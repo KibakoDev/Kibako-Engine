@@ -1,9 +1,11 @@
 // Kibako2DEngine/include/KibakoEngine/Core/Application.h
 #pragma once
 
-#include <windows.h> // for HWND
+#include <windows.h>
 
 #include "KibakoEngine/Renderer/RendererD3D11.h"
+#include "KibakoEngine/Core/Time.h"
+#include "KibakoEngine/Core/Input.h"
 
 // Forward-declare to avoid pulling SDL headers in public header
 struct SDL_Window;
@@ -15,6 +17,8 @@ namespace KibakoEngine
     public:
         bool Init(int width, int height, const char* title);
         void Run();
+        Time  m_time;
+        Input m_input;
         void Shutdown();
 
     private:

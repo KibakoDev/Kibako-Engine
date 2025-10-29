@@ -20,7 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\Renderer\RendererD3D11.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Kibako2DEngine\Kibako2DEngine.vcxproj">

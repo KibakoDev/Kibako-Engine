@@ -20,10 +20,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\KibakoEngine\Core\Application.h" />
+    <ClInclude Include="include\KibakoEngine\Core\Input.h" />
+    <ClInclude Include="include\KibakoEngine\Core\Time.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\RendererD3D11.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp" />
+    <ClCompile Include="src\Core\Input.cpp" />
+    <ClCompile Include="src\Core\Time.cpp" />
+    <ClCompile Include="src\Renderer\RendererD3D11.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

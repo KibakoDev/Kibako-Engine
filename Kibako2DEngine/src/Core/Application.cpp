@@ -12,9 +12,7 @@
 
 namespace KibakoEngine
 {
-    // ----------------------
-    // Private helpers
-    // ----------------------
+    // ===== Helpers privés =====
 
     bool Application::CreateWindowSDL(int w, int h, const char* title)
     {
@@ -66,19 +64,17 @@ namespace KibakoEngine
         m_renderer.OnResize(m_width, m_height);
     }
 
-    // ----------------------
-    // Public API
-    // ----------------------
+    // ===== API publique =====
 
     bool Application::Init(int width, int height, const char* title)
     {
         if (m_running) return true;
 
-        // 1) Create window (+ HWND)
+        // 1) Fenêtre (+ HWND)
         if (!CreateWindowSDL(width, height, title))
             return false;
 
-        // 2) Init renderer with HWND and initial size
+        // 2) Renderer (D3D11)
         if (!m_renderer.Init(m_hwnd, width, height))
             return false;
 
@@ -92,30 +88,35 @@ namespace KibakoEngine
 
         while (m_running)
         {
-            // --- Events ---
+            m_input.BeginFrame();
+            m_time.Tick();
+
             SDL_Event e;
             while (SDL_PollEvent(&e))
             {
                 switch (e.type)
                 {
-                case SDL_QUIT:
-                    m_running = false;
-                    break;
+                case SDL_QUIT: m_running = false; break;
                 case SDL_KEYDOWN:
-                    if (e.key.keysym.sym == SDLK_ESCAPE)
-                        m_running = false;
+                    if (e.key.keysym.sym == SDLK_ESCAPE) m_running = false;
                     break;
                 case SDL_WINDOWEVENT:
                     if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
                         OnResize(e.window.data1, e.window.data2);
                     break;
+                default: break;
                 }
+                m_input.HandleEvent(e);
             }
 
-            // --- Frame ---
             m_renderer.BeginFrame();
-            // TODO: draw calls here
+            // TODO: update & draw using dt / input
             m_renderer.EndFrame();
+
+            m_input.EndFrame();
+
+            static double acc=0; acc+=m_time.DeltaSeconds();
+            if (acc > 0.5) { std::cout << "FPS: " << (int)m_time.FPS() << "\r"; acc=0; }
         }
     }
 
