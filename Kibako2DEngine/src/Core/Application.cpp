@@ -12,8 +12,9 @@
 
 namespace KibakoEngine
 {
-    // ===== Helpers privés =====
-
+    // =====================================================
+    // WINDOW CREATION / MANAGEMENT
+    // =====================================================
     bool Application::CreateWindowSDL(int w, int h, const char* title)
     {
         SDL_SetMainReady();
@@ -23,6 +24,7 @@ namespace KibakoEngine
             return false;
         }
 
+        // Create a resizable SDL window
         m_window = SDL_CreateWindow(
             title,
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -36,6 +38,7 @@ namespace KibakoEngine
             return false;
         }
 
+        // Extract HWND from SDL (for Direct3D)
         SDL_SysWMinfo wminfo{};
         SDL_VERSION(&wminfo.version);
         if (!SDL_GetWindowWMInfo(m_window, &wminfo))
@@ -52,36 +55,59 @@ namespace KibakoEngine
 
     void Application::DestroyWindowSDL()
     {
-        if (m_window) { SDL_DestroyWindow(m_window); m_window = nullptr; }
+        if (m_window)
+        {
+            SDL_DestroyWindow(m_window);
+            m_window = nullptr;
+        }
         SDL_Quit();
     }
 
-    void Application::OnResize(int newWidth, int newHeight)
+    // =====================================================
+    // HANDLE WINDOW RESIZE
+    // =====================================================
+    void Application::OnResize(int /*newWidth*/, int /*newHeight*/)
     {
-        if (newWidth <= 0 || newHeight <= 0) return; // minimized/invalid
-        m_width = newWidth;
-        m_height = newHeight;
+        // Query true drawable pixel size (handles DPI scaling)
+        int pxW = 0, pxH = 0;
+        SDL_GetWindowSizeInPixels(m_window, &pxW, &pxH);
+        if (pxW <= 0 || pxH <= 0) return; // minimized / invalid
+
+        m_width = pxW;
+        m_height = pxH;
+
+        // Notify renderer
         m_renderer.OnResize(m_width, m_height);
     }
 
-    // ===== API publique =====
-
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
     bool Application::Init(int width, int height, const char* title)
     {
         if (m_running) return true;
 
-        // 1) Fenêtre (+ HWND)
+        // Create SDL window
         if (!CreateWindowSDL(width, height, title))
             return false;
 
-        // 2) Renderer (D3D11)
-        if (!m_renderer.Init(m_hwnd, width, height))
+        // Get actual pixel size (handles DPI)
+        int pxW = 0, pxH = 0;
+        SDL_GetWindowSizeInPixels(m_window, &pxW, &pxH);
+        m_width = pxW;
+        m_height = pxH;
+
+        // Initialize D3D11 renderer
+        if (!m_renderer.Init(m_hwnd, m_width, m_height))
             return false;
 
         m_running = true;
         return true;
     }
 
+    // =====================================================
+    // MAIN LOOP
+    // =====================================================
     void Application::Run()
     {
         if (!m_running) return;
@@ -96,30 +122,64 @@ namespace KibakoEngine
             {
                 switch (e.type)
                 {
-                case SDL_QUIT: m_running = false; break;
+                case SDL_QUIT:
+                    m_running = false;
+                    break;
+
                 case SDL_KEYDOWN:
-                    if (e.key.keysym.sym == SDLK_ESCAPE) m_running = false;
+                    if (e.key.keysym.sym == SDLK_ESCAPE)
+                        m_running = false;
                     break;
+
                 case SDL_WINDOWEVENT:
-                    if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+                {
+                    switch (e.window.event)
+                    {
+                    case SDL_WINDOWEVENT_SIZE_CHANGED:
+                    case SDL_WINDOWEVENT_RESIZED:
                         OnResize(e.window.data1, e.window.data2);
-                    break;
-                default: break;
+                        break;
+
+#if defined(SDL_WINDOWEVENT_DISPLAY_SCALE_CHANGED)
+                    case SDL_WINDOWEVENT_DISPLAY_SCALE_CHANGED:
+                        OnResize(0, 0); // re-read pixel size
+                        break;
+#endif
+                    default:
+                        break;
+                    }
                 }
+                break;
+
+                default:
+                    break;
+                }
+
+                // Pass event to input system
                 m_input.HandleEvent(e);
             }
 
+            // Render one frame
             m_renderer.BeginFrame();
             // TODO: update & draw using dt / input
             m_renderer.EndFrame();
 
             m_input.EndFrame();
 
-            static double acc=0; acc+=m_time.DeltaSeconds();
-            if (acc > 0.5) { std::cout << "FPS: " << (int)m_time.FPS() << "\r"; acc=0; }
+            // Simple FPS print (every ~0.5s)
+            static double acc = 0.0;
+            acc += m_time.DeltaSeconds();
+            if (acc > 0.5)
+            {
+                std::cout << "FPS: " << (int)m_time.FPS() << "\r";
+                acc = 0.0;
+            }
         }
     }
 
+    // =====================================================
+    // SHUTDOWN
+    // =====================================================
     void Application::Shutdown()
     {
         if (!m_running) return;
