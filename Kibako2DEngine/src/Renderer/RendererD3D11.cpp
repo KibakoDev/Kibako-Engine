@@ -11,9 +11,6 @@
 
 namespace KibakoEngine {
 
-    template<typename T>
-    inline void SafeRelease(T*& p) { if (p) { p->Release(); p = nullptr; } }
-
     // =====================================================
     // RENDERER INITIALIZATION
     // =====================================================
@@ -48,7 +45,11 @@ namespace KibakoEngine {
         HRESULT hr = D3D11CreateDeviceAndSwapChain(
             nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, flags,
             requested, _countof(requested), D3D11_SDK_VERSION,
-            &scd, &m_swapChain, &m_device, &created, &m_context
+            &scd,
+            m_swapChain.ReleaseAndGetAddressOf(),
+            m_device.ReleaseAndGetAddressOf(),
+            &created,
+            m_context.ReleaseAndGetAddressOf()
         );
         if (FAILED(hr))
         {
@@ -82,16 +83,19 @@ namespace KibakoEngine {
     // =====================================================
     bool RendererD3D11::CreateRTV()
     {
-        ID3D11Texture2D* backBuffer = nullptr;
-        HRESULT hr = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
+        // Get back buffer from swapchain
+        ComPtr<ID3D11Texture2D> backBuffer;
+        HRESULT hr = m_swapChain->GetBuffer(
+            0, __uuidof(ID3D11Texture2D),
+            reinterpret_cast<void**>(backBuffer.GetAddressOf()));
         if (FAILED(hr))
         {
             std::cerr << "SwapChain::GetBuffer failed (hr=0x" << std::hex << hr << ")\n";
             return false;
         }
 
-        hr = m_device->CreateRenderTargetView(backBuffer, nullptr, &m_rtv);
-        SafeRelease(backBuffer);
+        // Create render target view on the back buffer
+        hr = m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, m_rtv.ReleaseAndGetAddressOf());
         if (FAILED(hr))
         {
             std::cerr << "CreateRenderTargetView failed (hr=0x" << std::hex << hr << ")\n";
@@ -102,7 +106,7 @@ namespace KibakoEngine {
 
     void RendererD3D11::DestroyRTV()
     {
-        SafeRelease(m_rtv);
+        m_rtv.Reset();
     }
 
     // =====================================================
@@ -130,42 +134,56 @@ float4 mainPS(PSIn i) : SV_Target {
 
     bool RendererD3D11::InitTrianglePipeline()
     {
-        ID3DBlob* vsBlob = nullptr;
-        ID3DBlob* psBlob = nullptr;
-        ID3DBlob* err = nullptr;
-
         // Compile shaders (in-memory)
-        HRESULT hr = D3DCompile(g_VS_HLSL, strlen(g_VS_HLSL),
-            nullptr, nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &vsBlob, &err);
+        Microsoft::WRL::ComPtr<ID3DBlob> vsBlob, psBlob, err;
+
+        HRESULT hr = D3DCompile(
+            g_VS_HLSL, strlen(g_VS_HLSL),
+            nullptr, nullptr, nullptr,
+            "mainVS", "vs_5_0",
+            0, 0,
+            vsBlob.GetAddressOf(),
+            err.GetAddressOf()
+        );
         if (FAILED(hr))
         {
-            if (err) { std::cerr << "VS compile error: " << (const char*)err->GetBufferPointer() << "\n"; err->Release(); }
+            if (err) { std::cerr << "VS compile error: " << (const char*)err->GetBufferPointer() << "\n"; }
             return false;
         }
 
-        hr = D3DCompile(g_PS_HLSL, strlen(g_PS_HLSL),
-            nullptr, nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &psBlob, &err);
+        err.Reset();
+        hr = D3DCompile(
+            g_PS_HLSL, strlen(g_PS_HLSL),
+            nullptr, nullptr, nullptr,
+            "mainPS", "ps_5_0",
+            0, 0,
+            psBlob.GetAddressOf(),
+            err.GetAddressOf()
+        );
         if (FAILED(hr))
         {
-            if (err) { std::cerr << "PS compile error: " << (const char*)err->GetBufferPointer() << "\n"; err->Release(); }
-            SafeRelease(vsBlob);
+            if (err) { std::cerr << "PS compile error: " << (const char*)err->GetBufferPointer() << "\n"; }
             return false;
         }
 
         // Create shader objects
-        m_device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &m_vs);
-        m_device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &m_ps);
+        hr = m_device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, m_vs.ReleaseAndGetAddressOf());
+        if (FAILED(hr)) { std::cerr << "CreateVertexShader failed (hr=0x" << std::hex << hr << ")\n"; return false; }
 
-        // Vertex layout: POSITION (float3) + COLOR (float3)
+        hr = m_device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, m_ps.ReleaseAndGetAddressOf());
+        if (FAILED(hr)) { std::cerr << "CreatePixelShader failed (hr=0x" << std::hex << hr << ")\n"; return false; }
+
+        // Describe vertex memory layout (POSITION float3, COLOR float3)
         D3D11_INPUT_ELEMENT_DESC layout[] = {
             { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,                 D3D11_INPUT_PER_VERTEX_DATA, 0 },
             { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, sizeof(float) * 3, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
-        m_device->CreateInputLayout(layout, _countof(layout),
-            vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &m_inputLayout);
-
-        SafeRelease(vsBlob);
-        SafeRelease(psBlob);
+        hr = m_device->CreateInputLayout(
+            layout, _countof(layout),
+            vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
+            m_inputLayout.ReleaseAndGetAddressOf()
+        );
+        if (FAILED(hr)) { std::cerr << "CreateInputLayout failed (hr=0x" << std::hex << hr << ")\n"; return false; }
 
         // Create a small vertex buffer in clip space
         struct Vertex { float pos[3]; float color[3]; };
@@ -183,7 +201,7 @@ float4 mainPS(PSIn i) : SV_Target {
         D3D11_SUBRESOURCE_DATA srd{};
         srd.pSysMem = verts;
 
-        hr = m_device->CreateBuffer(&bd, &srd, &m_vb);
+        hr = m_device->CreateBuffer(&bd, &srd, m_vb.ReleaseAndGetAddressOf());
         if (FAILED(hr))
         {
             std::cerr << "CreateBuffer failed (hr=0x" << std::hex << hr << ")\n";
@@ -193,6 +211,7 @@ float4 mainPS(PSIn i) : SV_Target {
         m_vbStride = sizeof(Vertex);
         m_vbOffset = 0;
 
+        // Triangle list: each 3 vertices form one triangle
         m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         return true;
     }
@@ -200,24 +219,24 @@ float4 mainPS(PSIn i) : SV_Target {
     void RendererD3D11::DrawTriangle()
     {
         // Bind pipeline state and vertex buffer, then draw
-        m_context->IASetInputLayout(m_inputLayout);
-        m_context->VSSetShader(m_vs, nullptr, 0);
-        m_context->PSSetShader(m_ps, nullptr, 0);
+        m_context->IASetInputLayout(m_inputLayout.Get());
+        m_context->VSSetShader(m_vs.Get(), nullptr, 0);
+        m_context->PSSetShader(m_ps.Get(), nullptr, 0);
 
-        ID3D11Buffer* vbs[] = { m_vb };
-        UINT strides[] = { m_vbStride };
-        UINT offsets[] = { m_vbOffset };
-        m_context->IASetVertexBuffers(0, 1, vbs, strides, offsets);
+        ID3D11Buffer* vb = m_vb.Get();
+        UINT stride = m_vbStride;
+        UINT offset = m_vbOffset;
+        m_context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
 
         m_context->Draw(3, 0);
     }
 
     void RendererD3D11::DestroyTriangle()
     {
-        SafeRelease(m_vb);
-        SafeRelease(m_inputLayout);
-        SafeRelease(m_vs);
-        SafeRelease(m_ps);
+        m_vb.Reset();
+        m_inputLayout.Reset();
+        m_vs.Reset();
+        m_ps.Reset();
     }
 
     // =====================================================
@@ -228,9 +247,11 @@ float4 mainPS(PSIn i) : SV_Target {
         if (m_rtv)
         {
             // Bind render target and clear screen
-            m_context->OMSetRenderTargets(1, &m_rtv, nullptr);
+            ID3D11RenderTargetView* rtv = m_rtv.Get();
+            m_context->OMSetRenderTargets(1, &rtv, nullptr);
+
             const float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-            m_context->ClearRenderTargetView(m_rtv, color);
+            m_context->ClearRenderTargetView(m_rtv.Get(), color);
 
             // Draw one triangle
             DrawTriangle();
@@ -253,7 +274,7 @@ float4 mainPS(PSIn i) : SV_Target {
         m_height = newHeight;
 
         // Unbind current RTV before resizing
-        ID3D11RenderTargetView* nullRTV[1] = { nullptr };
+        ID3D11RenderTargetView* nullRTV[] = { nullptr };
         m_context->OMSetRenderTargets(1, nullRTV, nullptr);
 
         DestroyRTV();
@@ -261,11 +282,12 @@ float4 mainPS(PSIn i) : SV_Target {
         HRESULT hr = m_swapChain->ResizeBuffers(0, m_width, m_height, DXGI_FORMAT_UNKNOWN, 0);
         if (FAILED(hr))
         {
-            std::cerr << "ResizeBuffers failed hr=0x" << std::hex << hr << "\n";
+            std::cerr << "ResizeBuffers failed (hr=0x" << std::hex << hr << ")\n";
             return;
         }
 
-        CreateRTV();
+        if (!CreateRTV())
+            return;
 
         // Update viewport
         D3D11_VIEWPORT vp{};
@@ -285,9 +307,9 @@ float4 mainPS(PSIn i) : SV_Target {
     {
         DestroyTriangle();
         DestroyRTV();
-        SafeRelease(m_swapChain);
-        SafeRelease(m_context);
-        SafeRelease(m_device);
+        m_swapChain.Reset();
+        m_context.Reset();
+        m_device.Reset();
     }
 
 }
