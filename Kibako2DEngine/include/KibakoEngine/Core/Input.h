@@ -4,14 +4,15 @@
 #include <SDL2/SDL.h>
 
 namespace KibakoEngine {
+
     class Input {
     public:
         // Call once per frame, before reading state
-        void BeginFrame() { m_wheelX = m_wheelY = 0; m_textChar = 0; }
+        void BeginFrame();  // <— déclaration seule
 
         // Keyboard
-        inline bool KeyDown(SDL_Scancode sc) const { return m_keys[sc] != 0; }
-        inline bool KeyPressed(SDL_Scancode sc) const { return m_keys[sc] && !m_prevKeys[sc]; }
+        inline bool KeyDown(SDL_Scancode sc) const { return m_keys && m_keys[sc] != 0; }
+        inline bool KeyPressed(SDL_Scancode sc) const { return m_keys && m_keys[sc] && !m_prevKeys[sc]; }
 
         // Mouse
         inline int MouseX() const { return m_mouseX; }
@@ -31,11 +32,12 @@ namespace KibakoEngine {
 
     private:
         const uint8_t* m_keys = nullptr;
-        uint8_t        m_prevKeysState[SDL_NUM_SCANCODES] = {};
-        uint8_t        m_prevKeys[SDL_NUM_SCANCODES] = {};
-        int            m_mouseX = 0, m_mouseY = 0;
-        uint32_t       m_mouseButtons = 0;
-        int            m_wheelX = 0, m_wheelY = 0;
-        uint32_t       m_textChar = 0;
+        uint8_t  m_prevKeysState[SDL_NUM_SCANCODES] = {};
+        uint8_t  m_prevKeys[SDL_NUM_SCANCODES] = {};
+        int      m_mouseX = 0, m_mouseY = 0;
+        uint32_t m_mouseButtons = 0;
+        int      m_wheelX = 0, m_wheelY = 0;
+        uint32_t m_textChar = 0;
     };
+
 }

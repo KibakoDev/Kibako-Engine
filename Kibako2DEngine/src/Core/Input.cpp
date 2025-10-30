@@ -3,6 +3,20 @@
 
 namespace KibakoEngine {
 
+    void Input::BeginFrame() {
+        m_wheelX = m_wheelY = 0;
+        m_textChar = 0;
+
+        // First-time init: hook SDL keyboard pointer and seed snapshots
+        if (!m_keys) {
+            m_keys = SDL_GetKeyboardState(nullptr);
+            for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
+                m_prevKeysState[i] = m_keys[i];
+                m_prevKeys[i] = m_keys[i];
+            }
+        }
+    }
+
     void Input::HandleEvent(const SDL_Event& e) {
         switch (e.type) {
         case SDL_MOUSEMOTION:
@@ -25,16 +39,15 @@ namespace KibakoEngine {
     }
 
     void Input::EndFrame() {
-        // Snapshot current keyboard state for "Pressed" detection next frame
-        if (!m_keys) {
-            m_keys = SDL_GetKeyboardState(nullptr);
-            // First frame: initialize prev with current
-            for (int i = 0; i < SDL_NUM_SCANCODES; ++i) m_prevKeys[i] = m_keys[i];
-            return;
-        }
-        // Copy m_prevKeysState -> m_prevKeys, then refresh prevKeysState from SDL
-        for (int i = 0; i < SDL_NUM_SCANCODES; ++i) m_prevKeys[i] = m_prevKeysState[i];
+        // Copy previous snapshot
+        for (int i = 0; i < SDL_NUM_SCANCODES; ++i)
+            m_prevKeys[i] = m_prevKeysState[i];
+
+        // Refresh current keyboard state (SDL keeps a stable pointer)
         m_keys = SDL_GetKeyboardState(nullptr);
-        for (int i = 0; i < SDL_NUM_SCANCODES; ++i) m_prevKeysState[i] = m_keys[i];
+
+        // Store snapshot for next frame
+        for (int i = 0; i < SDL_NUM_SCANCODES; ++i)
+            m_prevKeysState[i] = m_keys[i];
     }
 }

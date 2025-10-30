@@ -22,6 +22,17 @@ namespace KibakoEngine {
         // Build and return ViewProj (transposed for HLSL)
         DirectX::XMFLOAT4X4 GetViewProjT();
 
+        float X() const { return m_posX; }
+        float Y() const { return m_posY; }
+        float Zoom() const { return m_zoom; }
+        float Rotation() const { return m_rot; }
+
+        // Convenience helpers
+        void Move(float dx, float dy) { m_posX += dx; m_posY += dy; m_dirty = true; }
+        void AddZoom(float dz) { m_zoom += dz; if (m_zoom < 0.05f) m_zoom = 0.05f; if (m_zoom > 8.0f) m_zoom = 8.0f; m_dirty = true; }
+        void AddRotation(float dr) { m_rot += dr; m_dirty = true; }
+        void Reset() { m_posX = 0.0f; m_posY = 0.0f; m_zoom = 1.0f; m_rot = 0.0f; m_dirty = true; }
+
     private:
         void RebuildIfNeeded();
 
@@ -33,14 +44,14 @@ namespace KibakoEngine {
         // Camera transform
         float m_posX = 0.0f;
         float m_posY = 0.0f;
-        float m_zoom = 1.0f;     // 1.0 = no zoom
-        float m_rot = 0.0f;     // radians
+        float m_zoom = 1.0f;
+        float m_rot = 0.0f;
 
         // Cached matrices
         bool m_dirty = true;
         DirectX::XMMATRIX m_view = DirectX::XMMatrixIdentity();
         DirectX::XMMATRIX m_proj = DirectX::XMMatrixIdentity();
-        DirectX::XMFLOAT4X4 m_viewProjT{}; // transposed for HLSL
+        DirectX::XMFLOAT4X4 m_viewProjT{};
     };
 
 }

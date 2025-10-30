@@ -373,4 +373,4 @@ float4 mainPS(PSIn i) : SV_Target {
         m_device.Reset();
     }
 
-} // namespace KibakoEngine
+}

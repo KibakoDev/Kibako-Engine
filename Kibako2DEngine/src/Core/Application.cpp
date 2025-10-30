@@ -159,6 +159,42 @@ namespace KibakoEngine
                 m_input.HandleEvent(e);
             }
 
+            // --- Camera controls (per-frame) ---
+            {
+                float dt = static_cast<float>(m_time.DeltaSeconds());
+                auto& cam = m_renderer.Camera();
+
+                // Move speed in pixels/sec, adjusted by zoom so movement feels consistent
+                const float baseMove = 600.0f;
+                const float move = baseMove * dt / cam.Zoom();
+
+                // Zoom and rotation speed
+                const float zoomStep = 1.5f * dt;     // add/sub zoom per second
+                const float rotSpeed = 1.5f * dt;     // radians per second
+
+                // WASD: pan
+                if (m_input.KeyDown(SDL_SCANCODE_W)) cam.Move(0.0f, -move);
+                if (m_input.KeyDown(SDL_SCANCODE_S)) cam.Move(0.0f, move);
+                if (m_input.KeyDown(SDL_SCANCODE_A)) cam.Move(-move, 0.0f);
+                if (m_input.KeyDown(SDL_SCANCODE_D)) cam.Move(move, 0.0f);
+
+                // QE: rotate
+                if (m_input.KeyDown(SDL_SCANCODE_Q)) cam.AddRotation(-rotSpeed);
+                if (m_input.KeyDown(SDL_SCANCODE_E)) cam.AddRotation(rotSpeed);
+
+                // ZX: zoom
+                if (m_input.KeyDown(SDL_SCANCODE_Z)) cam.AddZoom(zoomStep);
+                if (m_input.KeyDown(SDL_SCANCODE_X)) cam.AddZoom(-zoomStep);
+
+                // Mouse wheel: zoom (optional, smooth)
+                if (m_input.WheelY() != 0) {
+                    cam.AddZoom((float)m_input.WheelY() * 0.10f); // tweak factor if needed
+                }
+
+                // R: reset camera
+                if (m_input.KeyDown(SDL_SCANCODE_R)) cam.Reset();
+            }
+
             // Render one frame
             m_renderer.BeginFrame();
             // TODO: update & draw using dt / input
