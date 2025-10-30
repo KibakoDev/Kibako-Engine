@@ -71,7 +71,18 @@ namespace KibakoEngine {
         vp.TopLeftY = 0;
         m_context->RSSetViewports(1, &vp);
 
-        // Minimal pipeline (shaders + vertex buffer) to draw a triangle
+        // Camera setup (virtual space == window size for now)
+        m_camera.SetVirtualSize(width, height);
+        m_camera.SetViewportSize(width, height);
+        m_camera.SetPosition(0.0f, 0.0f);
+        m_camera.SetZoom(1.0f);
+        m_camera.SetRotation(0.0f);
+
+        // Create constant buffers
+        if (!CreateConstantBuffers())
+            return false;
+
+        // Minimal pipeline (shaders + vertex buffer)
         if (!InitTrianglePipeline())
             return false;
 
@@ -110,16 +121,58 @@ namespace KibakoEngine {
     }
 
     // =====================================================
-    // TRIANGLE PIPELINE (shaders + vertex buffer)
+    // CONSTANT BUFFERS
     // =====================================================
+    bool RendererD3D11::CreateConstantBuffers()
+    {
+        D3D11_BUFFER_DESC bd{};
+        bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        bd.ByteWidth = sizeof(CB_VS_Camera);
+        bd.Usage = D3D11_USAGE_DYNAMIC;
+        bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-    // Simple inline HLSL shaders
+        HRESULT hr = m_device->CreateBuffer(&bd, nullptr, m_cbCamera.ReleaseAndGetAddressOf());
+        if (FAILED(hr))
+        {
+            std::cerr << "CreateBuffer(CB_VS_Camera) failed (hr=0x" << std::hex << hr << ")\n";
+            return false;
+        }
+        return true;
+    }
+
+    void RendererD3D11::UpdateCameraCB()
+    {
+        CB_VS_Camera data{};
+        data.ViewProj = m_camera.GetViewProjT(); // already transposed for HLSL
+
+        D3D11_MAPPED_SUBRESOURCE map{};
+        if (SUCCEEDED(m_context->Map(m_cbCamera.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &map)))
+        {
+            std::memcpy(map.pData, &data, sizeof(data));
+            m_context->Unmap(m_cbCamera.Get(), 0);
+        }
+
+        // Bind to VS slot b0
+        ID3D11Buffer* cb = m_cbCamera.Get();
+        m_context->VSSetConstantBuffers(0, 1, &cb);
+    }
+
+    // =====================================================
+    // HLSL SHADERS
+    // =====================================================
     static const char* g_VS_HLSL = R"(
+cbuffer CB_VS_Camera : register(b0)
+{
+    float4x4 gViewProj;
+};
+
 struct VSIn  { float3 pos : POSITION; float3 color : COLOR; };
 struct VSOut { float4 pos : SV_Position; float3 color : COLOR; };
+
 VSOut mainVS(VSIn i) {
     VSOut o;
-    o.pos = float4(i.pos, 1.0);
+    float4 wp = float4(i.pos, 1.0);
+    o.pos = mul(wp, gViewProj);  // world -> clip
     o.color = i.color;
     return o;
 }
@@ -132,10 +185,13 @@ float4 mainPS(PSIn i) : SV_Target {
 }
 )";
 
+    // =====================================================
+    // TRIANGLE PIPELINE (shaders + vertex buffer)
+    // =====================================================
     bool RendererD3D11::InitTrianglePipeline()
     {
         // Compile shaders (in-memory)
-        Microsoft::WRL::ComPtr<ID3DBlob> vsBlob, psBlob, err;
+        ComPtr<ID3DBlob> vsBlob, psBlob, err;
 
         HRESULT hr = D3DCompile(
             g_VS_HLSL, strlen(g_VS_HLSL),
@@ -173,7 +229,7 @@ float4 mainPS(PSIn i) : SV_Target {
         hr = m_device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, m_ps.ReleaseAndGetAddressOf());
         if (FAILED(hr)) { std::cerr << "CreatePixelShader failed (hr=0x" << std::hex << hr << ")\n"; return false; }
 
-        // Describe vertex memory layout (POSITION float3, COLOR float3)
+        // Vertex layout: POSITION (float3) + COLOR (float3)
         D3D11_INPUT_ELEMENT_DESC layout[] = {
             { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,                 D3D11_INPUT_PER_VERTEX_DATA, 0 },
             { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, sizeof(float) * 3, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -185,12 +241,12 @@ float4 mainPS(PSIn i) : SV_Target {
         );
         if (FAILED(hr)) { std::cerr << "CreateInputLayout failed (hr=0x" << std::hex << hr << ")\n"; return false; }
 
-        // Create a small vertex buffer in clip space
+        // Create a small vertex buffer in pixel space (world units = pixels)
         struct Vertex { float pos[3]; float color[3]; };
         const Vertex verts[3] = {
-            { {  0.0f,  0.5f, 0.0f }, {  1.0f, 1.0f, 1.0f } },
-            { {  0.5f, -0.5f, 0.0f }, {  1.0f, 1.0f, 1.0f } },
-            { { -0.5f, -0.5f, 0.0f }, {  1.0f, 1.0f, 1.0f } },
+            { {  64.0f,  32.0f, 0.0f }, {  1.0f, 1.0f, 1.0f } },
+            { { 128.0f, 160.0f, 0.0f }, {  1.0f, 1.0f, 1.0f } },
+            { {   0.0f, 160.0f, 0.0f }, {  1.0f, 1.0f, 1.0f } },
         };
 
         D3D11_BUFFER_DESC bd{};
@@ -253,7 +309,8 @@ float4 mainPS(PSIn i) : SV_Target {
             const float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
             m_context->ClearRenderTargetView(m_rtv.Get(), color);
 
-            // Draw one triangle
+            // Update camera constants and draw
+            UpdateCameraCB();
             DrawTriangle();
         }
     }
@@ -298,6 +355,10 @@ float4 mainPS(PSIn i) : SV_Target {
         vp.TopLeftX = 0;
         vp.TopLeftY = 0;
         m_context->RSSetViewports(1, &vp);
+
+        // Keep camera in sync with the new size
+        m_camera.SetViewportSize(newWidth, newHeight);
+        m_camera.SetVirtualSize(newWidth, newHeight);
     }
 
     // =====================================================
@@ -312,4 +373,4 @@ float4 mainPS(PSIn i) : SV_Target {
         m_device.Reset();
     }
 
-}
+} // namespace KibakoEngine
