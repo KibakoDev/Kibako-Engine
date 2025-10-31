@@ -14,16 +14,6 @@
 Kibako Engine is an **experimental graphics framework** currently in **very early development**.  
 The goal is to explore engine structure, rendering systems, and resource management in a clear and lightweight way.
 
-This project is built for **learning purposes** and will evolve gradually over time — expect constant changes and experimentation.
-
----
-
-### Current Focus
-- Core Direct3D 11 setup (device, swap chain, context)
-- Basic 2D rendering pipeline
-- Texture and shader management
-- Logging and diagnostics utilities
-
 ---
 
 ### Development Status
