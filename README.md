@@ -11,7 +11,8 @@
 ---
 
 ### Overview
-Kibako Engine is an **experimental graphics framework** currently in **very early development**.  
+Kibako Engine is an **experimental graphics framework** currently in **very early development**. 
+Currently, it can only render in **2D**, though **3D** is planned for the future.
 The goal is to explore engine structure, rendering systems, and resource management in a clear and lightweight way.
 
 ---
