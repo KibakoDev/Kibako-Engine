@@ -25,7 +25,6 @@ namespace KibakoEngine
             return false;
         }
 
-        // Create a resizable SDL window
         m_window = SDL_CreateWindow(
             title,
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -39,7 +38,6 @@ namespace KibakoEngine
             return false;
         }
 
-        // Extract HWND from SDL (for Direct3D)
         SDL_SysWMinfo wminfo{};
         SDL_VERSION(&wminfo.version);
         if (!SDL_GetWindowWMInfo(m_window, &wminfo))
@@ -69,15 +67,12 @@ namespace KibakoEngine
     // =====================================================
     void Application::OnResize(int /*newWidth*/, int /*newHeight*/)
     {
-        // Query true drawable pixel size (handles DPI scaling)
         int pxW = 0, pxH = 0;
         SDL_GetWindowSizeInPixels(m_window, &pxW, &pxH);
-        if (pxW <= 0 || pxH <= 0) return; // minimized / invalid
+        if (pxW <= 0 || pxH <= 0) return;
 
         m_width = pxW;
         m_height = pxH;
-
-        // Notify renderer
         m_renderer.OnResize(m_width, m_height);
     }
 
@@ -92,7 +87,6 @@ namespace KibakoEngine
         if (!CreateWindowSDL(width, height, title))
             return false;
 
-        // Get actual pixel size (handles DPI)
         int pxW = 0, pxH = 0;
         SDL_GetWindowSizeInPixels(m_window, &pxW, &pxH);
         m_width = pxW;
@@ -102,10 +96,11 @@ namespace KibakoEngine
         if (!m_renderer.Init(m_hwnd, m_width, m_height))
             return false;
 
-        // Load Texture 2D
+        // Load test texture
         static KibakoEngine::Texture2D tex;
         static bool loaded = false;
-        if (!loaded) {
+        if (!loaded)
+        {
             loaded = tex.LoadFromFile(m_renderer.GetDevice(), "assets/ship.png", true);
             if (loaded)
                 std::cout << "Loaded texture: " << tex.Width() << "x" << tex.Height() << "\n";
@@ -113,7 +108,7 @@ namespace KibakoEngine
                 std::cout << "Failed to load texture\n";
         }
 
-
+        m_debugTexture = tex; // store for rendering
         m_running = true;
         return true;
     }
@@ -145,7 +140,6 @@ namespace KibakoEngine
                     break;
 
                 case SDL_WINDOWEVENT:
-                {
                     switch (e.window.event)
                     {
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
@@ -155,67 +149,74 @@ namespace KibakoEngine
 
 #if defined(SDL_WINDOWEVENT_DISPLAY_SCALE_CHANGED)
                     case SDL_WINDOWEVENT_DISPLAY_SCALE_CHANGED:
-                        OnResize(0, 0); // re-read pixel size
+                        OnResize(0, 0);
                         break;
 #endif
                     default:
                         break;
                     }
-                }
-                break;
+                    break;
 
                 default:
                     break;
                 }
 
-                // Pass event to input system
                 m_input.HandleEvent(e);
             }
 
-            // --- Camera controls (per-frame) ---
+            // --- Camera controls ---
             {
                 float dt = static_cast<float>(m_time.DeltaSeconds());
                 auto& cam = m_renderer.Camera();
 
-                // Move speed in pixels/sec, adjusted by zoom so movement feels consistent
                 const float baseMove = 600.0f;
                 const float move = baseMove * dt / cam.Zoom();
 
-                // Zoom and rotation speed
-                const float zoomStep = 1.5f * dt;     // add/sub zoom per second
-                const float rotSpeed = 1.5f * dt;     // radians per second
+                const float zoomStep = 1.5f * dt;
+                const float rotSpeed = 1.5f * dt;
 
-                // WASD: pan
                 if (m_input.KeyDown(SDL_SCANCODE_W)) cam.Move(0.0f, -move);
                 if (m_input.KeyDown(SDL_SCANCODE_S)) cam.Move(0.0f, move);
                 if (m_input.KeyDown(SDL_SCANCODE_A)) cam.Move(-move, 0.0f);
                 if (m_input.KeyDown(SDL_SCANCODE_D)) cam.Move(move, 0.0f);
 
-                // QE: rotate
                 if (m_input.KeyDown(SDL_SCANCODE_Q)) cam.AddRotation(-rotSpeed);
                 if (m_input.KeyDown(SDL_SCANCODE_E)) cam.AddRotation(rotSpeed);
 
-                // ZX: zoom
                 if (m_input.KeyDown(SDL_SCANCODE_Z)) cam.AddZoom(zoomStep);
                 if (m_input.KeyDown(SDL_SCANCODE_X)) cam.AddZoom(-zoomStep);
 
-                // Mouse wheel: zoom (optional, smooth)
-                if (m_input.WheelY() != 0) {
-                    cam.AddZoom((float)m_input.WheelY() * 0.10f); // tweak factor if needed
-                }
+                if (m_input.WheelY() != 0)
+                    cam.AddZoom((float)m_input.WheelY() * 0.10f);
 
-                // R: reset camera
                 if (m_input.KeyDown(SDL_SCANCODE_R)) cam.Reset();
             }
 
-            // Render one frame
+            // =====================================================
+            // RENDER
+            // =====================================================
             m_renderer.BeginFrame();
-            // TODO: update & draw using dt / input
+
+            auto& sprites = m_renderer.Sprites();
+            sprites.Begin(m_renderer.Camera().GetViewProjT());
+
+            if (m_debugTexture.GetSRV())
+            {
+                // destination rect in world space
+                RectF dst{ 200.0f, 150.0f, (float)m_debugTexture.Width(), (float)m_debugTexture.Height() };
+                RectF src{ 0.0f, 0.0f, 1.0f, 1.0f };
+                Color4 tint = Color4::White();
+
+                sprites.SetMonochrome(0.0f); // 0 = color, 1 = full grayscale
+                sprites.DrawSprite(m_debugTexture, dst, src, tint, 0.0f);
+            }
+
+            sprites.End();
             m_renderer.EndFrame();
 
             m_input.EndFrame();
 
-            // Simple FPS print (every ~0.5s)
+            // Debug FPS output
             static double acc = 0.0;
             acc += m_time.DeltaSeconds();
             if (acc > 0.5)

@@ -5,7 +5,9 @@
 #include <dxgi.h>
 #include <wrl/client.h>
 #include <DirectXMath.h>
+
 #include "KibakoEngine/Renderer/Camera2D.h"
+#include "KibakoEngine/Renderer/SpriteRenderer2D.h"
 
 namespace KibakoEngine {
 
@@ -23,6 +25,8 @@ namespace KibakoEngine {
         ID3D11DeviceContext* GetContext() const { return m_context.Get(); }
 
         Camera2D& Camera() { return m_camera; }
+
+        SpriteRenderer2D& Sprites() { return m_spriteRenderer; }
 
     private:
         bool CreateRTV();
@@ -46,6 +50,8 @@ namespace KibakoEngine {
         Camera2D m_camera;
         struct CB_VS_Camera { DirectX::XMFLOAT4X4 ViewProj; };
         ComPtr<ID3D11Buffer> m_cbCamera;
+
+        SpriteRenderer2D m_spriteRenderer;
     };
 
 }

@@ -1,11 +1,14 @@
 // Kibako2DEngine/src/Renderer/RendererD3D11.cpp
 #define WIN32_LEAN_AND_MEAN
 #include "KibakoEngine/Renderer/RendererD3D11.h"
+
 #include <iostream>
 #include <cstring>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
+
+using Microsoft::WRL::ComPtr;
 
 namespace KibakoEngine {
 
@@ -18,7 +21,7 @@ namespace KibakoEngine {
         m_width = width;
         m_height = height;
 
-        // Create device and swapchain (flip model for smooth resize)
+        // Create device and swap chain (flip model for smooth resize)
         DXGI_SWAP_CHAIN_DESC scd{};
         scd.BufferCount = 2;
         scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -51,7 +54,7 @@ namespace KibakoEngine {
         );
         if (FAILED(hr))
         {
-            std::cerr << "Failed to create D3D11 device/swapchain (hr=0x" << std::hex << hr << ")\n";
+            std::cerr << "D3D11CreateDeviceAndSwapChain failed (hr=0x" << std::hex << hr << ")\n";
             return false;
         }
 
@@ -69,16 +72,24 @@ namespace KibakoEngine {
         vp.TopLeftY = 0;
         m_context->RSSetViewports(1, &vp);
 
-        // Camera setup (virtual space == window size for now)
+        // Camera setup (virtual space == window size to start)
         m_camera.SetVirtualSize(width, height);
         m_camera.SetViewportSize(width, height);
         m_camera.SetPosition(0.0f, 0.0f);
         m_camera.SetZoom(1.0f);
         m_camera.SetRotation(0.0f);
 
-        // Create constant buffers
+        // Constant buffers (camera)
         if (!CreateConstantBuffers())
             return false;
+
+        // Init the sprite renderer (App will call Begin/End each frame)
+        if (!m_spriteRenderer.Init(m_device.Get(), m_context.Get()))
+        {
+            std::cerr << "SpriteRenderer2D::Init failed\n";
+            return false;
+        }
+        m_spriteRenderer.SetMonochrome(0.0f);
 
         return true;
     }
@@ -88,18 +99,17 @@ namespace KibakoEngine {
     // =====================================================
     bool RendererD3D11::CreateRTV()
     {
-        // Get back buffer from swapchain
         ComPtr<ID3D11Texture2D> backBuffer;
         HRESULT hr = m_swapChain->GetBuffer(
             0, __uuidof(ID3D11Texture2D),
-            reinterpret_cast<void**>(backBuffer.GetAddressOf()));
+            reinterpret_cast<void**>(backBuffer.GetAddressOf())
+        );
         if (FAILED(hr))
         {
             std::cerr << "SwapChain::GetBuffer failed (hr=0x" << std::hex << hr << ")\n";
             return false;
         }
 
-        // Create render target view on the back buffer
         hr = m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, m_rtv.ReleaseAndGetAddressOf());
         if (FAILED(hr))
         {
@@ -115,7 +125,7 @@ namespace KibakoEngine {
     }
 
     // =====================================================
-    // CONSTANT BUFFERS
+    // CONSTANT BUFFERS (CAMERA)
     // =====================================================
     bool RendererD3D11::CreateConstantBuffers()
     {
@@ -137,7 +147,7 @@ namespace KibakoEngine {
     void RendererD3D11::UpdateCameraCB()
     {
         CB_VS_Camera data{};
-        data.ViewProj = m_camera.GetViewProjT(); // already transposed for HLSL
+        data.ViewProj = m_camera.GetViewProjT(); // transposed for HLSL row-major
 
         D3D11_MAPPED_SUBRESOURCE map{};
         if (SUCCEEDED(m_context->Map(m_cbCamera.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &map)))
@@ -146,28 +156,28 @@ namespace KibakoEngine {
             m_context->Unmap(m_cbCamera.Get(), 0);
         }
 
-        // Bind to VS slot b0
         ID3D11Buffer* cb = m_cbCamera.Get();
         m_context->VSSetConstantBuffers(0, 1, &cb);
     }
 
     // =====================================================
-    // PER-FRAME RENDER
+    // PER-FRAME
     // =====================================================
     void RendererD3D11::BeginFrame()
     {
-        if (m_rtv)
-        {
-            // Bind render target and clear screen
-            ID3D11RenderTargetView* rtv = m_rtv.Get();
-            m_context->OMSetRenderTargets(1, &rtv, nullptr);
+        if (!m_rtv) return;
 
-            const float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-            m_context->ClearRenderTargetView(m_rtv.Get(), color);
+        // Bind RT and clear
+        ID3D11RenderTargetView* rtv = m_rtv.Get();
+        m_context->OMSetRenderTargets(1, &rtv, nullptr);
 
-            // Update camera constants and draw
-            UpdateCameraCB();
-        }
+        const float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+        m_context->ClearRenderTargetView(m_rtv.Get(), color);
+
+        // Update camera constants
+        UpdateCameraCB();
+
+        // Note: SpriteRenderer Begin/End is called from Application.cpp (not here)
     }
 
     void RendererD3D11::EndFrame()
@@ -177,15 +187,16 @@ namespace KibakoEngine {
     }
 
     // =====================================================
-    // RESIZE HANDLING
+    // RESIZE
     // =====================================================
     void RendererD3D11::OnResize(int newWidth, int newHeight)
     {
         if (newWidth <= 0 || newHeight <= 0) return;
+
         m_width = newWidth;
         m_height = newHeight;
 
-        // Unbind current RTV before resizing
+        // Unbind RT before resizing
         ID3D11RenderTargetView* nullRTV[] = { nullptr };
         m_context->OMSetRenderTargets(1, nullRTV, nullptr);
 
@@ -211,7 +222,7 @@ namespace KibakoEngine {
         vp.TopLeftY = 0;
         m_context->RSSetViewports(1, &vp);
 
-        // Keep camera in sync with the new size
+        // Keep camera in sync
         m_camera.SetViewportSize(newWidth, newHeight);
         m_camera.SetVirtualSize(newWidth, newHeight);
     }
@@ -221,6 +232,7 @@ namespace KibakoEngine {
     // =====================================================
     void RendererD3D11::Shutdown()
     {
+        m_spriteRenderer.Shutdown();
         DestroyRTV();
         m_swapChain.Reset();
         m_context.Reset();
