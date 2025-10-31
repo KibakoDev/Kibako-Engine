@@ -28,10 +28,6 @@ namespace KibakoEngine {
         bool CreateRTV();
         void DestroyRTV();
 
-        bool InitTrianglePipeline();
-        void DrawTriangle();
-        void DestroyTriangle();
-
         bool CreateConstantBuffers();
         void UpdateCameraCB();
 
@@ -45,14 +41,6 @@ namespace KibakoEngine {
         int  m_width = 0;
         int  m_height = 0;
         HWND m_hwnd = nullptr;
-
-        // Triangle pipeline
-        ComPtr<ID3D11VertexShader> m_vs;
-        ComPtr<ID3D11PixelShader>  m_ps;
-        ComPtr<ID3D11InputLayout>  m_inputLayout;
-        ComPtr<ID3D11Buffer>       m_vb;
-        UINT                       m_vbStride = 0;
-        UINT                       m_vbOffset = 0;
 
         // Camera and constant buffer
         Camera2D m_camera;

@@ -24,6 +24,11 @@
     <ClInclude Include="include\KibakoEngine\Core\Time.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\Camera2D.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\RendererD3D11.h" />
+    <ClInclude Include="include\KibakoEngine\Renderer\SpriteRenderer2D.h" />
+    <ClInclude Include="include\KibakoEngine\Renderer\SpriteTypes.h" />
+    <ClInclude Include="include\KibakoEngine\Renderer\States2D.h" />
+    <ClInclude Include="include\KibakoEngine\Renderer\Texture2D.h" />
+    <ClInclude Include="third_party\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp" />
@@ -31,6 +36,9 @@
     <ClCompile Include="src\Core\Time.cpp" />
     <ClCompile Include="src\Renderer\Camera2D.cpp" />
     <ClCompile Include="src\Renderer\RendererD3D11.cpp" />
+    <ClCompile Include="src\Renderer\SpriteRenderer2D.cpp" />
+    <ClCompile Include="src\Renderer\States2D.cpp" />
+    <ClCompile Include="src\Renderer\Texture2D.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -119,7 +127,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)third_party</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -137,7 +145,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)third_party</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

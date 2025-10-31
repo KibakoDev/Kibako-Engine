@@ -9,6 +9,7 @@
 #include <SDL2/SDL_syswm.h>
 
 #include "KibakoEngine/Core/Application.h"
+#include "KibakoEngine/Renderer/Texture2D.h"
 
 namespace KibakoEngine
 {
@@ -100,6 +101,18 @@ namespace KibakoEngine
         // Initialize D3D11 renderer
         if (!m_renderer.Init(m_hwnd, m_width, m_height))
             return false;
+
+        // Load Texture 2D
+        static KibakoEngine::Texture2D tex;
+        static bool loaded = false;
+        if (!loaded) {
+            loaded = tex.LoadFromFile(m_renderer.GetDevice(), "assets/ship.png", true);
+            if (loaded)
+                std::cout << "Loaded texture: " << tex.Width() << "x" << tex.Height() << "\n";
+            else
+                std::cout << "Failed to load texture\n";
+        }
+
 
         m_running = true;
         return true;

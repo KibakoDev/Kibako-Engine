@@ -4,10 +4,8 @@
 #include <iostream>
 #include <cstring>
 
-#include <d3dcompiler.h>  // compile HLSL at runtime
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
-#pragma comment(lib, "d3dcompiler.lib")
 
 namespace KibakoEngine {
 
@@ -82,10 +80,6 @@ namespace KibakoEngine {
         if (!CreateConstantBuffers())
             return false;
 
-        // Minimal pipeline (shaders + vertex buffer)
-        if (!InitTrianglePipeline())
-            return false;
-
         return true;
     }
 
@@ -158,144 +152,6 @@ namespace KibakoEngine {
     }
 
     // =====================================================
-    // HLSL SHADERS
-    // =====================================================
-    static const char* g_VS_HLSL = R"(
-cbuffer CB_VS_Camera : register(b0)
-{
-    float4x4 gViewProj;
-};
-
-struct VSIn  { float3 pos : POSITION; float3 color : COLOR; };
-struct VSOut { float4 pos : SV_Position; float3 color : COLOR; };
-
-VSOut mainVS(VSIn i) {
-    VSOut o;
-    float4 wp = float4(i.pos, 1.0);
-    o.pos = mul(wp, gViewProj);  // world -> clip
-    o.color = i.color;
-    return o;
-}
-)";
-
-    static const char* g_PS_HLSL = R"(
-struct PSIn { float4 pos : SV_Position; float3 color : COLOR; };
-float4 mainPS(PSIn i) : SV_Target {
-    return float4(i.color, 1.0);
-}
-)";
-
-    // =====================================================
-    // TRIANGLE PIPELINE (shaders + vertex buffer)
-    // =====================================================
-    bool RendererD3D11::InitTrianglePipeline()
-    {
-        // Compile shaders (in-memory)
-        ComPtr<ID3DBlob> vsBlob, psBlob, err;
-
-        HRESULT hr = D3DCompile(
-            g_VS_HLSL, strlen(g_VS_HLSL),
-            nullptr, nullptr, nullptr,
-            "mainVS", "vs_5_0",
-            0, 0,
-            vsBlob.GetAddressOf(),
-            err.GetAddressOf()
-        );
-        if (FAILED(hr))
-        {
-            if (err) { std::cerr << "VS compile error: " << (const char*)err->GetBufferPointer() << "\n"; }
-            return false;
-        }
-
-        err.Reset();
-        hr = D3DCompile(
-            g_PS_HLSL, strlen(g_PS_HLSL),
-            nullptr, nullptr, nullptr,
-            "mainPS", "ps_5_0",
-            0, 0,
-            psBlob.GetAddressOf(),
-            err.GetAddressOf()
-        );
-        if (FAILED(hr))
-        {
-            if (err) { std::cerr << "PS compile error: " << (const char*)err->GetBufferPointer() << "\n"; }
-            return false;
-        }
-
-        // Create shader objects
-        hr = m_device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, m_vs.ReleaseAndGetAddressOf());
-        if (FAILED(hr)) { std::cerr << "CreateVertexShader failed (hr=0x" << std::hex << hr << ")\n"; return false; }
-
-        hr = m_device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, m_ps.ReleaseAndGetAddressOf());
-        if (FAILED(hr)) { std::cerr << "CreatePixelShader failed (hr=0x" << std::hex << hr << ")\n"; return false; }
-
-        // Vertex layout: POSITION (float3) + COLOR (float3)
-        D3D11_INPUT_ELEMENT_DESC layout[] = {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,                 D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, sizeof(float) * 3, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        };
-        hr = m_device->CreateInputLayout(
-            layout, _countof(layout),
-            vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
-            m_inputLayout.ReleaseAndGetAddressOf()
-        );
-        if (FAILED(hr)) { std::cerr << "CreateInputLayout failed (hr=0x" << std::hex << hr << ")\n"; return false; }
-
-        // Create a small vertex buffer in pixel space (world units = pixels)
-        struct Vertex { float pos[3]; float color[3]; };
-        const Vertex verts[3] = {
-            { {  64.0f,  32.0f, 0.0f }, {  1.0f, 1.0f, 1.0f } },
-            { { 128.0f, 160.0f, 0.0f }, {  1.0f, 1.0f, 1.0f } },
-            { {   0.0f, 160.0f, 0.0f }, {  1.0f, 1.0f, 1.0f } },
-        };
-
-        D3D11_BUFFER_DESC bd{};
-        bd.ByteWidth = sizeof(verts);
-        bd.Usage = D3D11_USAGE_IMMUTABLE; // static data
-        bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-
-        D3D11_SUBRESOURCE_DATA srd{};
-        srd.pSysMem = verts;
-
-        hr = m_device->CreateBuffer(&bd, &srd, m_vb.ReleaseAndGetAddressOf());
-        if (FAILED(hr))
-        {
-            std::cerr << "CreateBuffer failed (hr=0x" << std::hex << hr << ")\n";
-            return false;
-        }
-
-        m_vbStride = sizeof(Vertex);
-        m_vbOffset = 0;
-
-        // Triangle list: each 3 vertices form one triangle
-        m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        return true;
-    }
-
-    void RendererD3D11::DrawTriangle()
-    {
-        // Bind pipeline state and vertex buffer, then draw
-        m_context->IASetInputLayout(m_inputLayout.Get());
-        m_context->VSSetShader(m_vs.Get(), nullptr, 0);
-        m_context->PSSetShader(m_ps.Get(), nullptr, 0);
-
-        ID3D11Buffer* vb = m_vb.Get();
-        UINT stride = m_vbStride;
-        UINT offset = m_vbOffset;
-        m_context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-
-        m_context->Draw(3, 0);
-    }
-
-    void RendererD3D11::DestroyTriangle()
-    {
-        m_vb.Reset();
-        m_inputLayout.Reset();
-        m_vs.Reset();
-        m_ps.Reset();
-    }
-
-    // =====================================================
     // PER-FRAME RENDER
     // =====================================================
     void RendererD3D11::BeginFrame()
@@ -311,7 +167,6 @@ float4 mainPS(PSIn i) : SV_Target {
 
             // Update camera constants and draw
             UpdateCameraCB();
-            DrawTriangle();
         }
     }
 
@@ -366,7 +221,6 @@ float4 mainPS(PSIn i) : SV_Target {
     // =====================================================
     void RendererD3D11::Shutdown()
     {
-        DestroyTriangle();
         DestroyRTV();
         m_swapChain.Reset();
         m_context.Reset();
