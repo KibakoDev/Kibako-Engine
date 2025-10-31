@@ -1,4 +1,7 @@
-// Kibako2DEngine/include/KibakoEngine/Renderer/Texture2D.h
+// =====================================================
+// Kibako2DEngine/Renderer/Texture2D.h
+// Simple wrapper for 2D textures loaded with stb_image.
+// =====================================================
 #pragma once
 #include <string>
 #include <wrl/client.h>
@@ -8,7 +11,7 @@ namespace KibakoEngine {
 
     class Texture2D {
     public:
-        // Load from disk. Returns false on failure.
+        // Loads an image from disk and creates a GPU texture
         bool LoadFromFile(ID3D11Device* device, const std::string& path, bool forceRGBA = true);
 
         // Accessors
@@ -16,13 +19,14 @@ namespace KibakoEngine {
         int  Width()  const { return m_w; }
         int  Height() const { return m_h; }
 
-        // Release GPU resources
+        // Frees GPU memory
         void Reset();
 
     private:
-        Microsoft::WRL::ComPtr<ID3D11Texture2D>         m_tex;
+        Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_tex;
         Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_srv;
-        int m_w = 0, m_h = 0;
+        int m_w = 0;
+        int m_h = 0;
     };
 
 }
