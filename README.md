@@ -1,7 +1,7 @@
 # Kibako Engine
 
 > A small C++ engine prototype built from scratch with Direct3D 11.  
-> Focused on learning modern rendering concepts and clean architecture.
+> Focused on learning modern rendering concepts, clean architecture, and practical engine design.
 
 ![status](https://img.shields.io/badge/status-early_development-orange)
 ![lang](https://img.shields.io/badge/C%2B%2B-20-blue)
@@ -11,20 +11,25 @@
 ---
 
 ### Overview
-Kibako Engine is a lightweight graphics framework experimenting with:
-- Low-level Direct3D 11 rendering
-- Basic 2D/3D systems and resource management
-- Simple and transparent design (educational purpose)
+Kibako Engine is an **experimental graphics framework** currently in **very early development**.  
+The goal is to explore engine structure, rendering systems, and resource management in a clear and lightweight way.
 
-This repository serves as a **learning and experimentation ground** for graphics programming and engine architecture in C++.
+This project is built for **learning purposes** and will evolve gradually over time — expect constant changes and experimentation.
 
 ---
 
 ### Current Focus
-- Core renderer setup (device, swap chain, context)
-- Basic sprite rendering pipeline
-- Resource management (textures, shaders)
-- Logging and diagnostics
+- Core Direct3D 11 setup (device, swap chain, context)
+- Basic 2D rendering pipeline
+- Texture and shader management
+- Logging and diagnostics utilities
+
+---
+
+### Development Status
+This project is **not stable** and APIs will change frequently.  
+Many systems are incomplete or placeholder-only.  
+The goal right now is to establish a **solid and understandable foundation** before expanding to more complex rendering features.
 
 ---
 
