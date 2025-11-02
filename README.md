@@ -1,5 +1,12 @@
 <p align="center">
-  <img src="assets/img/KibakoEngine_Logo_Black.png" alt="Kibako Engine Logo" width="180"/>
+  <picture>
+    <!-- Black Logo -->
+    <source media="(prefers-color-scheme: dark)" srcset="assets/img/KibakoEngine_Logo_White.png">
+    <!-- White Logo -->
+    <source media="(prefers-color-scheme: light)" srcset="assets/img/KibakoEngine_Logo_Black.png">
+    <!-- Default (Black) -->
+    <img src="assets/img/KibakoEngine_Logo_Black.png" alt="Kibako Engine Logo" width="180">
+  </picture>
 </p>
 
 <h1 align="center">Kibako Engine</h1>
