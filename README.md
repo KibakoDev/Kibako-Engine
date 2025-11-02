@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="assets/KibakoEngine_Logo_Black.png" alt="Kibako Engine Logo" width="180"/>
-</p>
+<p align="center"> <img src="assets/img/KibakoEngine_Logo_Black.png" alt="Kibako Engine Logo" width="180"/> </p>
 
 <h1 align="center">Kibako Engine</h1>
 
