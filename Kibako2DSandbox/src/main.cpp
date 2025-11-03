@@ -27,7 +27,7 @@ int main()
         // Input-driven camera (optional: keep or remove)
         const float dt = (float)app.TimeSys().DeltaSeconds();
         const float move = 600.0f * dt;
-        if (app.InputSys().KeyDown(SDL_SCANCODE_W)) cam.Move(0.0f, -move);
+        if (app.InputSys().KeyDown(SDL_SCANCODE_W)) cam.Move(0.0f, -move);d
         if (app.InputSys().KeyDown(SDL_SCANCODE_S)) cam.Move(0.0f, move);
         if (app.InputSys().KeyDown(SDL_SCANCODE_A)) cam.Move(-move, 0.0f);
         if (app.InputSys().KeyDown(SDL_SCANCODE_D)) cam.Move(move, 0.0f);
