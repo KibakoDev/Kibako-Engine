@@ -24,6 +24,7 @@
     <ClInclude Include="include\KibakoEngine\Core\Time.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\Camera2D.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\RendererD3D11.h" />
+    <ClInclude Include="include\KibakoEngine\Renderer\SpriteBatch2D.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\SpriteRenderer2D.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\SpriteTypes.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\States2D.h" />
@@ -36,6 +37,7 @@
     <ClCompile Include="src\Core\Time.cpp" />
     <ClCompile Include="src\Renderer\Camera2D.cpp" />
     <ClCompile Include="src\Renderer\RendererD3D11.cpp" />
+    <ClCompile Include="src\Renderer\SpriteBatch2D.cpp" />
     <ClCompile Include="src\Renderer\SpriteRenderer2D.cpp" />
     <ClCompile Include="src\Renderer\States2D.cpp" />
     <ClCompile Include="src\Renderer\Texture2D.cpp" />

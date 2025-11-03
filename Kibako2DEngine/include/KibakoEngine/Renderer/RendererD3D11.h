@@ -7,7 +7,7 @@
 #include <DirectXMath.h>
 
 #include "KibakoEngine/Renderer/Camera2D.h"
-#include "KibakoEngine/Renderer/SpriteRenderer2D.h"
+#include "KibakoEngine/Renderer/SpriteBatch2D.h"   // <-- NEW
 
 namespace KibakoEngine {
 
@@ -26,7 +26,8 @@ namespace KibakoEngine {
 
         Camera2D& Camera() { return m_camera; }
 
-        SpriteRenderer2D& Sprites() { return m_spriteRenderer; }
+        // Expose the sprite batch to the sandbox
+        SpriteBatch2D& Sprites() { return m_spriteBatch; }   // <-- NEW
 
     private:
         bool CreateRTV();
@@ -46,12 +47,12 @@ namespace KibakoEngine {
         int  m_height = 0;
         HWND m_hwnd = nullptr;
 
-        // Camera and constant buffer
+        // Camera + constant buffer
         Camera2D m_camera;
         struct CB_VS_Camera { DirectX::XMFLOAT4X4 ViewProj; };
         ComPtr<ID3D11Buffer> m_cbCamera;
 
-        SpriteRenderer2D m_spriteRenderer;
+        // Sprite batching
+        SpriteBatch2D m_spriteBatch;
     };
-
 }

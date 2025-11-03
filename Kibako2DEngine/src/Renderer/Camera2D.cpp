@@ -8,30 +8,36 @@ using namespace DirectX;
 
 namespace KibakoEngine {
 
-    void Camera2D::RebuildIfNeeded() {
-        if (!m_dirty) return;
+    // Recompute View, Proj, and ViewProj^T if dirty
+    void Camera2D::RebuildMatrices()
+    {
+        // View: rotate then translate (no zoom/scale)
+        XMMATRIX V =
+            XMMatrixRotationZ(-m_rot) *
+            XMMatrixTranslation(-m_pos.x, -m_pos.y, 0.0f);
+
+        // Projection: map virtual space (0..W, 0..H) to clip space
+        // Left-handed, origin at top-left, Y down.
+        float L = 0.0f, T = 0.0f;
+        float R = static_cast<float>(m_virtualW);
+        float B = static_cast<float>(m_virtualH);
+        XMMATRIX P = XMMatrixOrthographicOffCenterLH(L, R, B, T, 0.0f, 1.0f);
+
+        XMMATRIX VP = V * P;
+
+        XMStoreFloat4x4(&m_view, V);
+        XMStoreFloat4x4(&m_proj, P);
+
+        // Transpose for HLSL constant buffer
+        XMMATRIX VP_T = XMMatrixTranspose(VP);
+        XMStoreFloat4x4(&m_viewProjT, VP_T);
+
         m_dirty = false;
-
-        // Build view matrix (inverse of camera transform)
-        XMMATRIX T = XMMatrixTranslation(-m_posX, -m_posY, 0.0f);
-        XMMATRIX R = XMMatrixRotationZ(-m_rot);
-        XMMATRIX S = XMMatrixScaling(1.0f / m_zoom, 1.0f / m_zoom, 1.0f);
-        m_view = S * R * T;
-
-        // Build orthographic projection (Y down)
-        float L = 0.0f;
-        float Rr = static_cast<float>(m_vw);
-        float B = static_cast<float>(m_vh);
-        float Tt = 0.0f;
-        m_proj = XMMatrixOrthographicOffCenterLH(L, Rr, B, Tt, 0.0f, 1.0f);
-
-        // Store transposed ViewProjection for HLSL
-        XMMATRIX vp = m_view * m_proj;
-        XMStoreFloat4x4(&m_viewProjT, XMMatrixTranspose(vp));
     }
 
-    XMFLOAT4X4 Camera2D::GetViewProjT() {
-        RebuildIfNeeded();
+    XMFLOAT4X4 Camera2D::GetViewProjT()
+    {
+        if (m_dirty) RebuildMatrices();
         return m_viewProjT;
     }
 

@@ -1,59 +1,54 @@
-// =====================================================
-// Kibako2DEngine/Core/Input.cpp
-// Handles keyboard, mouse, and text input via SDL2.
-// =====================================================
+// Kibako2DSandbox/src/main.cpp
+#define SDL_MAIN_HANDLED
+#include <SDL2/SDL.h>  // <-- NEW
+#include "KibakoEngine/Core/Application.h"
+#include "KibakoEngine/Renderer/Texture2D.h"
+#include "KibakoEngine/Renderer/SpriteTypes.h"
 
-#include "KibakoEngine/Core/Input.h"
+using namespace KibakoEngine;
 
-namespace KibakoEngine {
-
-    void Input::BeginFrame() {
-        m_wheelX = m_wheelY = 0;
-        m_textChar = 0;
+int main()
+{
+    Application app;
+    if (!app.Init(1280, 720, "Kibako Sandbox")) {
+        return 1;
     }
 
-    void Input::HandleEvent(const SDL_Event& e) {
-        switch (e.type) {
-        case SDL_MOUSEMOTION:
-            m_mouseX = e.motion.x;
-            m_mouseY = e.motion.y;
-            break;
+    Texture2D ship;
+    ship.LoadFromFile(app.Renderer().GetDevice(), "assets/star.png", true);
 
-        case SDL_MOUSEBUTTONDOWN:
-        case SDL_MOUSEBUTTONUP:
-            m_mouseButtons = SDL_GetMouseState(&m_mouseX, &m_mouseY);
-            break;
+    auto& cam = app.Renderer().Camera();
+    cam.SetPosition(0.0f, 0.0f);
 
-        case SDL_MOUSEWHEEL:
-            m_wheelX += e.wheel.x;
-            m_wheelY += e.wheel.y;
-            break;
+    while (app.PumpEvents())
+    {
+        const float dt = (float)app.TimeSys().DeltaSeconds();
+        const float move = 600.0f * dt;
+        if (app.InputSys().KeyDown(SDL_SCANCODE_W)) cam.Move(0.0f, -move);
+        if (app.InputSys().KeyDown(SDL_SCANCODE_S)) cam.Move(0.0f, move);
+        if (app.InputSys().KeyDown(SDL_SCANCODE_A)) cam.Move(-move, 0.0f);
+        if (app.InputSys().KeyDown(SDL_SCANCODE_D)) cam.Move(move, 0.0f);
+        if (app.InputSys().KeyDown(SDL_SCANCODE_Q)) cam.AddRotation(-1.5f * dt);
+        if (app.InputSys().KeyDown(SDL_SCANCODE_E)) cam.AddRotation(1.5f * dt);
+        if (app.InputSys().KeyDown(SDL_SCANCODE_R)) cam.Reset();
 
-        case SDL_TEXTINPUT:
-            m_textChar = static_cast<uint8_t>(e.text.text[0]); // ASCII only
-            break;
+        app.BeginFrame();
 
-        default:
-            break;
-        }
-    }
+        auto& sprites = app.Renderer().Sprites();
+        sprites.Begin(app.Renderer().Camera().GetViewProjT());
 
-    void Input::EndFrame() {
-        // Update previous keyboard state for "pressed" detection
-        if (!m_keys) {
-            m_keys = SDL_GetKeyboardState(nullptr);
-            for (int i = 0; i < SDL_NUM_SCANCODES; ++i)
-                m_prevKeys[i] = m_keys[i];
-            return;
+        if (ship.GetSRV()) {
+            RectF  dst{ 200.0f, 150.0f, (float)ship.Width(), (float)ship.Height() };
+            RectF  src{ 0.0f, 0.0f, 1.0f, 1.0f };
+            Color4 tint = Color4::White();
+            sprites.SetMonochrome(0.0f);
+            sprites.Push(ship, dst, src, tint, 0.0f);  // <-- CHANGEMENT: Push au lieu de DrawSprite
         }
 
-        for (int i = 0; i < SDL_NUM_SCANCODES; ++i)
-            m_prevKeys[i] = m_prevKeysState[i];
-
-        m_keys = SDL_GetKeyboardState(nullptr);
-
-        for (int i = 0; i < SDL_NUM_SCANCODES; ++i)
-            m_prevKeysState[i] = m_keys[i];
+        sprites.End();
+        app.EndFrame();
     }
 
+    app.Shutdown();
+    return 0;
 }
