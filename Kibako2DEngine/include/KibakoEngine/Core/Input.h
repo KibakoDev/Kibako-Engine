@@ -1,47 +1,60 @@
 // =====================================================
 // Kibako2DEngine/Core/Input.h
-// Handles keyboard, mouse, and text input via SDL2.
+// SDL keyboard/mouse input helper (ASCII only).
+// Usage per frame:
+//   input.BeginFrame();
+//   while (SDL_PollEvent(&e)) input.HandleEvent(e);
+//   ... query KeyDown/KeyPressed/Mouse... ...
+//   input.EndFrame();
 // =====================================================
+
 #pragma once
 #include <cstdint>
-#include <SDL2/SDL.h>
+#include <SDL2/SDL.h>  // brings SDL_Event, SDL_Scancode, SDL_BUTTON, SDL_NUM_SCANCODES
 
 namespace KibakoEngine {
 
     class Input {
     public:
-        // Called at the start of each frame to reset transient states
-        void BeginFrame();
+        Input();
 
-        // Handle a single SDL event (keyboard, mouse, etc.)
-        void HandleEvent(const SDL_Event& e);
+        // Frame lifecycle
+        void BeginFrame();                   // reset per-frame deltas (wheel, text), cache current SDL key ptr
+        void HandleEvent(const SDL_Event&);  // feed every SDL event you receive
+        void EndFrame();                     // snapshot current key/mouse states for "Pressed" queries
 
-        // Called at the end of each frame to store previous state
-        void EndFrame();
+        // Keyboard queries
+        bool KeyDown(SDL_Scancode sc) const;     // true while the key is held
+        bool KeyPressed(SDL_Scancode sc) const;  // true only on the transition up->down for this frame
 
-        // Keyboard accessors
-        inline bool KeyDown(SDL_Scancode sc) const { return m_keys && m_keys[sc] != 0; }
-        inline bool KeyPressed(SDL_Scancode sc) const { return m_keys && m_keys[sc] && !m_prevKeys[sc]; }
+        // Mouse button queries (btn is 1..5, use SDL_BUTTON_LEFT, etc.)
+        bool MouseDown(uint8_t btn) const;
+        bool MousePressed(uint8_t btn) const;
 
-        // Mouse accessors
-        inline int MouseX() const { return m_mouseX; }
-        inline int MouseY() const { return m_mouseY; }
-        inline int WheelX() const { return m_wheelX; }
-        inline int WheelY() const { return m_wheelY; }
-        inline bool MouseDown(uint8_t btn) const { return (m_mouseButtons & SDL_BUTTON(btn)) != 0; }
+        // Mouse position / wheel (accumulated deltas per frame)
+        int  MouseX() const;
+        int  MouseY() const;
+        int  WheelX() const;
+        int  WheelY() const;
 
-        // Last typed character (ASCII, or low UTF-32)
-        inline uint32_t TextChar() const { return m_textChar; }
+        // ASCII-only last typed character this frame (0 if none)
+        uint32_t TextChar() const;
 
     private:
-        const uint8_t* m_keys = nullptr;
-        uint8_t  m_prevKeysState[SDL_NUM_SCANCODES] = {};
-        uint8_t  m_prevKeys[SDL_NUM_SCANCODES] = {};
+        // Keyboard
+        const uint8_t* m_keys = nullptr;                    // pointer from SDL_GetKeyboardState()
+        uint8_t        m_prevKeyState[SDL_NUM_SCANCODES]{}; // snapshot from previous frame
+        uint8_t        m_prevKeys[SDL_NUM_SCANCODES]{};     // optional mirror (kept for debugging/consistency)
+
+        // Mouse
         int      m_mouseX = 0;
         int      m_mouseY = 0;
-        uint32_t m_mouseButtons = 0;
-        int      m_wheelX = 0;
-        int      m_wheelY = 0;
+        int      m_wheelX = 0;  // per-frame delta
+        int      m_wheelY = 0;  // per-frame delta
+        uint32_t m_mouseButtons = 0;       // current SDL button bitfield
+        uint32_t m_prevMouseButtons = 0;   // previous-frame copy
+
+        // Text (ASCII only, first printable byte this frame)
         uint32_t m_textChar = 0;
     };
 

@@ -1,54 +1,126 @@
-// Kibako2DSandbox/src/main.cpp
-#define SDL_MAIN_HANDLED
-#include <SDL2/SDL.h>  // <-- NEW
-#include "KibakoEngine/Core/Application.h"
-#include "KibakoEngine/Renderer/Texture2D.h"
-#include "KibakoEngine/Renderer/SpriteTypes.h"
+// =====================================================
+// Kibako2DEngine/Core/Input.cpp
+// SDL keyboard/mouse input helper (ASCII only).
+// - Call BeginFrame() at the start of the frame
+// - Feed every SDL_Event to HandleEvent()
+// - Call EndFrame() after you've processed events
+// =====================================================
 
-using namespace KibakoEngine;
+#include "KibakoEngine/Core/Input.h"
+#include <SDL2/SDL.h>
+#include <cstring>   // memcpy
+#include <cstdint>
 
-int main()
-{
-    Application app;
-    if (!app.Init(1280, 720, "Kibako Sandbox")) {
-        return 1;
-    }
+namespace KibakoEngine {
 
-    Texture2D ship;
-    ship.LoadFromFile(app.Renderer().GetDevice(), "assets/star.png", true);
-
-    auto& cam = app.Renderer().Camera();
-    cam.SetPosition(0.0f, 0.0f);
-
-    while (app.PumpEvents())
+    Input::Input()
     {
-        const float dt = (float)app.TimeSys().DeltaSeconds();
-        const float move = 600.0f * dt;
-        if (app.InputSys().KeyDown(SDL_SCANCODE_W)) cam.Move(0.0f, -move);
-        if (app.InputSys().KeyDown(SDL_SCANCODE_S)) cam.Move(0.0f, move);
-        if (app.InputSys().KeyDown(SDL_SCANCODE_A)) cam.Move(-move, 0.0f);
-        if (app.InputSys().KeyDown(SDL_SCANCODE_D)) cam.Move(move, 0.0f);
-        if (app.InputSys().KeyDown(SDL_SCANCODE_Q)) cam.AddRotation(-1.5f * dt);
-        if (app.InputSys().KeyDown(SDL_SCANCODE_E)) cam.AddRotation(1.5f * dt);
-        if (app.InputSys().KeyDown(SDL_SCANCODE_R)) cam.Reset();
+        // SDL returns a persistent pointer to its internal keyboard state.
+        // It becomes valid after the first PumpEvents / PollEvent.
+        m_keys = SDL_GetKeyboardState(nullptr);
 
-        app.BeginFrame();
-
-        auto& sprites = app.Renderer().Sprites();
-        sprites.Begin(app.Renderer().Camera().GetViewProjT());
-
-        if (ship.GetSRV()) {
-            RectF  dst{ 200.0f, 150.0f, (float)ship.Width(), (float)ship.Height() };
-            RectF  src{ 0.0f, 0.0f, 1.0f, 1.0f };
-            Color4 tint = Color4::White();
-            sprites.SetMonochrome(0.0f);
-            sprites.Push(ship, dst, src, tint, 0.0f);  // <-- CHANGEMENT: Push au lieu de DrawSprite
-        }
-
-        sprites.End();
-        app.EndFrame();
+        std::memset(m_prevKeyState, 0, sizeof(m_prevKeyState));
+        std::memset(m_prevKeys, 0, sizeof(m_prevKeys)); // optional mirror
+        m_mouseX = m_mouseY = 0;
+        m_wheelX = m_wheelY = 0;
+        m_mouseButtons = 0;
+        m_prevMouseButtons = 0;
+        m_textChar = 0;
     }
 
-    app.Shutdown();
-    return 0;
+    void Input::BeginFrame()
+    {
+        // Clear per-frame deltas
+        m_wheelX = 0;
+        m_wheelY = 0;
+        m_textChar = 0;
+
+        // Snapshot mouse buttons for "Pressed" detection
+        m_prevMouseButtons = m_mouseButtons;
+
+        // Cache the pointer (SDL returns the same pointer each time, but
+        // we re-fetch for clarity).
+        m_keys = SDL_GetKeyboardState(nullptr);
+    }
+
+    void Input::HandleEvent(const SDL_Event& e)
+    {
+        switch (e.type)
+        {
+        case SDL_MOUSEMOTION:
+            m_mouseX = e.motion.x;
+            m_mouseY = e.motion.y;
+            break;
+
+        case SDL_MOUSEWHEEL:
+            // SDL mouse wheel is small ints; accumulate for this frame
+            // Note: if you need natural/inverted, flip the sign here.
+            m_wheelX += e.wheel.x;
+            m_wheelY += e.wheel.y;
+            break;
+
+        case SDL_MOUSEBUTTONDOWN:
+            m_mouseButtons |= SDL_BUTTON(e.button.button);
+            break;
+
+        case SDL_MOUSEBUTTONUP:
+            m_mouseButtons &= ~SDL_BUTTON(e.button.button);
+            break;
+
+        case SDL_TEXTINPUT:
+            // ASCII only (no Unicode like requested). Grab first byte if printable.
+            if (e.text.text[0] >= 32 && e.text.text[0] <= 126)
+                m_textChar = static_cast<uint32_t>(static_cast<unsigned char>(e.text.text[0]));
+            break;
+
+            // Keyboard: we rely on SDL_GetKeyboardState(), which gets updated by PollEvent/PumpEvents.
+            // No per-key bookkeeping needed here.
+        default:
+            break;
+        }
+    }
+
+    void Input::EndFrame()
+    {
+        // Take a snapshot of the current keyboard state for "KeyPressed" next frame.
+        // SDL_NUM_SCANCODES is the maximum; SDL guarantees m_keys has that many bytes.
+        std::memcpy(m_prevKeyState, m_keys, SDL_NUM_SCANCODES);
+
+        // (Optional) keep a copy in m_prevKeys if your header exposes it.
+        std::memcpy(m_prevKeys, m_keys, SDL_NUM_SCANCODES);
+    }
+
+    // ----------------------
+    // Convenience getters
+    // ----------------------
+    bool Input::KeyDown(SDL_Scancode sc) const
+    {
+        return m_keys && m_keys[sc] != 0;
+    }
+
+    bool Input::KeyPressed(SDL_Scancode sc) const
+    {
+        // true if currently down but was up last frame
+        const uint8_t now = m_keys ? m_keys[sc] : 0;
+        const uint8_t prev = m_prevKeyState[sc];
+        return (now != 0) && (prev == 0);
+    }
+
+    bool Input::MouseDown(uint8_t btn) const
+    {
+        return (m_mouseButtons & SDL_BUTTON(btn)) != 0;
+    }
+
+    bool Input::MousePressed(uint8_t btn) const
+    {
+        const uint32_t mask = SDL_BUTTON(btn);
+        return ((m_mouseButtons & mask) != 0) && ((m_prevMouseButtons & mask) == 0);
+    }
+
+    int Input::MouseX() const { return m_mouseX; }
+    int Input::MouseY() const { return m_mouseY; }
+    int Input::WheelX() const { return m_wheelX; }
+    int Input::WheelY() const { return m_wheelY; }
+    uint32_t Input::TextChar() const { return m_textChar; }
+
 }

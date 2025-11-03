@@ -38,7 +38,7 @@ int main()
         // Render
         app.BeginFrame();
 
-        auto& sprites = app.Renderer().Sprites();
+        auto& sprites = app.Renderer().Batch();
         sprites.Begin(app.Renderer().Camera().GetViewProjT());
 
         if (ship.GetSRV()) {
@@ -46,7 +46,7 @@ int main()
             RectF  src{ 0.0f, 0.0f, 1.0f, 1.0f };
             Color4 tint = Color4::White();
             sprites.SetMonochrome(0.0f);
-            sprites.DrawSprite(ship, dst, src, tint, 0.0f);
+            sprites.Push(ship, dst, src, tint, 0.0f);
         }
 
         sprites.End();
