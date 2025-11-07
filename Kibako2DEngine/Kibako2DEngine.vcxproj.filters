@@ -41,6 +41,12 @@
     <ClInclude Include="include\KibakoEngine\Renderer\SpriteBatch2D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\KibakoEngine\Core\Debug.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\KibakoEngine\Core\Log.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp">

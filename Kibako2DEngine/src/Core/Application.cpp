@@ -1,7 +1,8 @@
 // =====================================================
 // Kibako2DEngine/Core/Application.cpp
 // SDL window + event pump + D3D11 renderer hooks.
-// The sandbox owns the main loop and content.
+// Sandbox owns the main loop; Application is the shell.
+// Debug-ready: logs and asserts sprinkled at key points.
 // =====================================================
 
 #define WIN32_LEAN_AND_MEAN
@@ -14,13 +15,15 @@
 #include <SDL2/SDL_syswm.h>
 
 #include "KibakoEngine/Core/Application.h"
+#include "KibakoEngine/Core/Debug.h"
+#include "KibakoEngine/Core/Log.h"
 
 namespace KibakoEngine {
 
-    // -------------------------------------------------
-    // Window creation / teardown
-    // -------------------------------------------------
-    bool Application::CreateWindowSDL(int width, int height, const char* title)
+    // -----------------------
+    // Window creation / tear
+    // -----------------------
+    bool Application::CreateWindowSDL(int w, int h, const char* title)
     {
         SDL_SetMainReady();
         if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -28,10 +31,12 @@ namespace KibakoEngine {
             return false;
         }
 
+        KbkLog("App", "Creating window %dx%d: %s", w, h, title);
+
         m_window = SDL_CreateWindow(
             title,
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-            width, height,
+            w, h,
             SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE /* | SDL_WINDOW_ALLOW_HIGHDPI */
         );
         if (!m_window) {
@@ -40,17 +45,18 @@ namespace KibakoEngine {
             return false;
         }
 
-        // Extract HWND for D3D
         SDL_SysWMinfo wminfo{};
         SDL_VERSION(&wminfo.version);
         if (!SDL_GetWindowWMInfo(m_window, &wminfo)) {
             std::cerr << "SDL_GetWindowWMInfo failed\n";
             return false;
         }
-        m_hwnd = wminfo.info.win.window;
 
-        m_width = width;
-        m_height = height;
+        m_hwnd = wminfo.info.win.window;
+        KBK_ASSERT(m_hwnd != nullptr, "HWND is null after SDL_GetWindowWMInfo");
+
+        m_width = w;
+        m_height = h;
         return true;
     }
 
@@ -61,58 +67,68 @@ namespace KibakoEngine {
             m_window = nullptr;
         }
         SDL_Quit();
+        KbkLog("App", "SDL shutdown complete");
     }
 
-    // -------------------------------------------------
+    // -----------------------
     // Resize handling
-    // -------------------------------------------------
+    // -----------------------
     void Application::OnResize(int /*newWidth*/, int /*newHeight*/)
     {
-        // Ask SDL for the true drawable size (handles DPI scaling)
+        // Query true drawable size (handles DPI scaling)
         int pxW = 0, pxH = 0;
         SDL_GetWindowSizeInPixels(m_window, &pxW, &pxH);
-        if (pxW <= 0 || pxH <= 0) return; // minimized
+        if (pxW <= 0 || pxH <= 0) return; // minimized / invalid
 
         m_width = pxW;
         m_height = pxH;
 
-        // Propagate to renderer (swapchain, viewport, camera virtual size…)
+        KbkLog("App", "Resize -> %dx%d (drawable px)", m_width, m_height);
+
+        // Notify renderer (resize swapchain, viewport, etc.)
         m_renderer.OnResize(m_width, m_height);
     }
 
-    // -------------------------------------------------
-    // Lifecycle
-    // -------------------------------------------------
+    // -----------------------
+    // Init / Shutdown
+    // -----------------------
     bool Application::Init(int width, int height, const char* title)
     {
         if (m_running) return true;
+
+        KbkLog("App", "Init start");
 
         // 1) Window
         if (!CreateWindowSDL(width, height, title))
             return false;
 
-        // 2) True pixel size (in case of DPI scaling)
+        // 2) True pixel size (DPI)
         SDL_GetWindowSizeInPixels(m_window, &m_width, &m_height);
+        KbkLog("App", "Pixel size (DPI-aware): %dx%d", m_width, m_height);
 
-        // 3) Renderer (D3D11 device, swapchain, camera, sprite systems)
+        // 3) D3D11 renderer
+        KBK_ASSERT(m_hwnd != nullptr, "Init without a valid HWND");
         if (!m_renderer.Init(m_hwnd, m_width, m_height))
             return false;
 
         m_running = true;
+        KbkLog("App", "Init done");
         return true;
     }
 
     void Application::Shutdown()
     {
         if (!m_running) return;
+
+        KbkLog("App", "Shutdown");
         m_renderer.Shutdown();
         DestroyWindowSDL();
         m_running = false;
     }
 
-    // -------------------------------------------------
+    // -----------------------
     // Frame control
-    // -------------------------------------------------
+    // -----------------------
     bool Application::PumpEvents()
     {
         if (!m_running) return false;
@@ -123,12 +139,16 @@ namespace KibakoEngine {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
+
             case SDL_QUIT:
+                KbkLog("App", "Quit requested (SDL_QUIT)");
                 return false;
 
             case SDL_KEYDOWN:
-                if (e.key.keysym.sym == SDLK_ESCAPE)
+                if (e.key.keysym.sym == SDLK_ESCAPE) {
+                    KbkLog("App", "Quit requested (ESC)");
                     return false;
+                }
                 break;
 
             case SDL_WINDOWEVENT:
@@ -150,7 +170,7 @@ namespace KibakoEngine {
                 break;
             }
 
-            // Forward to input abstraction
+            // Forward to input system
             m_input.HandleEvent(e);
         }
 
@@ -159,15 +179,17 @@ namespace KibakoEngine {
 
     void Application::BeginFrame()
     {
+        // Renderer write begins
         m_renderer.BeginFrame();
     }
 
     void Application::EndFrame()
     {
+        // Present + input frame end
         m_renderer.EndFrame();
         m_input.EndFrame();
 
-        // Tiny FPS print every ~0.5s (handy during bring-up)
+        // Optional tiny FPS print each ~0.5s
         static double acc = 0.0;
         acc += m_time.DeltaSeconds();
         if (acc > 0.5) {
@@ -175,4 +197,5 @@ namespace KibakoEngine {
             acc = 0.0;
         }
     }
+
 }

@@ -1,55 +1,147 @@
 // Kibako2DSandbox/src/main.cpp
 #define SDL_MAIN_HANDLED
+#define NOMINMAX
+#include <SDL2/SDL.h>
+
 #include "KibakoEngine/Core/Application.h"
 #include "KibakoEngine/Renderer/Texture2D.h"
 #include "KibakoEngine/Renderer/SpriteTypes.h"
 
+#include <vector>
+#include <algorithm>
+#include <cstdlib>
+#include <ctime>
+
+// Petit struct jeu: vaisseau + obstacles
+struct Asteroid {
+    KibakoEngine::RectF rect;
+    float speed;
+    float rotation;
+};
+
 using namespace KibakoEngine;
 
-int main()
-{
+int main() {
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
     Application app;
-    if (!app.Init(1280, 720, "Kibako Sandbox")) {
+    if (!app.Init(1280, 720, "KibakoEngine - Sandbox")) {
         return 1;
     }
 
-    // Example game-side resources
-    Texture2D ship;
-    ship.LoadFromFile(app.Renderer().GetDevice(), "assets/star.png", true);
+    // Textures (réutilise star.png si tu n’as pas d’asteroid.png)
+    Texture2D texShip;
+    Texture2D texAst;
+    texShip.LoadFromFile(app.Renderer().GetDevice(), "assets/star.png", true);
+    // essaie de charger une autre texture, sinon retombe sur la même
+    if (!texAst.LoadFromFile(app.Renderer().GetDevice(), "assets/asteroid.png", true)) {
+        texAst = texShip;
+    }
 
-    // Simple camera setup
+    // Monde / caméra: fixe
+    const int winW = 1280;
+    const int winH = 720;
     auto& cam = app.Renderer().Camera();
-    cam.SetPosition(0.0f, 0.0f);
+    cam.SetPosition(0.0f, 0.0f);     // origine haut-gauche (selon ton Camera2D)
+    cam.SetRotation(0.0f);           // pas de rotation
 
-    // Main loop driven by Sandbox
-    while (app.PumpEvents())
-    {
-        // Input-driven camera (optional: keep or remove)
+    // Vaisseau: centré verticalement, 10% du bord gauche
+    RectF ship{
+        winW * 0.10f,
+        winH * 0.5f - texShip.Height() * 0.5f,
+        (float)texShip.Width(),
+        (float)texShip.Height()
+    };
+    const float shipSpeed = 450.0f; // px/s
+
+    // Astéroïdes
+    std::vector<Asteroid> asts;
+    float spawnTimer = 0.0f;
+    const float autoSpawnEvery = 0.6f; // s
+
+    // Rendu batch: pixels nets
+    auto& batch = app.Renderer().Batch();
+    batch.SetPointSampling(true);
+    batch.SetPixelSnap(true);
+    batch.SetMonochrome(0.0f);
+
+    while (app.PumpEvents()) {
         const float dt = (float)app.TimeSys().DeltaSeconds();
-        const float move = 600.0f * dt;
-        if (app.InputSys().KeyDown(SDL_SCANCODE_W)) cam.Move(0.0f, -move);d
-        if (app.InputSys().KeyDown(SDL_SCANCODE_S)) cam.Move(0.0f, move);
-        if (app.InputSys().KeyDown(SDL_SCANCODE_A)) cam.Move(-move, 0.0f);
-        if (app.InputSys().KeyDown(SDL_SCANCODE_D)) cam.Move(move, 0.0f);
-        if (app.InputSys().KeyDown(SDL_SCANCODE_Q)) cam.AddRotation(-1.5f * dt);
-        if (app.InputSys().KeyDown(SDL_SCANCODE_E)) cam.AddRotation(1.5f * dt);
-        if (app.InputSys().KeyDown(SDL_SCANCODE_R)) cam.Reset();
 
-        // Render
-        app.BeginFrame();
+        // ---- Input vaisseau: W/S ou flèches haut/bas ----
+        float dy = 0.0f;
+        if (app.InputSys().KeyDown(SDL_SCANCODE_W) || app.InputSys().KeyDown(SDL_SCANCODE_UP))   dy -= shipSpeed * dt;
+        if (app.InputSys().KeyDown(SDL_SCANCODE_S) || app.InputSys().KeyDown(SDL_SCANCODE_DOWN)) dy += shipSpeed * dt;
 
-        auto& sprites = app.Renderer().Batch();
-        sprites.Begin(app.Renderer().Camera().GetViewProjT());
+        ship.y = std::clamp(ship.y + dy, 0.0f, (float)winH - ship.h);
 
-        if (ship.GetSRV()) {
-            RectF  dst{ 200.0f, 150.0f, (float)ship.Width(), (float)ship.Height() };
-            RectF  src{ 0.0f, 0.0f, 1.0f, 1.0f };
-            Color4 tint = Color4::White();
-            sprites.SetMonochrome(0.0f);
-            sprites.Push(ship, dst, src, tint, 0.0f);
+        // ---- Spawn astéroïdes ----
+        spawnTimer += dt;
+        auto spawnOne = [&]() {
+            const float h = (float)texAst.Height();
+            const float w = (float)texAst.Width();
+            // position X au bord droit, Y random (marge pour éviter bord)
+            float y = (float)(20 + std::rand() % (winH - 40));
+            float speed = 220.0f + (std::rand() % 180); // 220..400 px/s
+            float rot = ((std::rand() % 100) / 100.0f) * 0.4f - 0.2f; // -0.2..0.2 rad/s
+            asts.push_back({ RectF{ (float)winW + w, y - h * 0.5f, w, h }, speed, rot });
+            };
+
+        if (spawnTimer >= autoSpawnEvery) {
+            spawnTimer = 0.0f;
+            spawnOne();
+        }
+        if (app.InputSys().KeyPressed(SDL_SCANCODE_SPACE)) {
+            // spawn manuel: petit burst
+            for (int i = 0; i < 3; ++i) spawnOne();
         }
 
-        sprites.End();
+        // ---- Update astéroïdes ----
+        for (auto& a : asts) {
+            a.rect.x -= a.speed * dt;
+            // Option: légère rotation visuelle (si tu veux)
+            a.rotation += 0.6f * dt;
+        }
+        // purge hors-écran
+        asts.erase(
+            std::remove_if(asts.begin(), asts.end(),
+                [&](const Asteroid& a) { return a.rect.x + a.rect.w < -100.0f; }),
+            asts.end()
+        );
+
+        // ---- (Option) Collision AABB simple pour test ----
+        // juste un print console si contact
+        for (auto& a : asts) {
+            bool overlap =
+                ship.x < a.rect.x + a.rect.w && ship.x + ship.w > a.rect.x &&
+                ship.y < a.rect.y + a.rect.h && ship.y + ship.h > a.rect.y;
+            if (overlap) {
+                // pas de game-over ici, juste un ping (évite flood en vrai)
+                // printf("HIT!\n");
+                break;
+            }
+        }
+
+        // ---- Render ----
+        app.BeginFrame();
+
+        batch.Begin(app.Renderer().Camera().GetViewProjT());
+
+        // draw ship (layer 10 pour être devant si tu veux empiler plus tard)
+        if (texShip.GetSRV()) {
+            RectF src{ 0,0,1,1 };
+            batch.Push(texShip, ship, src, Color4::White(), 0.0f, 10);
+        }
+
+        // draw asteroids (layer 0)
+        if (texAst.GetSRV()) {
+            RectF src{ 0,0,1,1 };
+            for (auto& a : asts) {
+                batch.Push(texAst, a.rect, src, Color4::White(), a.rotation, 0);
+            }
+        }
+
+        batch.End();
         app.EndFrame();
     }
 
