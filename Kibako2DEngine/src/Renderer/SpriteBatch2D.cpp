@@ -43,12 +43,10 @@ namespace KibakoEngine {
         m_vertexBuffer.Reset();
         m_indexBuffer.Reset();
         m_cbVS.Reset();
-        m_cbPS.Reset();
         m_vs.Reset();
         m_ps.Reset();
         m_inputLayout.Reset();
         m_samplerPoint.Reset();
-        m_samplerLinear.Reset();
         m_blendAlpha.Reset();
         m_depthDisabled.Reset();
         m_rasterCullNone.Reset();
@@ -93,7 +91,6 @@ namespace KibakoEngine {
             return;
 
         UpdateVSConstants();
-        UpdatePSConstants();
 
         std::vector<Vertex> vertices;
         vertices.reserve(spriteCount * 4);
@@ -118,8 +115,6 @@ namespace KibakoEngine {
 
         ID3D11Buffer* cbs[] = { m_cbVS.Get() };
         m_context->VSSetConstantBuffers(0, 1, cbs);
-        ID3D11Buffer* cbp[] = { m_cbPS.Get() };
-        m_context->PSSetConstantBuffers(0, 1, cbp);
 
         m_context->VSSetShader(m_vs.Get(), nullptr, 0);
         m_context->PSSetShader(m_ps.Get(), nullptr, 0);
@@ -129,7 +124,7 @@ namespace KibakoEngine {
         m_context->OMSetDepthStencilState(m_depthDisabled.Get(), 0);
         m_context->RSSetState(m_rasterCullNone.Get());
 
-        ID3D11SamplerState* sampler = m_pointSampling ? m_samplerPoint.Get() : m_samplerLinear.Get();
+        ID3D11SamplerState* sampler = m_samplerPoint.Get();
         m_context->PSSetSamplers(0, 1, &sampler);
 
         size_t start = 0;
@@ -212,18 +207,10 @@ VSOutput main(VSInput input)
 Texture2D gTexture : register(t0);
 SamplerState gSampler : register(s0);
 
-cbuffer CB_PS : register(b0)
-{
-    float gMonochrome;
-    float3 _Pad;
-};
-
 float4 main(float4 position : SV_Position, float2 texcoord : TEXCOORD0, float4 color : COLOR0) : SV_Target
 {
     float4 texColor = gTexture.Sample(gSampler, texcoord);
-    float luminance = dot(texColor.rgb, float3(0.299f, 0.587f, 0.114f));
-    float3 finalRgb = lerp(texColor.rgb, luminance.xxx, saturate(gMonochrome));
-    return float4(finalRgb * color.rgb, texColor.a * color.a);
+    return float4(texColor.rgb * color.rgb, texColor.a * color.a);
 }
 )";
 
@@ -277,12 +264,6 @@ float4 main(float4 position : SV_Position, float2 texcoord : TEXCOORD0, float4 c
         if (FAILED(hr))
             return false;
 
-        cbd.ByteWidth = sizeof(CBPS);
-        hr = device->CreateBuffer(&cbd, nullptr, m_cbPS.GetAddressOf());
-        KBK_HR(hr);
-        if (FAILED(hr))
-            return false;
-
         return true;
     }
 
@@ -296,12 +277,6 @@ float4 main(float4 position : SV_Position, float2 texcoord : TEXCOORD0, float4 c
 
         samp.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
         HRESULT hr = device->CreateSamplerState(&samp, m_samplerPoint.GetAddressOf());
-        KBK_HR(hr);
-        if (FAILED(hr))
-            return false;
-
-        samp.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-        hr = device->CreateSamplerState(&samp, m_samplerLinear.GetAddressOf());
         KBK_HR(hr);
         if (FAILED(hr))
             return false;
@@ -418,18 +393,6 @@ float4 main(float4 position : SV_Position, float2 texcoord : TEXCOORD0, float4 c
         auto* cb = static_cast<CBVS*>(mapped.pData);
         cb->viewProjT = m_viewProjT;
         m_context->Unmap(m_cbVS.Get(), 0);
-    }
-
-    void SpriteBatch2D::UpdatePSConstants()
-    {
-        D3D11_MAPPED_SUBRESOURCE mapped{};
-        HRESULT hr = m_context->Map(m_cbPS.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-        KBK_HR(hr);
-        if (FAILED(hr))
-            return;
-        auto* cb = static_cast<CBPS*>(mapped.pData);
-        cb->monochrome = m_monochrome;
-        m_context->Unmap(m_cbPS.Get(), 0);
     }
 
     void SpriteBatch2D::BuildVertices(std::vector<Vertex>& outVertices) const

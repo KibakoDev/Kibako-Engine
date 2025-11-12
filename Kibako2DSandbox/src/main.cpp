@@ -52,20 +52,9 @@ int main()
     const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
     while (app.PumpEvents()) {
-        if (app.InputSys().KeyPressed(SDL_SCANCODE_M)) {
-            monochrome = !monochrome;
-            KbkLog("Sandbox", "Monochrome %s", monochrome ? "ON" : "OFF");
-        }
-        if (app.InputSys().KeyPressed(SDL_SCANCODE_P)) {
-            pointSampling = !pointSampling;
-            KbkLog("Sandbox", "Point sampling %s", pointSampling ? "ON" : "OFF");
-        }
-
         app.BeginFrame(clearColor);
 
         auto& batch = renderer.Batch();
-        batch.SetMonochrome(monochrome ? 1.0f : 0.0f);
-        batch.SetPointSampling(pointSampling);
         batch.SetPixelSnap(true);
         batch.Begin(renderer.Camera().GetViewProjectionT());
 
