@@ -194,7 +194,7 @@ namespace KibakoEngine {
     void RendererD3D11::Shutdown()
     {
         KbkLog("Renderer", "Shutdown");
-        m_batch.Shutdown();   // <-- shutdown du batch
+        m_batch.Shutdown();
         DestroyRTV();
         m_swapChain.Reset();
         m_context.Reset();

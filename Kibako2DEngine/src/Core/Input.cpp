@@ -84,7 +84,10 @@ namespace KibakoEngine {
         // Take a snapshot of the current keyboard state for "KeyPressed" next frame.
         // SDL_NUM_SCANCODES is the maximum; SDL guarantees m_keys has that many bytes.
         std::memcpy(m_prevKeyState, m_keys, SDL_NUM_SCANCODES);
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
     }
 
     // ----------------------

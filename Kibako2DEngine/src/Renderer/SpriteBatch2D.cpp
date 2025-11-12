@@ -84,7 +84,11 @@ namespace KibakoEngine {
 
         m_queue.erase(std::remove_if(m_queue.begin(), m_queue.end(), [](const DrawCmd& cmd) {
             return cmd.tex == nullptr || cmd.tex->GetSRV() == nullptr;
+<<<<<<< Updated upstream
         }), m_queue.end());
+=======
+            }), m_queue.end());
+>>>>>>> Stashed changes
         if (m_queue.empty()) return;
 
         std::stable_sort(m_queue.begin(), m_queue.end(), [](const DrawCmd& a, const DrawCmd& b) {
@@ -93,7 +97,11 @@ namespace KibakoEngine {
             if (srvA == srvB)
                 return a.layer < b.layer;
             return srvA < srvB;
+<<<<<<< Updated upstream
         });
+=======
+            });
+>>>>>>> Stashed changes
 
         UpdateVSConstants();
         UpdatePSConstants();
@@ -138,6 +146,10 @@ namespace KibakoEngine {
                 ++end;
             }
 
+<<<<<<< Updated upstream
+=======
+            // capacité en sprites
+>>>>>>> Stashed changes
             const size_t bucketCount = end - start;
             if (!EnsureVB(bucketCount)) return;
             if (!EnsureIB(bucketCount)) return;
@@ -161,6 +173,10 @@ namespace KibakoEngine {
 
             m_context->PSSetShaderResources(0, 1, &srv);
 
+<<<<<<< Updated upstream
+=======
+            // draw
+>>>>>>> Stashed changes
             const UINT indexCount = static_cast<UINT>(bucketCount * 6);
             m_context->DrawIndexed(indexCount, 0, 0);
             totalSprites += bucketCount;

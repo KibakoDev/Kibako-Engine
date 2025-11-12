@@ -70,7 +70,7 @@ namespace KibakoEngine {
 
         void UpdateVSConstants();
         void UpdatePSConstants();
-        void BuildVertsForBucket(const std::vector<DrawCmd*>& bucket,
+        void BuildVertsForRange(const DrawCmd* cmds, size_t count,
             std::vector<Vertex>& outVerts);
 
     private:
