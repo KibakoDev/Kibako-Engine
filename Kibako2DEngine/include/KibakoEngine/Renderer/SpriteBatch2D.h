@@ -20,9 +20,7 @@ namespace KibakoEngine {
         void Begin(const DirectX::XMFLOAT4X4& viewProjT);
         void End();
 
-        void SetPointSampling(bool enabled) { m_pointSampling = enabled; }
         void SetPixelSnap(bool enabled) { m_pixelSnap = enabled; }
-        void SetMonochrome(float amount) { m_monochrome = amount; }
 
         void Push(const Texture2D& texture,
                   const RectF& dst,
@@ -51,17 +49,11 @@ namespace KibakoEngine {
             DirectX::XMFLOAT4X4 viewProjT;
         };
 
-        struct CBPS {
-            float monochrome = 0.0f;
-            float padding[3]{};
-        };
-
         bool CreateShaders(ID3D11Device* device);
         bool CreateStates(ID3D11Device* device);
         bool EnsureVertexCapacity(size_t spriteCount);
         bool EnsureIndexCapacity(size_t spriteCount);
         void UpdateVSConstants();
-        void UpdatePSConstants();
         void BuildVertices(std::vector<Vertex>& outVertices) const;
 
         ID3D11Device*        m_device = nullptr;
@@ -73,9 +65,7 @@ namespace KibakoEngine {
         Microsoft::WRL::ComPtr<ID3D11Buffer>       m_vertexBuffer;
         Microsoft::WRL::ComPtr<ID3D11Buffer>       m_indexBuffer;
         Microsoft::WRL::ComPtr<ID3D11Buffer>       m_cbVS;
-        Microsoft::WRL::ComPtr<ID3D11Buffer>       m_cbPS;
         Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerPoint;
-        Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerLinear;
         Microsoft::WRL::ComPtr<ID3D11BlendState>   m_blendAlpha;
         Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_depthDisabled;
         Microsoft::WRL::ComPtr<ID3D11RasterizerState>   m_rasterCullNone;
@@ -86,8 +76,6 @@ namespace KibakoEngine {
         DirectX::XMFLOAT4X4 m_viewProjT{};
         size_t m_vertexCapacitySprites = 0;
         size_t m_indexCapacitySprites = 0;
-        float  m_monochrome = 0.0f;
-        bool   m_pointSampling = true;
         bool   m_pixelSnap = true;
         bool   m_isDrawing = false;
     };

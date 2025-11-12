@@ -46,26 +46,12 @@ int main()
     RectF dstStar3{ 520.0f, 100.0f, static_cast<float>(texStar.Width()), static_cast<float>(texStar.Height()) };
     const RectF uvFull{ 0.0f, 0.0f, 1.0f, 1.0f };
 
-    bool monochrome = false;
-    bool pointSampling = true;
-
     const float clearColor[4] = { 0.05f, 0.06f, 0.08f, 1.0f };
 
     while (app.PumpEvents()) {
-        if (app.InputSys().KeyPressed(SDL_SCANCODE_M)) {
-            monochrome = !monochrome;
-            KbkLog("Sandbox", "Monochrome %s", monochrome ? "ON" : "OFF");
-        }
-        if (app.InputSys().KeyPressed(SDL_SCANCODE_P)) {
-            pointSampling = !pointSampling;
-            KbkLog("Sandbox", "Point sampling %s", pointSampling ? "ON" : "OFF");
-        }
-
         app.BeginFrame(clearColor);
 
         auto& batch = renderer.Batch();
-        batch.SetMonochrome(monochrome ? 1.0f : 0.0f);
-        batch.SetPointSampling(pointSampling);
         batch.SetPixelSnap(true);
         batch.Begin(renderer.Camera().GetViewProjectionT());
 
