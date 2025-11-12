@@ -1,5 +1,10 @@
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
+
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #define SDL_MAIN_HANDLED
 
 #include "KibakoEngine/Core/Application.h"
