@@ -8,7 +8,7 @@ namespace KibakoEngine {
     Input::Input()
     {
         m_keyboard = nullptr;
-        std::fill(m_prevKeyboard.begin(), m_prevKeyboard.end(), 0);
+        std::fill(m_prevKeyboard.begin(), m_prevKeyboard.end(), static_cast<uint8_t>(0));
     }
 
     void Input::BeginFrame()
