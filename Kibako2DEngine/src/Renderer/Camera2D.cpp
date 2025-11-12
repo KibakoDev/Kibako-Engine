@@ -1,44 +1,56 @@
-// =====================================================
-// Kibako2DEngine/Renderer/Camera2D.cpp
-// Builds the 2D orthographic view-projection matrix.
-// =====================================================
-
 #include "KibakoEngine/Renderer/Camera2D.h"
+
 using namespace DirectX;
 
 namespace KibakoEngine {
 
-    // Recompute View, Proj, and ViewProj^T if dirty
-    void Camera2D::RebuildMatrices()
+    void Camera2D::SetViewport(float width, float height)
     {
-        // View: rotate then translate (no zoom/scale)
-        XMMATRIX V =
-            XMMatrixRotationZ(-m_rot) *
-            XMMatrixTranslation(-m_pos.x, -m_pos.y, 0.0f);
+        if (width <= 0.0f) width = 1.0f;
+        if (height <= 0.0f) height = 1.0f;
+        if (width != m_viewWidth || height != m_viewHeight) {
+            m_viewWidth = width;
+            m_viewHeight = height;
+            m_dirty = true;
+            UpdateMatrix();
+        }
+    }
 
-        // Projection: map virtual space (0..W, 0..H) to clip space
-        // Left-handed, origin at top-left, Y down.
-        float L = 0.0f, T = 0.0f;
-        float R = static_cast<float>(m_virtualW);
-        float B = static_cast<float>(m_virtualH);
-        XMMATRIX P = XMMatrixOrthographicOffCenterLH(L, R, B, T, 0.0f, 1.0f);
+    void Camera2D::SetPosition(float x, float y)
+    {
+        if (x != m_positionX || y != m_positionY) {
+            m_positionX = x;
+            m_positionY = y;
+            m_dirty = true;
+            UpdateMatrix();
+        }
+    }
 
-        XMMATRIX VP = V * P;
+    void Camera2D::SetRotation(float radians)
+    {
+        if (radians != m_rotation) {
+            m_rotation = radians;
+            m_dirty = true;
+            UpdateMatrix();
+        }
+    }
 
-        XMStoreFloat4x4(&m_view, V);
-        XMStoreFloat4x4(&m_proj, P);
-
-        // Transpose for HLSL constant buffer
-        XMMATRIX VP_T = XMMatrixTranspose(VP);
-        XMStoreFloat4x4(&m_viewProjT, VP_T);
-
+    void Camera2D::UpdateMatrix()
+    {
+        if (!m_dirty)
+            return;
         m_dirty = false;
+
+        const XMMATRIX proj = XMMatrixOrthographicOffCenterLH(0.0f, m_viewWidth, m_viewHeight, 0.0f, -1.0f, 1.0f);
+        const XMMATRIX translate = XMMatrixTranslation(-m_positionX, -m_positionY, 0.0f);
+        const XMMATRIX rotate = XMMatrixRotationZ(-m_rotation);
+        const XMMATRIX view = rotate * translate;
+        const XMMATRIX vp = view * proj;
+
+        XMStoreFloat4x4(&m_viewProj, vp);
+        const XMMATRIX vpT = XMMatrixTranspose(vp);
+        XMStoreFloat4x4(&m_viewProjT, vpT);
     }
 
-    XMFLOAT4X4 Camera2D::GetViewProjT()
-    {
-        if (m_dirty) RebuildMatrices();
-        return m_viewProjT;
-    }
+} // namespace KibakoEngine
 
-}

@@ -1,485 +1,489 @@
-// Kibako2DEngine/src/Renderer/SpriteBatch2D.cpp
-#define WIN32_LEAN_AND_MEAN
 #include "KibakoEngine/Renderer/SpriteBatch2D.h"
 
+#include "KibakoEngine/Core/Debug.h"
+#include "KibakoEngine/Core/Log.h"
+
 #include <d3dcompiler.h>
+
 #include <algorithm>
-#include <vector>
 #include <cmath>
 #include <cstring>
-#include <iostream>
-
-#include "KibakoEngine/Core/Debug.h" // KBK_ASSERT, KBK_HR
-#include "KibakoEngine/Core/Log.h"   // KbkLog
-
-#pragma comment(lib, "d3dcompiler.lib")
 
 using namespace DirectX;
 
+#pragma comment(lib, "d3dcompiler.lib")
+
 namespace KibakoEngine {
 
-    // ==============================
-    // Init / Shutdown
-    // ==============================
     bool SpriteBatch2D::Init(ID3D11Device* device, ID3D11DeviceContext* context)
     {
-        KBK_ASSERT(device != nullptr, "SpriteBatch2D::Init needs device");
-        KBK_ASSERT(context != nullptr, "SpriteBatch2D::Init needs context");
-
+        KBK_ASSERT(device != nullptr, "SpriteBatch2D::Init requires device");
+        KBK_ASSERT(context != nullptr, "SpriteBatch2D::Init requires context");
         m_device = device;
         m_context = context;
 
-        if (!CreateShaders(device)) return false;
-        if (!CreateStates(device))  return false;
+        if (!CreateShaders(device))
+            return false;
+        if (!CreateStates(device))
+            return false;
 
-        // Petites tailles de départ, on grossit à la demande
-        if (!EnsureVB(256))  return false;
-        if (!EnsureIB(256))  return false;
+        if (!EnsureVertexCapacity(256))
+            return false;
+        if (!EnsureIndexCapacity(256))
+            return false;
 
-        KbkLog("Batch2D", "Init OK (pointSampling=%d, pixelSnap=%d)", (int)m_pointSampling, (int)m_pixelSnap);
         return true;
     }
 
     void SpriteBatch2D::Shutdown()
     {
-        KbkLog("Batch2D", "Shutdown");
-        m_ib.Reset();
-        m_vb.Reset();
+        m_indexScratch.clear();
+        m_commands.clear();
+
+        m_vertexBuffer.Reset();
+        m_indexBuffer.Reset();
         m_cbVS.Reset();
         m_cbPS.Reset();
-        m_inputLayout.Reset();
         m_vs.Reset();
         m_ps.Reset();
-        m_sampPoint.Reset();
-        m_sampLinear.Reset();
+        m_inputLayout.Reset();
+        m_samplerPoint.Reset();
+        m_samplerLinear.Reset();
         m_blendAlpha.Reset();
-        m_dssOff.Reset();
-        m_rsCullNone.Reset();
+        m_depthDisabled.Reset();
+        m_rasterCullNone.Reset();
 
         m_device = nullptr;
         m_context = nullptr;
-
-        m_queue.clear();
-        m_vbSpriteCap = 0;
-        m_ibSpriteCap = 0;
-        m_indexScratch.clear();
+        m_vertexCapacitySprites = 0;
+        m_indexCapacitySprites = 0;
+        m_isDrawing = false;
     }
 
-    // ==============================
-    // Frame control
-    // ==============================
-    void SpriteBatch2D::Begin(const XMFLOAT4X4& viewProj)
+    void SpriteBatch2D::Begin(const XMFLOAT4X4& viewProjT)
     {
-        KBK_ASSERT(!m_isDrawing, "Begin called twice without End");
+        KBK_ASSERT(!m_isDrawing, "SpriteBatch2D::Begin without End");
         m_isDrawing = true;
-        m_viewProj = viewProj;
-        m_queue.clear();
+        m_viewProjT = viewProjT;
+        m_commands.clear();
     }
 
     void SpriteBatch2D::End()
     {
-        KBK_ASSERT(m_isDrawing, "End called without Begin");
+        KBK_ASSERT(m_isDrawing, "SpriteBatch2D::End without Begin");
         m_isDrawing = false;
-        if (m_queue.empty()) return;
 
-        m_queue.erase(std::remove_if(m_queue.begin(), m_queue.end(), [](const DrawCmd& cmd) {
-            return cmd.tex == nullptr || cmd.tex->GetSRV() == nullptr;
-<<<<<<< Updated upstream
-        }), m_queue.end());
-=======
-            }), m_queue.end());
->>>>>>> Stashed changes
-        if (m_queue.empty()) return;
+        m_commands.erase(std::remove_if(m_commands.begin(), m_commands.end(), [](const DrawCommand& cmd) {
+                                return cmd.texture == nullptr || cmd.texture->GetSRV() == nullptr;
+                            }),
+            m_commands.end());
+        if (m_commands.empty())
+            return;
 
-        std::stable_sort(m_queue.begin(), m_queue.end(), [](const DrawCmd& a, const DrawCmd& b) {
-            ID3D11ShaderResourceView* srvA = a.tex ? a.tex->GetSRV() : nullptr;
-            ID3D11ShaderResourceView* srvB = b.tex ? b.tex->GetSRV() : nullptr;
-            if (srvA == srvB)
+        std::stable_sort(m_commands.begin(), m_commands.end(), [](const DrawCommand& a, const DrawCommand& b) {
+            if (a.layer != b.layer)
                 return a.layer < b.layer;
+            const auto srvA = a.texture->GetSRV();
+            const auto srvB = b.texture->GetSRV();
             return srvA < srvB;
-<<<<<<< Updated upstream
         });
-=======
-            });
->>>>>>> Stashed changes
+
+        const size_t spriteCount = m_commands.size();
+        if (!EnsureVertexCapacity(spriteCount) || !EnsureIndexCapacity(spriteCount))
+            return;
 
         UpdateVSConstants();
         UpdatePSConstants();
 
-        ID3D11Buffer* cbVS = m_cbVS.Get();
-        ID3D11Buffer* cbPS = m_cbPS.Get();
-        m_context->VSSetConstantBuffers(0, 1, &cbVS);
-        m_context->PSSetConstantBuffers(0, 1, &cbPS);
+        std::vector<Vertex> vertices;
+        vertices.reserve(spriteCount * 4);
+        BuildVertices(vertices);
 
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+        HRESULT hr = m_context->Map(m_vertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return;
+        std::memcpy(mapped.pData, vertices.data(), vertices.size() * sizeof(Vertex));
+        m_context->Unmap(m_vertexBuffer.Get(), 0);
+
+        UINT stride = sizeof(Vertex);
+        UINT offset = 0;
+        ID3D11Buffer* vb = m_vertexBuffer.Get();
+        ID3D11Buffer* ib = m_indexBuffer.Get();
+        m_context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+        m_context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
         m_context->IASetInputLayout(m_inputLayout.Get());
         m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        float blendFactor[4] = { 0,0,0,0 };
-        m_context->OMSetBlendState(m_blendAlpha.Get(), blendFactor, 0xFFFFFFFF);
-        m_context->OMSetDepthStencilState(m_dssOff.Get(), 0);
-        m_context->RSSetState(m_rsCullNone.Get());
-
-        ID3D11SamplerState* samp = m_pointSampling ? m_sampPoint.Get() : m_sampLinear.Get();
-        m_context->PSSetSamplers(0, 1, &samp);
+        ID3D11Buffer* cbs[] = { m_cbVS.Get() };
+        m_context->VSSetConstantBuffers(0, 1, cbs);
+        ID3D11Buffer* cbp[] = { m_cbPS.Get() };
+        m_context->PSSetConstantBuffers(0, 1, cbp);
 
         m_context->VSSetShader(m_vs.Get(), nullptr, 0);
         m_context->PSSetShader(m_ps.Get(), nullptr, 0);
 
-        std::vector<Vertex> cpuVerts;
-        size_t totalSprites = 0;
-        size_t batchCount = 0;
+        const float blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
+        m_context->OMSetBlendState(m_blendAlpha.Get(), blendFactor, 0xFFFFFFFFu);
+        m_context->OMSetDepthStencilState(m_depthDisabled.Get(), 0);
+        m_context->RSSetState(m_rasterCullNone.Get());
 
-        const size_t spriteCount = m_queue.size();
+        ID3D11SamplerState* sampler = m_pointSampling ? m_samplerPoint.Get() : m_samplerLinear.Get();
+        m_context->PSSetSamplers(0, 1, &sampler);
+
         size_t start = 0;
         while (start < spriteCount) {
-            ID3D11ShaderResourceView* srv = m_queue[start].tex->GetSRV();
-            if (!srv) {
-                ++start;
-                continue;
-            }
-
+            const DrawCommand& first = m_commands[start];
+            ID3D11ShaderResourceView* srv = first.texture->GetSRV();
             size_t end = start + 1;
             while (end < spriteCount) {
-                ID3D11ShaderResourceView* nextSrv = m_queue[end].tex ? m_queue[end].tex->GetSRV() : nullptr;
-                if (nextSrv != srv)
+                const DrawCommand& next = m_commands[end];
+                if (next.layer != first.layer || next.texture->GetSRV() != srv)
                     break;
                 ++end;
             }
 
-<<<<<<< Updated upstream
-=======
-            // capacit� en sprites
->>>>>>> Stashed changes
-            const size_t bucketCount = end - start;
-            if (!EnsureVB(bucketCount)) return;
-            if (!EnsureIB(bucketCount)) return;
-
-            cpuVerts.clear();
-            cpuVerts.reserve(bucketCount * 4);
-            BuildVertsForRange(m_queue.data() + start, bucketCount, cpuVerts);
-
-            D3D11_MAPPED_SUBRESOURCE map{};
-            HRESULT hr = m_context->Map(m_vb.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
-            KBK_HR(hr);
-            if (FAILED(hr)) return;
-            std::memcpy(map.pData, cpuVerts.data(), cpuVerts.size() * sizeof(Vertex));
-            m_context->Unmap(m_vb.Get(), 0);
-
-            UINT stride = sizeof(Vertex), offset = 0;
-            ID3D11Buffer* vb = m_vb.Get();
-            m_context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-            ID3D11Buffer* ib = m_ib.Get();
-            m_context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-
             m_context->PSSetShaderResources(0, 1, &srv);
+            const UINT startIndex = static_cast<UINT>(start * 6);
+            const UINT indexCount = static_cast<UINT>((end - start) * 6);
+            m_context->DrawIndexed(indexCount, startIndex, 0);
 
-<<<<<<< Updated upstream
-=======
-            // draw
->>>>>>> Stashed changes
-            const UINT indexCount = static_cast<UINT>(bucketCount * 6);
-            m_context->DrawIndexed(indexCount, 0, 0);
-            totalSprites += bucketCount;
-            ++batchCount;
-
-            ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
-            m_context->PSSetShaderResources(0, 1, nullSRV);
+            ID3D11ShaderResourceView* nullSrv = nullptr;
+            m_context->PSSetShaderResources(0, 1, &nullSrv);
 
             start = end;
         }
-
-        KbkLog("Batch2D", "Flushed %zu sprites in %zu batches", totalSprites, batchCount);
     }
 
-    // ==============================
-    // Push
-    // ==============================
-    void SpriteBatch2D::Push(const Texture2D& tex,
-        const RectF& dst,
-        const RectF& src,
-        const Color4& color,
-        float rotation,
-        int   layer)
+    void SpriteBatch2D::Push(const Texture2D& texture,
+                              const RectF& dst,
+                              const RectF& src,
+                              const Color4& color,
+                              float rotation,
+                              int layer)
     {
-        if (!m_isDrawing) return;
-        if (!tex.GetSRV())  return;
+        if (!m_isDrawing)
+            return;
 
-        DrawCmd cmd{};
-        cmd.tex = &tex;
+        DrawCommand cmd;
+        cmd.texture = &texture;
         cmd.dst = dst;
         cmd.src = src;
         cmd.color = color;
         cmd.rotation = rotation;
         cmd.layer = layer;
-        m_queue.push_back(cmd);
+        m_commands.push_back(cmd);
     }
 
-    // ==============================
-    // Internal helpers
-    // ==============================
     bool SpriteBatch2D::CreateShaders(ID3D11Device* device)
     {
-        // VS
-        const char* vsCode = R"(
-cbuffer CB_VS_Transform : register(b0) { float4x4 gViewProj; };
-struct VSIn  { float3 pos:POSITION; float2 uv:TEXCOORD; float4 col:COLOR; };
-struct VSOut { float4 pos:SV_Position; float2 uv:TEXCOORD; float4 col:COLOR; };
-VSOut mainVS(VSIn i){
-    VSOut o;
-    o.pos = mul(float4(i.pos,1.0), gViewProj);
-    o.uv  = i.uv;
-    o.col = i.col;
-    return o;
-})";
+        static constexpr const char* VS_SOURCE = R"(
+cbuffer CB_VS : register(b0)
+{
+    float4x4 gViewProj;
+};
 
-        // PS
-        const char* psCode = R"(
-Texture2D tex0 : register(t0);
-SamplerState samp0 : register(s0);
-cbuffer CB_PS_Params : register(b0) { float Monochrome; float3 _pad; }
-float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV_Target {
-    float4 t = tex0.Sample(samp0, uv);
-    float l = dot(t.rgb, float3(0.299, 0.587, 0.114));
-    float3 mixrgb = lerp(t.rgb, l.xxx, saturate(Monochrome));
-    return float4(mixrgb * col.rgb, t.a * col.a);
-})";
+struct VSInput
+{
+    float3 position : POSITION;
+    float2 texcoord : TEXCOORD0;
+    float4 color    : COLOR0;
+};
 
-        Microsoft::WRL::ComPtr<ID3DBlob> vsBlob, psBlob, err;
+struct VSOutput
+{
+    float4 position : SV_Position;
+    float2 texcoord : TEXCOORD0;
+    float4 color    : COLOR0;
+};
 
-        HRESULT hr = D3DCompile(vsCode, strlen(vsCode), nullptr, nullptr, nullptr,
-            "mainVS", "vs_5_0", 0, 0, vsBlob.GetAddressOf(), err.GetAddressOf());
-        KBK_HR(hr);
+VSOutput main(VSInput input)
+{
+    VSOutput output;
+    output.position = mul(float4(input.position, 1.0f), gViewProj);
+    output.texcoord = input.texcoord;
+    output.color = input.color;
+    return output;
+}
+)";
+
+        static constexpr const char* PS_SOURCE = R"(
+Texture2D gTexture : register(t0);
+SamplerState gSampler : register(s0);
+
+cbuffer CB_PS : register(b0)
+{
+    float gMonochrome;
+    float3 _Pad;
+};
+
+float4 main(float4 position : SV_Position, float2 texcoord : TEXCOORD0, float4 color : COLOR0) : SV_Target
+{
+    float4 texColor = gTexture.Sample(gSampler, texcoord);
+    float luminance = dot(texColor.rgb, float3(0.299f, 0.587f, 0.114f));
+    float3 finalRgb = lerp(texColor.rgb, luminance.xxx, saturate(gMonochrome));
+    return float4(finalRgb * color.rgb, texColor.a * color.a);
+}
+)";
+
+        Microsoft::WRL::ComPtr<ID3DBlob> vsBlob;
+        Microsoft::WRL::ComPtr<ID3DBlob> psBlob;
+        Microsoft::WRL::ComPtr<ID3DBlob> errors;
+
+        HRESULT hr = D3DCompile(VS_SOURCE, std::strlen(VS_SOURCE), nullptr, nullptr, nullptr, "main", "vs_5_0", 0, 0, vsBlob.GetAddressOf(), errors.GetAddressOf());
         if (FAILED(hr)) {
-            if (err) std::cerr << "VS compile error: " << (const char*)err->GetBufferPointer() << "\n";
+            if (errors)
+                KbkLog("Batch", "VS compile error: %s", static_cast<const char*>(errors->GetBufferPointer()));
+            KBK_HR(hr);
             return false;
         }
-        err.Reset();
+        errors.Reset();
 
-        hr = D3DCompile(psCode, strlen(psCode), nullptr, nullptr, nullptr,
-            "mainPS", "ps_5_0", 0, 0, psBlob.GetAddressOf(), err.GetAddressOf());
-        KBK_HR(hr);
+        hr = D3DCompile(PS_SOURCE, std::strlen(PS_SOURCE), nullptr, nullptr, nullptr, "main", "ps_5_0", 0, 0, psBlob.GetAddressOf(), errors.GetAddressOf());
         if (FAILED(hr)) {
-            if (err) std::cerr << "PS compile error: " << (const char*)err->GetBufferPointer() << "\n";
+            if (errors)
+                KbkLog("Batch", "PS compile error: %s", static_cast<const char*>(errors->GetBufferPointer()));
+            KBK_HR(hr);
             return false;
         }
 
-        hr = device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
-            nullptr, m_vs.ReleaseAndGetAddressOf());
-        KBK_HR(hr); if (FAILED(hr)) return false;
+        hr = device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, m_vs.GetAddressOf());
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return false;
+        hr = device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, m_ps.GetAddressOf());
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return false;
 
-        hr = device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(),
-            nullptr, m_ps.ReleaseAndGetAddressOf());
-        KBK_HR(hr); if (FAILED(hr)) return false;
-
-        // Input layout
         D3D11_INPUT_ELEMENT_DESC layout[] = {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,     0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,        0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT,  0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
-        hr = device->CreateInputLayout(layout, _countof(layout),
-            vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
-            m_inputLayout.ReleaseAndGetAddressOf());
-        KBK_HR(hr); if (FAILED(hr)) return false;
+        hr = device->CreateInputLayout(layout, static_cast<UINT>(std::size(layout)), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), m_inputLayout.GetAddressOf());
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return false;
 
-        // Constant buffers (dynamiques)
         D3D11_BUFFER_DESC cbd{};
-        cbd.Usage = D3D11_USAGE_DYNAMIC;
         cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        cbd.Usage = D3D11_USAGE_DYNAMIC;
         cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        cbd.ByteWidth = sizeof(CBVS);
+        hr = device->CreateBuffer(&cbd, nullptr, m_cbVS.GetAddressOf());
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return false;
 
-        cbd.ByteWidth = sizeof(CB_VS_Transform);
-        hr = device->CreateBuffer(&cbd, nullptr, m_cbVS.ReleaseAndGetAddressOf());
-        KBK_HR(hr); if (FAILED(hr)) return false;
-
-        cbd.ByteWidth = sizeof(CB_PS_Params);
-        hr = device->CreateBuffer(&cbd, nullptr, m_cbPS.ReleaseAndGetAddressOf());
-        KBK_HR(hr); if (FAILED(hr)) return false;
+        cbd.ByteWidth = sizeof(CBPS);
+        hr = device->CreateBuffer(&cbd, nullptr, m_cbPS.GetAddressOf());
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return false;
 
         return true;
     }
 
     bool SpriteBatch2D::CreateStates(ID3D11Device* device)
     {
-        // Samplers
-        D3D11_SAMPLER_DESC sd{};
-        sd.AddressU = sd.AddressV = sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sd.MaxAnisotropy = 1;
-        sd.MinLOD = 0; sd.MaxLOD = D3D11_FLOAT32_MAX;
+        D3D11_SAMPLER_DESC samp{};
+        samp.AddressU = samp.AddressV = samp.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+        samp.MinLOD = 0;
+        samp.MaxLOD = D3D11_FLOAT32_MAX;
+        samp.MaxAnisotropy = 1;
 
-        sd.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-        HRESULT hr = device->CreateSamplerState(&sd, m_sampPoint.ReleaseAndGetAddressOf());
-        KBK_HR(hr); if (FAILED(hr)) return false;
+        samp.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+        HRESULT hr = device->CreateSamplerState(&samp, m_samplerPoint.GetAddressOf());
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return false;
 
-        sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-        hr = device->CreateSamplerState(&sd, m_sampLinear.ReleaseAndGetAddressOf());
-        KBK_HR(hr); if (FAILED(hr)) return false;
+        samp.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        hr = device->CreateSamplerState(&samp, m_samplerLinear.GetAddressOf());
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return false;
 
-        // Alpha blend
-        D3D11_BLEND_DESC bd{};
-        bd.RenderTarget[0].BlendEnable = TRUE;
-        bd.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-        bd.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-        bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-        bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-        bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
-        bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-        bd.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-        hr = device->CreateBlendState(&bd, m_blendAlpha.ReleaseAndGetAddressOf());
-        KBK_HR(hr); if (FAILED(hr)) return false;
+        D3D11_BLEND_DESC blend{};
+        blend.RenderTarget[0].BlendEnable = TRUE;
+        blend.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+        blend.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+        blend.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+        blend.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+        blend.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+        blend.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+        blend.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+        hr = device->CreateBlendState(&blend, m_blendAlpha.GetAddressOf());
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return false;
 
-        // Depth off
-        D3D11_DEPTH_STENCIL_DESC dsd{};
-        dsd.DepthEnable = FALSE;
-        dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-        dsd.DepthFunc = D3D11_COMPARISON_ALWAYS;
-        hr = device->CreateDepthStencilState(&dsd, m_dssOff.ReleaseAndGetAddressOf());
-        KBK_HR(hr); if (FAILED(hr)) return false;
+        D3D11_DEPTH_STENCIL_DESC depth{};
+        depth.DepthEnable = FALSE;
+        depth.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+        depth.DepthFunc = D3D11_COMPARISON_ALWAYS;
+        hr = device->CreateDepthStencilState(&depth, m_depthDisabled.GetAddressOf());
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return false;
 
-        // Rasterizer
-        D3D11_RASTERIZER_DESC rd{};
-        rd.FillMode = D3D11_FILL_SOLID;
-        rd.CullMode = D3D11_CULL_NONE;
-        rd.DepthClipEnable = TRUE;
-        hr = device->CreateRasterizerState(&rd, m_rsCullNone.ReleaseAndGetAddressOf());
-        KBK_HR(hr); if (FAILED(hr)) return false;
+        D3D11_RASTERIZER_DESC rast{};
+        rast.FillMode = D3D11_FILL_SOLID;
+        rast.CullMode = D3D11_CULL_NONE;
+        rast.DepthClipEnable = TRUE;
+        hr = device->CreateRasterizerState(&rast, m_rasterCullNone.GetAddressOf());
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return false;
 
         return true;
     }
 
-    bool SpriteBatch2D::EnsureVB(size_t spriteCapacity)
+    bool SpriteBatch2D::EnsureVertexCapacity(size_t spriteCount)
     {
-        if (spriteCapacity <= m_vbSpriteCap) return true;
-        size_t newCap = m_vbSpriteCap ? m_vbSpriteCap : 256;
-        while (newCap < spriteCapacity) newCap *= 2;
-        m_vbSpriteCap = newCap;
+        if (spriteCount <= m_vertexCapacitySprites && m_vertexBuffer)
+            return true;
 
-        D3D11_BUFFER_DESC bd{};
-        bd.Usage = D3D11_USAGE_DYNAMIC;
-        bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        bd.ByteWidth = static_cast<UINT>(m_vbSpriteCap * 4 * sizeof(Vertex)); // 4 verts / sprite
+        size_t newCapacity = m_vertexCapacitySprites == 0 ? 256 : m_vertexCapacitySprites;
+        while (newCapacity < spriteCount)
+            newCapacity *= 2;
 
-        Microsoft::WRL::ComPtr<ID3D11Buffer> newVB;
-        HRESULT hr = m_device->CreateBuffer(&bd, nullptr, newVB.ReleaseAndGetAddressOf());
-        KBK_HR(hr); if (FAILED(hr)) return false;
+        D3D11_BUFFER_DESC desc{};
+        desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        desc.Usage = D3D11_USAGE_DYNAMIC;
+        desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        desc.ByteWidth = static_cast<UINT>(newCapacity * 4 * sizeof(Vertex));
 
-        m_vb = newVB;
+        Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
+        HRESULT hr = m_device->CreateBuffer(&desc, nullptr, buffer.GetAddressOf());
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return false;
+
+        m_vertexBuffer = buffer;
+        m_vertexCapacitySprites = newCapacity;
         return true;
     }
 
-    bool SpriteBatch2D::EnsureIB(size_t spriteCapacity)
+    bool SpriteBatch2D::EnsureIndexCapacity(size_t spriteCount)
     {
-        if (m_ib && spriteCapacity <= m_ibSpriteCap) return true;
+        if (spriteCount <= m_indexCapacitySprites && m_indexBuffer)
+            return true;
 
-        const size_t oldCap = m_ibSpriteCap;
-        size_t newCap = oldCap ? oldCap : 256;
-        while (newCap < spriteCapacity) newCap *= 2;
+        size_t newCapacity = m_indexCapacitySprites == 0 ? 256 : m_indexCapacitySprites;
+        while (newCapacity < spriteCount)
+            newCapacity *= 2;
 
-        if (m_ib && newCap == oldCap) return true;
-
-        m_ibSpriteCap = newCap;
-        const size_t requiredIndexCount = m_ibSpriteCap * 6;
-        if (m_indexScratch.size() < requiredIndexCount)
-            m_indexScratch.resize(requiredIndexCount);
-
-        const size_t startFill = oldCap;
-        for (size_t i = startFill; i < m_ibSpriteCap; ++i) {
-            const uint32_t base = static_cast<uint32_t>(i * 4);
-            uint32_t* idx = m_indexScratch.data() + i * 6;
-            idx[0] = base + 0; idx[1] = base + 1; idx[2] = base + 2;
-            idx[3] = base + 0; idx[4] = base + 2; idx[5] = base + 3;
+        const size_t indexCount = newCapacity * 6;
+        m_indexScratch.resize(indexCount);
+        for (size_t sprite = 0; sprite < newCapacity; ++sprite) {
+            const uint32_t base = static_cast<uint32_t>(sprite * 4);
+            uint32_t* indices = m_indexScratch.data() + sprite * 6;
+            indices[0] = base;
+            indices[1] = base + 1;
+            indices[2] = base + 2;
+            indices[3] = base;
+            indices[4] = base + 2;
+            indices[5] = base + 3;
         }
 
-        D3D11_BUFFER_DESC bd{};
-        bd.Usage = D3D11_USAGE_IMMUTABLE;
-        bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-        bd.ByteWidth = static_cast<UINT>(requiredIndexCount * sizeof(uint32_t));
+        D3D11_BUFFER_DESC desc{};
+        desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+        desc.Usage = D3D11_USAGE_IMMUTABLE;
+        desc.ByteWidth = static_cast<UINT>(indexCount * sizeof(uint32_t));
 
-        D3D11_SUBRESOURCE_DATA srd{};
-        srd.pSysMem = m_indexScratch.data();
+        D3D11_SUBRESOURCE_DATA data{};
+        data.pSysMem = m_indexScratch.data();
 
-        Microsoft::WRL::ComPtr<ID3D11Buffer> newIB;
-        HRESULT hr = m_device->CreateBuffer(&bd, &srd, newIB.ReleaseAndGetAddressOf());
-        KBK_HR(hr); if (FAILED(hr)) return false;
+        Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
+        HRESULT hr = m_device->CreateBuffer(&desc, &data, buffer.GetAddressOf());
+        KBK_HR(hr);
+        if (FAILED(hr))
+            return false;
 
-        m_ib = newIB;
+        m_indexBuffer = buffer;
+        m_indexCapacitySprites = newCapacity;
         return true;
     }
 
     void SpriteBatch2D::UpdateVSConstants()
     {
-        D3D11_MAPPED_SUBRESOURCE map{};
-        HRESULT hr = m_context->Map(m_cbVS.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+        HRESULT hr = m_context->Map(m_cbVS.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
         KBK_HR(hr);
-        if (FAILED(hr)) return;
-
-        std::memcpy(map.pData, &m_viewProj, sizeof(XMFLOAT4X4));
+        if (FAILED(hr))
+            return;
+        auto* cb = static_cast<CBVS*>(mapped.pData);
+        cb->viewProjT = m_viewProjT;
         m_context->Unmap(m_cbVS.Get(), 0);
     }
 
     void SpriteBatch2D::UpdatePSConstants()
     {
-        D3D11_MAPPED_SUBRESOURCE map{};
-        HRESULT hr = m_context->Map(m_cbPS.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+        HRESULT hr = m_context->Map(m_cbPS.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
         KBK_HR(hr);
-        if (FAILED(hr)) return;
-
-        auto* cb = reinterpret_cast<CB_PS_Params*>(map.pData);
-        cb->Monochrome = m_monochrome;
+        if (FAILED(hr))
+            return;
+        auto* cb = static_cast<CBPS*>(mapped.pData);
+        cb->monochrome = m_monochrome;
         m_context->Unmap(m_cbPS.Get(), 0);
     }
 
-    void SpriteBatch2D::BuildVertsForRange(const DrawCmd* cmds, size_t count,
-        std::vector<Vertex>& outVerts)
+    void SpriteBatch2D::BuildVertices(std::vector<Vertex>& outVertices) const
     {
-        outVerts.resize(count * 4);
-        size_t vi = 0;
+        const size_t spriteCount = m_commands.size();
+        outVertices.resize(spriteCount * 4);
 
-        for (size_t ci = 0; ci < count; ++ci) {
-            const DrawCmd& cmd = cmds[ci];
-            const RectF& d = cmd.dst;
-            const RectF& s = cmd.src;
-            const Color4& c = cmd.color;
+        size_t v = 0;
+        for (const DrawCommand& cmd : m_commands) {
+            const float left = cmd.dst.x;
+            const float top = cmd.dst.y;
+            const float right = cmd.dst.x + cmd.dst.w;
+            const float bottom = cmd.dst.y + cmd.dst.h;
 
-            XMFLOAT2 p[4] = {
-                { d.x,         d.y          },
-                { d.x + d.w,   d.y          },
-                { d.x + d.w,   d.y + d.h    },
-                { d.x,         d.y + d.h    }
+            XMFLOAT2 corners[4] = {
+                { left, top },
+                { right, top },
+                { right, bottom },
+                { left, bottom },
             };
 
-            if (cmd.rotation != 0.0f) {
-                const float cx = d.x + d.w * 0.5f;
-                const float cy = d.y + d.h * 0.5f;
+            if (std::fabs(cmd.rotation) > 0.0001f) {
+                const float cx = cmd.dst.x + cmd.dst.w * 0.5f;
+                const float cy = cmd.dst.y + cmd.dst.h * 0.5f;
                 const float cs = std::cos(cmd.rotation);
                 const float sn = std::sin(cmd.rotation);
-                for (int i = 0; i < 4; ++i) {
-                    const float dx = p[i].x - cx;
-                    const float dy = p[i].y - cy;
-                    const float rx = dx * cs - dy * sn;
-                    const float ry = dx * sn + dy * cs;
-                    p[i].x = cx + rx;
-                    p[i].y = cy + ry;
+                for (auto& p : corners) {
+                    const float dx = p.x - cx;
+                    const float dy = p.y - cy;
+                    p.x = cx + dx * cs - dy * sn;
+                    p.y = cy + dx * sn + dy * cs;
+                }
+            } else if (m_pixelSnap) {
+                for (auto& p : corners) {
+                    p.x = std::round(p.x);
+                    p.y = std::round(p.y);
                 }
             }
 
-            if (m_pixelSnap && cmd.rotation == 0.0f) {
-                for (int i = 0; i < 4; ++i) {
-                    p[i].x = std::roundf(p[i].x);
-                    p[i].y = std::roundf(p[i].y);
-                }
-            }
+            const float u0 = cmd.src.x;
+            const float v0 = cmd.src.y;
+            const float u1 = cmd.src.x + cmd.src.w;
+            const float v1 = cmd.src.y + cmd.src.h;
 
-            const float u1 = s.x, v1 = s.y, u2 = s.x + s.w, v2 = s.y + s.h;
+            const XMFLOAT4 color = { cmd.color.r, cmd.color.g, cmd.color.b, cmd.color.a };
 
-            outVerts[vi + 0] = Vertex{ { p[0].x, p[0].y, 0.0f }, { u1, v1 }, { c.r, c.g, c.b, c.a } };
-            outVerts[vi + 1] = Vertex{ { p[1].x, p[1].y, 0.0f }, { u2, v1 }, { c.r, c.g, c.b, c.a } };
-            outVerts[vi + 2] = Vertex{ { p[2].x, p[2].y, 0.0f }, { u2, v2 }, { c.r, c.g, c.b, c.a } };
-            outVerts[vi + 3] = Vertex{ { p[3].x, p[3].y, 0.0f }, { u1, v2 }, { c.r, c.g, c.b, c.a } };
+            outVertices[v + 0] = Vertex{ { corners[0].x, corners[0].y, 0.0f }, { u0, v0 }, color };
+            outVertices[v + 1] = Vertex{ { corners[1].x, corners[1].y, 0.0f }, { u1, v0 }, color };
+            outVertices[v + 2] = Vertex{ { corners[2].x, corners[2].y, 0.0f }, { u1, v1 }, color };
+            outVertices[v + 3] = Vertex{ { corners[3].x, corners[3].y, 0.0f }, { u0, v1 }, color };
 
-            vi += 4;
+            v += 4;
         }
     }
 
-}
+} // namespace KibakoEngine
+
