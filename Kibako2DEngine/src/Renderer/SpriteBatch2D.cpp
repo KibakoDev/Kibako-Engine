@@ -5,7 +5,6 @@
 #include <d3dcompiler.h>
 #include <algorithm>
 #include <vector>
-#include <unordered_map>
 #include <cmath>
 #include <cstring>
 #include <iostream>
@@ -33,7 +32,7 @@ namespace KibakoEngine {
         if (!CreateShaders(device)) return false;
         if (!CreateStates(device))  return false;
 
-        // Petites tailles de départ, on grossit à la demande
+        // Petites tailles de dÃ©part, on grossit Ã  la demande
         if (!EnsureVB(256))  return false;
         if (!EnsureIB(256))  return false;
 
@@ -63,6 +62,7 @@ namespace KibakoEngine {
         m_queue.clear();
         m_vbSpriteCap = 0;
         m_ibSpriteCap = 0;
+        m_indexScratch.clear();
     }
 
     // ==============================
@@ -82,26 +82,27 @@ namespace KibakoEngine {
         m_isDrawing = false;
         if (m_queue.empty()) return;
 
-        // regrouper par SRV
-        std::unordered_map<ID3D11ShaderResourceView*, std::vector<DrawCmd*>> buckets;
-        buckets.reserve(m_queue.size());
-        for (auto& cmd : m_queue) {
-            auto* srv = cmd.tex ? cmd.tex->GetSRV() : nullptr;
-            if (!srv) continue;
-            buckets[srv].push_back(&cmd);
-        }
+        m_queue.erase(std::remove_if(m_queue.begin(), m_queue.end(), [](const DrawCmd& cmd) {
+            return cmd.tex == nullptr || cmd.tex->GetSRV() == nullptr;
+        }), m_queue.end());
+        if (m_queue.empty()) return;
 
-        // constants
+        std::stable_sort(m_queue.begin(), m_queue.end(), [](const DrawCmd& a, const DrawCmd& b) {
+            ID3D11ShaderResourceView* srvA = a.tex ? a.tex->GetSRV() : nullptr;
+            ID3D11ShaderResourceView* srvB = b.tex ? b.tex->GetSRV() : nullptr;
+            if (srvA == srvB)
+                return a.layer < b.layer;
+            return srvA < srvB;
+        });
+
         UpdateVSConstants();
         UpdatePSConstants();
 
-        // bind constants
         ID3D11Buffer* cbVS = m_cbVS.Get();
         ID3D11Buffer* cbPS = m_cbPS.Get();
         m_context->VSSetConstantBuffers(0, 1, &cbVS);
         m_context->PSSetConstantBuffers(0, 1, &cbPS);
 
-        // IA + states
         m_context->IASetInputLayout(m_inputLayout.Get());
         m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -113,33 +114,38 @@ namespace KibakoEngine {
         ID3D11SamplerState* samp = m_pointSampling ? m_sampPoint.Get() : m_sampLinear.Get();
         m_context->PSSetSamplers(0, 1, &samp);
 
-        // shaders
         m_context->VSSetShader(m_vs.Get(), nullptr, 0);
         m_context->PSSetShader(m_ps.Get(), nullptr, 0);
 
-        // un seul upload VB par texture
         std::vector<Vertex> cpuVerts;
         size_t totalSprites = 0;
+        size_t batchCount = 0;
 
-        for (auto& kv : buckets) {
-            auto* srv = kv.first;
-            auto& bucket = kv.second;
-            if (bucket.empty()) continue;
+        const size_t spriteCount = m_queue.size();
+        size_t start = 0;
+        while (start < spriteCount) {
+            ID3D11ShaderResourceView* srv = m_queue[start].tex->GetSRV();
+            if (!srv) {
+                ++start;
+                continue;
+            }
 
-            // tri par layer en gardant l’ordre relatif (stable)
-            std::stable_sort(bucket.begin(), bucket.end(),
-                [](const DrawCmd* a, const DrawCmd* b) { return a->layer < b->layer; });
+            size_t end = start + 1;
+            while (end < spriteCount) {
+                ID3D11ShaderResourceView* nextSrv = m_queue[end].tex ? m_queue[end].tex->GetSRV() : nullptr;
+                if (nextSrv != srv)
+                    break;
+                ++end;
+            }
 
-            // capacité en sprites
-            if (!EnsureVB(bucket.size())) return;
-            if (!EnsureIB(bucket.size())) return;
+            const size_t bucketCount = end - start;
+            if (!EnsureVB(bucketCount)) return;
+            if (!EnsureIB(bucketCount)) return;
 
-            // construit les verts CPU
             cpuVerts.clear();
-            cpuVerts.reserve(bucket.size() * 4);
-            BuildVertsForBucket(bucket, cpuVerts);
+            cpuVerts.reserve(bucketCount * 4);
+            BuildVertsForRange(m_queue.data() + start, bucketCount, cpuVerts);
 
-            // upload VB
             D3D11_MAPPED_SUBRESOURCE map{};
             HRESULT hr = m_context->Map(m_vb.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
             KBK_HR(hr);
@@ -147,27 +153,26 @@ namespace KibakoEngine {
             std::memcpy(map.pData, cpuVerts.data(), cpuVerts.size() * sizeof(Vertex));
             m_context->Unmap(m_vb.Get(), 0);
 
-            // bind buffers
             UINT stride = sizeof(Vertex), offset = 0;
             ID3D11Buffer* vb = m_vb.Get();
             m_context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
             ID3D11Buffer* ib = m_ib.Get();
             m_context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
 
-            // bind SRV
             m_context->PSSetShaderResources(0, 1, &srv);
 
-            // draw
-            const UINT indexCount = static_cast<UINT>(bucket.size() * 6);
+            const UINT indexCount = static_cast<UINT>(bucketCount * 6);
             m_context->DrawIndexed(indexCount, 0, 0);
-            totalSprites += bucket.size();
+            totalSprites += bucketCount;
+            ++batchCount;
 
-            // unbind SRV (évite les warnings du debug layer)
             ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
             m_context->PSSetShaderResources(0, 1, nullSRV);
+
+            start = end;
         }
 
-        KbkLog("Batch2D", "Flushed %zu sprites in %zu buckets", totalSprites, buckets.size());
+        KbkLog("Batch2D", "Flushed %zu sprites in %zu batches", totalSprites, batchCount);
     }
 
     // ==============================
@@ -349,16 +354,23 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
 
     bool SpriteBatch2D::EnsureIB(size_t spriteCapacity)
     {
-        if (spriteCapacity <= m_ibSpriteCap) return true;
-        size_t newCap = m_ibSpriteCap ? m_ibSpriteCap : 256;
-        while (newCap < spriteCapacity) newCap *= 2;
-        m_ibSpriteCap = newCap;
+        if (m_ib && spriteCapacity <= m_ibSpriteCap) return true;
 
-        // motif d’indices: 0,1,2, 0,2,3 pour chaque sprite
-        std::vector<uint32_t> indices(m_ibSpriteCap * 6);
-        for (size_t i = 0; i < m_ibSpriteCap; ++i) {
+        const size_t oldCap = m_ibSpriteCap;
+        size_t newCap = oldCap ? oldCap : 256;
+        while (newCap < spriteCapacity) newCap *= 2;
+
+        if (m_ib && newCap == oldCap) return true;
+
+        m_ibSpriteCap = newCap;
+        const size_t requiredIndexCount = m_ibSpriteCap * 6;
+        if (m_indexScratch.size() < requiredIndexCount)
+            m_indexScratch.resize(requiredIndexCount);
+
+        const size_t startFill = oldCap;
+        for (size_t i = startFill; i < m_ibSpriteCap; ++i) {
             const uint32_t base = static_cast<uint32_t>(i * 4);
-            uint32_t* idx = indices.data() + i * 6;
+            uint32_t* idx = m_indexScratch.data() + i * 6;
             idx[0] = base + 0; idx[1] = base + 1; idx[2] = base + 2;
             idx[3] = base + 0; idx[4] = base + 2; idx[5] = base + 3;
         }
@@ -366,10 +378,10 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
         D3D11_BUFFER_DESC bd{};
         bd.Usage = D3D11_USAGE_IMMUTABLE;
         bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-        bd.ByteWidth = static_cast<UINT>(indices.size() * sizeof(uint32_t));
+        bd.ByteWidth = static_cast<UINT>(requiredIndexCount * sizeof(uint32_t));
 
         D3D11_SUBRESOURCE_DATA srd{};
-        srd.pSysMem = indices.data();
+        srd.pSysMem = m_indexScratch.data();
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> newIB;
         HRESULT hr = m_device->CreateBuffer(&bd, &srd, newIB.ReleaseAndGetAddressOf());
@@ -402,18 +414,18 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
         m_context->Unmap(m_cbPS.Get(), 0);
     }
 
-    void SpriteBatch2D::BuildVertsForBucket(const std::vector<DrawCmd*>& bucket,
+    void SpriteBatch2D::BuildVertsForRange(const DrawCmd* cmds, size_t count,
         std::vector<Vertex>& outVerts)
     {
-        outVerts.resize(bucket.size() * 4);
+        outVerts.resize(count * 4);
         size_t vi = 0;
 
-        for (const DrawCmd* cmd : bucket) {
-            const RectF& d = cmd->dst;
-            const RectF& s = cmd->src;
-            const Color4& c = cmd->color;
+        for (size_t ci = 0; ci < count; ++ci) {
+            const DrawCmd& cmd = cmds[ci];
+            const RectF& d = cmd.dst;
+            const RectF& s = cmd.src;
+            const Color4& c = cmd.color;
 
-            // coins en espace monde
             XMFLOAT2 p[4] = {
                 { d.x,         d.y          },
                 { d.x + d.w,   d.y          },
@@ -421,12 +433,11 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
                 { d.x,         d.y + d.h    }
             };
 
-            // rotation autour du centre
-            if (cmd->rotation != 0.0f) {
+            if (cmd.rotation != 0.0f) {
                 const float cx = d.x + d.w * 0.5f;
                 const float cy = d.y + d.h * 0.5f;
-                const float cs = std::cos(cmd->rotation);
-                const float sn = std::sin(cmd->rotation);
+                const float cs = std::cos(cmd.rotation);
+                const float sn = std::sin(cmd.rotation);
                 for (int i = 0; i < 4; ++i) {
                     const float dx = p[i].x - cx;
                     const float dy = p[i].y - cy;
@@ -437,18 +448,15 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
                 }
             }
 
-            // snap aux pixels (utile sans rotation)
-            if (m_pixelSnap && cmd->rotation == 0.0f) {
+            if (m_pixelSnap && cmd.rotation == 0.0f) {
                 for (int i = 0; i < 4; ++i) {
                     p[i].x = std::roundf(p[i].x);
                     p[i].y = std::roundf(p[i].y);
                 }
             }
 
-            // UVs
             const float u1 = s.x, v1 = s.y, u2 = s.x + s.w, v2 = s.y + s.h;
 
-            // ordre des sommets = pattern de l’IB (0,1,2, 0,2,3)
             outVerts[vi + 0] = Vertex{ { p[0].x, p[0].y, 0.0f }, { u1, v1 }, { c.r, c.g, c.b, c.a } };
             outVerts[vi + 1] = Vertex{ { p[1].x, p[1].y, 0.0f }, { u2, v1 }, { c.r, c.g, c.b, c.a } };
             outVerts[vi + 2] = Vertex{ { p[2].x, p[2].y, 0.0f }, { u2, v2 }, { c.r, c.g, c.b, c.a } };

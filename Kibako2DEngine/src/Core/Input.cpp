@@ -20,7 +20,6 @@ namespace KibakoEngine {
         m_keys = SDL_GetKeyboardState(nullptr);
 
         std::memset(m_prevKeyState, 0, sizeof(m_prevKeyState));
-        std::memset(m_prevKeys, 0, sizeof(m_prevKeys)); // optional mirror
         m_mouseX = m_mouseY = 0;
         m_wheelX = m_wheelY = 0;
         m_mouseButtons = 0;
@@ -86,8 +85,6 @@ namespace KibakoEngine {
         // SDL_NUM_SCANCODES is the maximum; SDL guarantees m_keys has that many bytes.
         std::memcpy(m_prevKeyState, m_keys, SDL_NUM_SCANCODES);
 
-        // (Optional) keep a copy in m_prevKeys if your header exposes it.
-        std::memcpy(m_prevKeys, m_keys, SDL_NUM_SCANCODES);
     }
 
     // ----------------------

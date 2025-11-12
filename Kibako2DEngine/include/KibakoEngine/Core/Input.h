@@ -44,7 +44,6 @@ namespace KibakoEngine {
         // Keyboard
         const uint8_t* m_keys = nullptr;                    // pointer from SDL_GetKeyboardState()
         uint8_t        m_prevKeyState[SDL_NUM_SCANCODES]{}; // snapshot from previous frame
-        uint8_t        m_prevKeys[SDL_NUM_SCANCODES]{};     // optional mirror (kept for debugging/consistency)
 
         // Mouse
         int      m_mouseX = 0;

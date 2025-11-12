@@ -4,7 +4,6 @@
 #include <wrl/client.h>
 #include <DirectXMath.h>
 #include <vector>
-#include <unordered_map>
 #include <cstdint>
 
 #include "KibakoEngine/Renderer/Texture2D.h"
@@ -22,11 +21,11 @@ namespace KibakoEngine {
         bool Init(ID3D11Device* device, ID3D11DeviceContext* context);
         void Shutdown();
 
-        // Délimite une frame de sprites
+        // DÃ©limite une frame de sprites
         void Begin(const DirectX::XMFLOAT4X4& viewProj);
         void End();
 
-        // Paramètres visuels globaux
+        // ParamÃ¨tres visuels globaux
         void SetMonochrome(float amount) { m_monochrome = amount; }     // 0 = couleur, 1 = N&B
         void SetPointSampling(bool enable) { m_pointSampling = enable; }  // point vs linear
         void SetPixelSnap(bool enable) { m_pixelSnap = enable; }      // arrondit aux pixels
@@ -36,7 +35,7 @@ namespace KibakoEngine {
         // src: rect UV [0..1]
         // color: teinte
         // rotation: radians (centre du dst)
-        // layer: ordre de dessin à texture égale (plus petit = derrière)
+        // layer: ordre de dessin Ã  texture Ã©gale (plus petit = derriÃ¨re)
         void Push(const Texture2D& tex,
             const RectF& dst,
             const RectF& src,
@@ -65,8 +64,9 @@ namespace KibakoEngine {
 
         bool CreateShaders(ID3D11Device* device);
         bool CreateStates(ID3D11Device* device);
-        bool EnsureVB(size_t spriteCapacity); // capacité en sprites
-        bool EnsureIB(size_t spriteCapacity);
+        void BuildVertsForRange(const DrawCmd* cmds, size_t count,
+        std::vector<uint32_t> m_indexScratch; // cache CPU pour l'IB
+}
 
         void UpdateVSConstants();
         void UpdatePSConstants();
@@ -83,10 +83,10 @@ namespace KibakoEngine {
         ComPtr<ID3D11PixelShader>  m_ps;
         ComPtr<ID3D11InputLayout>  m_inputLayout;
 
-        // Buffers partagés (taille variable)
+        // Buffers partagÃ©s (taille variable)
         ComPtr<ID3D11Buffer> m_vb;      // N sprites * 4 verts
         ComPtr<ID3D11Buffer> m_ib;      // N sprites * 6 indices
-        size_t m_vbSpriteCap = 0;       // capacité en sprites
+        size_t m_vbSpriteCap = 0;       // capacitÃ© en sprites
         size_t m_ibSpriteCap = 0;
 
         // Constant buffers
@@ -104,8 +104,8 @@ namespace KibakoEngine {
         std::vector<DrawCmd>   m_queue;
         DirectX::XMFLOAT4X4    m_viewProj{};
         float                  m_monochrome = 0.0f;
-        bool                   m_pointSampling = true;   // par défaut: pixels nets
-        bool                   m_pixelSnap = true;   // par défaut: snap aux pixels
+        bool                   m_pointSampling = true;   // par dÃ©faut: pixels nets
+        bool                   m_pixelSnap = true;   // par dÃ©faut: snap aux pixels
         bool                   m_isDrawing = false;
     };
 

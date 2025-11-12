@@ -48,7 +48,10 @@ namespace KibakoEngine {
         SDL_SysWMinfo wminfo{};
         SDL_VERSION(&wminfo.version);
         if (!SDL_GetWindowWMInfo(m_window, &wminfo)) {
-            std::cerr << "SDL_GetWindowWMInfo failed\n";
+            std::cerr << "SDL_GetWindowWMInfo failed" << std::endl;
+            SDL_DestroyWindow(m_window);
+            m_window = nullptr;
+            SDL_Quit();
             return false;
         }
 
