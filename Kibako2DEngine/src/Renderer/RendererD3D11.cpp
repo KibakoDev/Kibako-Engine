@@ -14,6 +14,11 @@
 #include <iterator>
 #include <windows.h>
 
+#ifdef _MSC_VER
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi.lib")
+#endif
+
 namespace KibakoEngine {
 
     bool RendererD3D11::Init(HWND hwnd, uint32_t width, uint32_t height)
