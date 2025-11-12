@@ -29,10 +29,10 @@
     <ClInclude Include="include\KibakoEngine\Renderer\Texture2D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\KibakoEngine\Renderer\States2D.h">
+    <ClInclude Include="include\KibakoEngine\Renderer\SpriteTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\KibakoEngine\Renderer\SpriteTypes.h">
+    <ClInclude Include="include\KibakoEngine\Utils\Math.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="third_party\stb_image.h">
@@ -65,9 +65,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Renderer\Texture2D.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Renderer\States2D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Renderer\SpriteBatch2D.cpp">

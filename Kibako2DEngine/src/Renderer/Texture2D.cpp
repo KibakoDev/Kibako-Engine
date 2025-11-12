@@ -1,78 +1,71 @@
-// =====================================================
-// Kibako2DEngine/Renderer/Texture2D.cpp
-// Loads a 2D texture using stb_image and uploads it to GPU.
-// =====================================================
+#include "KibakoEngine/Renderer/Texture2D.h"
+
+#include "KibakoEngine/Core/Debug.h"
+#include "KibakoEngine/Core/Log.h"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "KibakoEngine/Renderer/Texture2D.h"
-#include <wrl/client.h>
-#include <d3d11.h>
-#include <vector>
-#include <cstring>
 #include "stb_image.h"
 
 namespace KibakoEngine {
 
-    void Texture2D::Reset() {
+    void Texture2D::Reset()
+    {
         m_srv.Reset();
-        m_tex.Reset();
-        m_w = m_h = 0;
+        m_texture.Reset();
+        m_width = 0;
+        m_height = 0;
     }
 
-    bool Texture2D::LoadFromFile(ID3D11Device* device, const std::string& path, bool forceRGBA) {
+    bool Texture2D::LoadFromFile(ID3D11Device* device, const std::string& path, bool srgb)
+    {
+        KBK_ASSERT(device != nullptr, "Texture2D::LoadFromFile requires a valid device");
         Reset();
 
-        int w = 0, h = 0, comp = 0;
-        stbi_uc* pixels = stbi_load(path.c_str(), &w, &h, &comp, forceRGBA ? 4 : 0);
-        if (!pixels)
+        stbi_set_flip_vertically_on_load(false);
+        int width = 0;
+        int height = 0;
+        int comp = 0;
+        stbi_uc* pixels = stbi_load(path.c_str(), &width, &height, &comp, 4);
+        if (!pixels) {
+            KbkLog("Texture", "Failed to load %s", path.c_str());
             return false;
+        }
 
-        const int channels = forceRGBA ? 4 : comp;
-        const DXGI_FORMAT fmt = (channels == 4)
-            ? DXGI_FORMAT_R8G8B8A8_UNORM
-            : DXGI_FORMAT_R8_UNORM;
+        const DXGI_FORMAT format = srgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
 
-        // Describe GPU texture
-        D3D11_TEXTURE2D_DESC td{};
-        td.Width = w;
-        td.Height = h;
-        td.MipLevels = 1;
-        td.ArraySize = 1;
-        td.Format = fmt;
-        td.SampleDesc.Count = 1;
-        td.Usage = D3D11_USAGE_IMMUTABLE;
-        td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        D3D11_TEXTURE2D_DESC desc{};
+        desc.Width = static_cast<UINT>(width);
+        desc.Height = static_cast<UINT>(height);
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.Format = format;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D11_USAGE_IMMUTABLE;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-        D3D11_SUBRESOURCE_DATA srd{};
-        srd.pSysMem = pixels;
-        srd.SysMemPitch = w * channels;
+        D3D11_SUBRESOURCE_DATA data{};
+        data.pSysMem = pixels;
+        data.SysMemPitch = static_cast<UINT>(width * 4);
 
-        Microsoft::WRL::ComPtr<ID3D11Texture2D> tex;
-        HRESULT hr = device->CreateTexture2D(&td, &srd, tex.ReleaseAndGetAddressOf());
-
-        // Free CPU image data
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+        HRESULT hr = device->CreateTexture2D(&desc, &data, texture.GetAddressOf());
         stbi_image_free(pixels);
-
+        KBK_HR(hr);
         if (FAILED(hr))
             return false;
-
-        // Create shader resource view
-        D3D11_SHADER_RESOURCE_VIEW_DESC srvd{};
-        srvd.Format = td.Format;
-        srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        srvd.Texture2D.MipLevels = 1;
 
         Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
-        hr = device->CreateShaderResourceView(tex.Get(), &srvd, srv.ReleaseAndGetAddressOf());
+        hr = device->CreateShaderResourceView(texture.Get(), nullptr, srv.GetAddressOf());
+        KBK_HR(hr);
         if (FAILED(hr))
             return false;
 
-        // Store texture data
-        m_tex = tex;
+        m_texture = texture;
         m_srv = srv;
-        m_w = w;
-        m_h = h;
+        m_width = width;
+        m_height = height;
         return true;
     }
 
-}
+} // namespace KibakoEngine
+
