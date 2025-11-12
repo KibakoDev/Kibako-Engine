@@ -1,5 +1,10 @@
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
+
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 
 #include "KibakoEngine/Renderer/RendererD3D11.h"
 
@@ -8,6 +13,11 @@
 
 #include <iterator>
 #include <windows.h>
+
+#ifdef _MSC_VER
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi.lib")
+#endif
 
 namespace KibakoEngine {
 
