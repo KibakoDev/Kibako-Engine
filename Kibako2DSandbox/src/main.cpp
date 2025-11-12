@@ -49,7 +49,7 @@ int main()
     bool monochrome = false;
     bool pointSampling = true;
 
-    const float clearColor[4] = { 0.05f, 0.06f, 0.08f, 1.0f };
+    const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
     while (app.PumpEvents()) {
         if (app.InputSys().KeyPressed(SDL_SCANCODE_M)) {
