@@ -1,10 +1,5 @@
-// =====================================================
 // Kibako2DEngine/Core/Input.cpp
-// SDL keyboard/mouse input helper (ASCII only).
-// - Call BeginFrame() at the start of the frame
-// - Feed every SDL_Event to HandleEvent()
-// - Call EndFrame() after you've processed events
-// =====================================================
+// Simple SDL input helper with per-frame state.
 
 #include "KibakoEngine/Core/Input.h"
 #include <SDL2/SDL.h>

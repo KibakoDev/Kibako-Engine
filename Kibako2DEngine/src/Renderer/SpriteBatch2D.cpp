@@ -2,15 +2,14 @@
 #define WIN32_LEAN_AND_MEAN
 #include "KibakoEngine/Renderer/SpriteBatch2D.h"
 
-#include <d3dcompiler.h>
 #include <algorithm>
-#include <vector>
 #include <cmath>
 #include <cstring>
+#include <d3dcompiler.h>
 #include <iostream>
 
-#include "KibakoEngine/Core/Debug.h" // KBK_ASSERT, KBK_HR
-#include "KibakoEngine/Core/Log.h"   // KbkLog
+#include "KibakoEngine/Core/Debug.h"
+#include "KibakoEngine/Core/Log.h"
 
 #pragma comment(lib, "d3dcompiler.lib")
 
@@ -18,9 +17,6 @@ using namespace DirectX;
 
 namespace KibakoEngine {
 
-    // ==============================
-    // Init / Shutdown
-    // ==============================
     bool SpriteBatch2D::Init(ID3D11Device* device, ID3D11DeviceContext* context)
     {
         KBK_ASSERT(device != nullptr, "SpriteBatch2D::Init needs device");
@@ -32,7 +28,6 @@ namespace KibakoEngine {
         if (!CreateShaders(device)) return false;
         if (!CreateStates(device))  return false;
 
-        // Petites tailles de départ, on grossit à la demande
         if (!EnsureVB(256))  return false;
         if (!EnsureIB(256))  return false;
 
@@ -62,18 +57,18 @@ namespace KibakoEngine {
         m_queue.clear();
         m_vbSpriteCap = 0;
         m_ibSpriteCap = 0;
+        m_vertexScratch.clear();
         m_indexScratch.clear();
     }
 
-    // ==============================
-    // Frame control
-    // ==============================
     void SpriteBatch2D::Begin(const XMFLOAT4X4& viewProj)
     {
         KBK_ASSERT(!m_isDrawing, "Begin called twice without End");
         m_isDrawing = true;
         m_viewProj = viewProj;
         m_queue.clear();
+        if (m_vbSpriteCap > 0)
+            m_queue.reserve(m_vbSpriteCap); // keep one allocation for the frame's sprites
     }
 
     void SpriteBatch2D::End()
@@ -83,17 +78,31 @@ namespace KibakoEngine {
         if (m_queue.empty()) return;
 
         m_queue.erase(std::remove_if(m_queue.begin(), m_queue.end(), [](const DrawCmd& cmd) {
-            return cmd.tex == nullptr || cmd.tex->GetSRV() == nullptr;
+            return cmd.tex == nullptr || cmd.srv == nullptr;
         }), m_queue.end());
         if (m_queue.empty()) return;
 
-        std::stable_sort(m_queue.begin(), m_queue.end(), [](const DrawCmd& a, const DrawCmd& b) {
-            ID3D11ShaderResourceView* srvA = a.tex ? a.tex->GetSRV() : nullptr;
-            ID3D11ShaderResourceView* srvB = b.tex ? b.tex->GetSRV() : nullptr;
-            if (srvA == srvB)
-                return a.layer < b.layer;
-            return srvA < srvB;
-        });
+        const size_t spriteCount = m_queue.size();
+        if (spriteCount > 1) {
+            // Keep lower layers first and still group sprites by texture within each layer.
+            std::stable_sort(m_queue.begin(), m_queue.end(), [](const DrawCmd& a, const DrawCmd& b) {
+                if (a.layer != b.layer)
+                    return a.layer < b.layer;
+                return a.srv < b.srv;
+            });
+        }
+
+        if (!EnsureVB(spriteCount)) return;
+        if (!EnsureIB(spriteCount)) return;
+
+        BuildVertsForRange(m_queue.data(), spriteCount, m_vertexScratch);
+
+        D3D11_MAPPED_SUBRESOURCE map{};
+        HRESULT hr = m_context->Map(m_vb.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
+        KBK_HR(hr);
+        if (FAILED(hr)) return;
+        std::memcpy(map.pData, m_vertexScratch.data(), m_vertexScratch.size() * sizeof(Vertex));
+        m_context->Unmap(m_vb.Get(), 0);
 
         UpdateVSConstants();
         UpdatePSConstants();
@@ -117,52 +126,38 @@ namespace KibakoEngine {
         m_context->VSSetShader(m_vs.Get(), nullptr, 0);
         m_context->PSSetShader(m_ps.Get(), nullptr, 0);
 
-        std::vector<Vertex> cpuVerts;
+        UINT stride = sizeof(Vertex), offset = 0;
+        ID3D11Buffer* vb = m_vb.Get();
+        m_context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+        ID3D11Buffer* ib = m_ib.Get();
+        m_context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
+
         size_t totalSprites = 0;
         size_t batchCount = 0;
 
-        const size_t spriteCount = m_queue.size();
         size_t start = 0;
         while (start < spriteCount) {
-            ID3D11ShaderResourceView* srv = m_queue[start].tex->GetSRV();
+            ID3D11ShaderResourceView* srv = m_queue[start].srv;
             if (!srv) {
                 ++start;
                 continue;
             }
 
+            const int layer = m_queue[start].layer;
             size_t end = start + 1;
             while (end < spriteCount) {
-                ID3D11ShaderResourceView* nextSrv = m_queue[end].tex ? m_queue[end].tex->GetSRV() : nullptr;
-                if (nextSrv != srv)
+                // stop the bucket when layer or texture changes so we keep the right draw order
+                if (m_queue[end].layer != layer || m_queue[end].srv != srv)
                     break;
                 ++end;
             }
 
             const size_t bucketCount = end - start;
-            if (!EnsureVB(bucketCount)) return;
-            if (!EnsureIB(bucketCount)) return;
-
-            cpuVerts.clear();
-            cpuVerts.reserve(bucketCount * 4);
-            BuildVertsForRange(m_queue.data() + start, bucketCount, cpuVerts);
-
-            D3D11_MAPPED_SUBRESOURCE map{};
-            HRESULT hr = m_context->Map(m_vb.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
-            KBK_HR(hr);
-            if (FAILED(hr)) return;
-            std::memcpy(map.pData, cpuVerts.data(), cpuVerts.size() * sizeof(Vertex));
-            m_context->Unmap(m_vb.Get(), 0);
-
-            UINT stride = sizeof(Vertex), offset = 0;
-            ID3D11Buffer* vb = m_vb.Get();
-            m_context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-            ID3D11Buffer* ib = m_ib.Get();
-            m_context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-
             m_context->PSSetShaderResources(0, 1, &srv);
 
             const UINT indexCount = static_cast<UINT>(bucketCount * 6);
-            m_context->DrawIndexed(indexCount, 0, 0);
+            const UINT indexOffset = static_cast<UINT>(start * 6);
+            m_context->DrawIndexed(indexCount, indexOffset, 0);
             totalSprites += bucketCount;
             ++batchCount;
 
@@ -175,9 +170,6 @@ namespace KibakoEngine {
         KbkLog("Batch2D", "Flushed %zu sprites in %zu batches", totalSprites, batchCount);
     }
 
-    // ==============================
-    // Push
-    // ==============================
     void SpriteBatch2D::Push(const Texture2D& tex,
         const RectF& dst,
         const RectF& src,
@@ -186,10 +178,12 @@ namespace KibakoEngine {
         int   layer)
     {
         if (!m_isDrawing) return;
-        if (!tex.GetSRV())  return;
+        ID3D11ShaderResourceView* srv = tex.GetSRV();
+        if (!srv)  return;
 
         DrawCmd cmd{};
         cmd.tex = &tex;
+        cmd.srv = srv;
         cmd.dst = dst;
         cmd.src = src;
         cmd.color = color;
@@ -198,12 +192,8 @@ namespace KibakoEngine {
         m_queue.push_back(cmd);
     }
 
-    // ==============================
-    // Internal helpers
-    // ==============================
     bool SpriteBatch2D::CreateShaders(ID3D11Device* device)
     {
-        // VS
         const char* vsCode = R"(
 cbuffer CB_VS_Transform : register(b0) { float4x4 gViewProj; };
 struct VSIn  { float3 pos:POSITION; float2 uv:TEXCOORD; float4 col:COLOR; };
@@ -216,7 +206,6 @@ VSOut mainVS(VSIn i){
     return o;
 })";
 
-        // PS
         const char* psCode = R"(
 Texture2D tex0 : register(t0);
 SamplerState samp0 : register(s0);
@@ -255,7 +244,6 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
             nullptr, m_ps.ReleaseAndGetAddressOf());
         KBK_HR(hr); if (FAILED(hr)) return false;
 
-        // Input layout
         D3D11_INPUT_ELEMENT_DESC layout[] = {
             { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,     0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
             { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,        0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -266,7 +254,6 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
             m_inputLayout.ReleaseAndGetAddressOf());
         KBK_HR(hr); if (FAILED(hr)) return false;
 
-        // Constant buffers (dynamiques)
         D3D11_BUFFER_DESC cbd{};
         cbd.Usage = D3D11_USAGE_DYNAMIC;
         cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -285,7 +272,6 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
 
     bool SpriteBatch2D::CreateStates(ID3D11Device* device)
     {
-        // Samplers
         D3D11_SAMPLER_DESC sd{};
         sd.AddressU = sd.AddressV = sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
         sd.MaxAnisotropy = 1;
@@ -299,7 +285,6 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
         hr = device->CreateSamplerState(&sd, m_sampLinear.ReleaseAndGetAddressOf());
         KBK_HR(hr); if (FAILED(hr)) return false;
 
-        // Alpha blend
         D3D11_BLEND_DESC bd{};
         bd.RenderTarget[0].BlendEnable = TRUE;
         bd.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
@@ -312,7 +297,6 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
         hr = device->CreateBlendState(&bd, m_blendAlpha.ReleaseAndGetAddressOf());
         KBK_HR(hr); if (FAILED(hr)) return false;
 
-        // Depth off
         D3D11_DEPTH_STENCIL_DESC dsd{};
         dsd.DepthEnable = FALSE;
         dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
@@ -320,7 +304,6 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
         hr = device->CreateDepthStencilState(&dsd, m_dssOff.ReleaseAndGetAddressOf());
         KBK_HR(hr); if (FAILED(hr)) return false;
 
-        // Rasterizer
         D3D11_RASTERIZER_DESC rd{};
         rd.FillMode = D3D11_FILL_SOLID;
         rd.CullMode = D3D11_CULL_NONE;
@@ -349,6 +332,8 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
         KBK_HR(hr); if (FAILED(hr)) return false;
 
         m_vb = newVB;
+        m_vertexScratch.clear();
+        m_vertexScratch.reserve(m_vbSpriteCap * 4);
         return true;
     }
 
@@ -417,7 +402,10 @@ float4 mainPS(float4 pos:SV_Position, float2 uv:TEXCOORD, float4 col:COLOR) : SV
     void SpriteBatch2D::BuildVertsForRange(const DrawCmd* cmds, size_t count,
         std::vector<Vertex>& outVerts)
     {
-        outVerts.resize(count * 4);
+        const size_t needed = count * 4;
+        if (outVerts.capacity() < needed)
+            outVerts.reserve(needed);
+        outVerts.resize(needed);
         size_t vi = 0;
 
         for (size_t ci = 0; ci < count; ++ci) {

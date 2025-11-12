@@ -1,9 +1,5 @@
-// =====================================================
 // Kibako2DEngine/Core/Application.cpp
-// SDL window + event pump + D3D11 renderer hooks.
-// Sandbox owns the main loop; Application is the shell.
-// Debug-ready: logs and asserts sprinkled at key points.
-// =====================================================
+// Creates the window and keeps the frame flow simple.
 
 #define WIN32_LEAN_AND_MEAN
 #define SDL_MAIN_HANDLED

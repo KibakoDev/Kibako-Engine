@@ -1,7 +1,5 @@
-// =====================================================
 // Kibako2DEngine/Core/Time.cpp
-// High-precision frame timing using SDL performance counters.
-// =====================================================
+// Tracks frame timing with SDL performance counters.
 
 #include "KibakoEngine/Core/Time.h"
 #include <SDL2/SDL.h>
