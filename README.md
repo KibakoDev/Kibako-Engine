@@ -19,7 +19,7 @@
 
 ---
 
-## 👋 What is Kibako Engine?
+## ⚙️ About
 Kibako Engine is a personal learning playground from a solo developer (19&nbsp;y/o) who wants to ship original games one day. The short-term mission is clear:
 
 - **Focus entirely on 2D rendering and gameplay foundations.**
