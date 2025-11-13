@@ -19,16 +19,14 @@ namespace KibakoEngine {
 
 #define KBK_LOG_CHANNEL_DEFAULT "Kibako"
 
-#define KbkLog(...) \
-    ::KibakoEngine::LogMessage(::KibakoEngine::LogLevel::Info, __VA_ARGS__)
-#define KbkWarn(...) \
-    ::KibakoEngine::LogMessage(::KibakoEngine::LogLevel::Warning, __VA_ARGS__)
-#define KbkError(...) \
-    ::KibakoEngine::LogMessage(::KibakoEngine::LogLevel::Error, __VA_ARGS__)
-#define KbkLog(channel, fmt, ...) \
+#define KbkLog(channel, fmt, ...)                                                                             \
     ::KibakoEngine::LogMessage(::KibakoEngine::LogLevel::Info, (channel), (fmt) __VA_OPT__(, ) __VA_ARGS__)
-#define KbkWarn(channel, fmt, ...) \
+#define KbkWarn(channel, fmt, ...)                                                                            \
     ::KibakoEngine::LogMessage(::KibakoEngine::LogLevel::Warning, (channel), (fmt) __VA_OPT__(, ) __VA_ARGS__)
-#define KbkError(channel, fmt, ...) \
+#define KbkError(channel, fmt, ...)                                                                           \
     ::KibakoEngine::LogMessage(::KibakoEngine::LogLevel::Error, (channel), (fmt) __VA_OPT__(, ) __VA_ARGS__)
+
+#define KbkLogDefault(fmt, ...)  KbkLog(KBK_LOG_CHANNEL_DEFAULT, fmt __VA_OPT__(, ) __VA_ARGS__)
+#define KbkWarnDefault(fmt, ...) KbkWarn(KBK_LOG_CHANNEL_DEFAULT, fmt __VA_OPT__(, ) __VA_ARGS__)
+#define KbkErrorDefault(fmt, ...) KbkError(KBK_LOG_CHANNEL_DEFAULT, fmt __VA_OPT__(, ) __VA_ARGS__)
 
