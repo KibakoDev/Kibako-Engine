@@ -21,8 +21,6 @@ namespace KibakoEngine {
         void Begin(const DirectX::XMFLOAT4X4& viewProjT);
         void End();
 
-        void SetPixelSnap(bool enabled) { m_pixelSnap = enabled; }
-
         void Push(const Texture2D& texture,
                   const RectF& dst,
                   const RectF& src,
@@ -78,7 +76,6 @@ namespace KibakoEngine {
         DirectX::XMFLOAT4X4 m_viewProjT{};
         size_t m_vertexCapacitySprites = 0;
         size_t m_indexCapacitySprites = 0;
-        bool   m_pixelSnap = true;
         bool   m_isDrawing = false;
     };
 

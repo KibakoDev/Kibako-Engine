@@ -71,7 +71,6 @@ namespace KibakoEngine {
         m_vertexCapacitySprites = 0;
         m_indexCapacitySprites = 0;
         m_isDrawing = false;
-        m_pixelSnap = true;
     }
 
     void SpriteBatch2D::Begin(const XMFLOAT4X4& viewProjT)
@@ -463,11 +462,6 @@ float4 main(float4 position : SV_Position, float2 texcoord : TEXCOORD0, float4 c
                     const float dy = p.y - cy;
                     p.x = cx + dx * cs - dy * sn;
                     p.y = cy + dx * sn + dy * cs;
-                }
-            } else if (m_pixelSnap) {
-                for (auto& p : corners) {
-                    p.x = std::round(p.x);
-                    p.y = std::round(p.y);
                 }
             }
 
