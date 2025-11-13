@@ -1,69 +1,55 @@
-# Kibako Engine
+<p align="center">
+  <img src="assets/img/KibakoEngine_Logo_Black.png" alt="Kibako Engine Logo" width="180"/>
+</p>
 
-Kibako Engine is a compact 2D rendering engine built with C++20, SDL2, and Direct3D 11. It powers a small sandbox application used to explore ideas for a pixel-art project in the style of *Astro Void*. The repository focuses purely on engine-level systems—windowing, input, time keeping, sprite batching, and supporting utilities—without any gameplay-specific logic.
+<h1 align="center">Kibako Engine</h1>
 
-## Features
+<p align="center">
+  <em>
+    A small C++ engine prototype built from scratch with Direct3D 11.<br>
+    Focused on learning modern rendering concepts, clean architecture,<br>
+    and practical engine design.
+  </em>
+</p>
 
-- SDL2 window creation, input handling, and high-resolution timing.
-- Direct3D 11 renderer with pixel-perfect 2D camera, swap chain resize handling, and sprite batching tuned for layered textures.
-- Texture loading through `stb_image`, with point sampling defaults suitable for pixel art.
-- Unified logging, assertions, and profiling helpers designed for Visual Studio debugging sessions.
-- Lightweight sandbox demonstrating layered sprites, tinting, and simple motion using the public engine API.
+<p align="center">
+  <img src="https://img.shields.io/badge/status-early_development-orange" alt="status"/>
+  <img src="https://img.shields.io/badge/C%2B%2B-20-blue" alt="language"/>
+  <img src="https://img.shields.io/badge/Windows-MSVC%2FVS2022-lightgrey" alt="platform"/>
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="license"/>
+</p>
 
-## Repository structure
+---
 
-```
-Kibako2DEngine/
-├─ include/KibakoEngine/   Public headers for Core, Renderer, and Utils modules
-├─ src/                    Engine implementation files
-├─ third_party/            stb_image.h (header-only)
-└─ Kibako2DEngine.vcxproj  Visual Studio project file
+## 🧩 Overview
+**Kibako Engine** is an experimental graphics framework currently in **very early development**.  
+At this stage, it supports **2D rendering**, with **3D capabilities planned** for the future.  
 
-Kibako2DSandbox/
-├─ include/                Sandbox layer header
-├─ src/                    Sandbox main loop and demo layer
-└─ Kibako2DSandbox.vcxproj Visual Studio project file
-```
+The goal is to explore:
+- Engine architecture and modular system design  
+- Real-time rendering and resource management  
+- Clean and understandable code structure
 
-The engine is built as a static library and linked by the sandbox application.
+This project is primarily focused on **learning and experimentation**, not production use.
 
-## Build requirements
+---
 
-- Windows 10/11 with a Direct3D 11 capable GPU.
-- Visual Studio 2022 (v143 toolset) with the **Desktop development with C++** workload.
-- [vcpkg](https://github.com/microsoft/vcpkg) for dependency management (integrated mode recommended).
+## ⚙️ Development Status
+This project is **not stable** and APIs will change frequently.  
+Many systems are incomplete or serve as placeholders.  
 
-### Installing dependencies with vcpkg
+The current focus is on:
+- Building a **solid foundation** for rendering and engine flow  
+- Implementing a **debug/logging layer**  
+- Testing architecture scalability before adding complexity
 
-```powershell
-# Clone and bootstrap vcpkg if necessary
-git clone https://github.com/microsoft/vcpkg.git C:\dev\vcpkg
-C:\dev\vcpkg\bootstrap-vcpkg.bat
+---
 
-# Install SDL2 for both Win32 and x64
-C:\dev\vcpkg\vcpkg install sdl2:x86-windows sdl2:x64-windows
+## 🧾 License
+MIT © 2025 **KibakoDev**
 
-# Enable user-wide integration so Visual Studio picks up vcpkg automatically
-C:\dev\vcpkg\vcpkg integrate install
-```
+---
 
-`stb_image` ships with the repository and does not require installation.
-
-### Building the solution
-
-1. Open `KibakoEngine.sln` in Visual Studio 2022.
-2. Select a configuration (`Debug` or `Release`) and platform (`Win32` or `x64`).
-3. Build the solution. Both projects treat warnings as errors, compile with `/W4`, and request the Direct3D debug layer when available in debug builds.
-
-## Running the sandbox
-
-Launch the `Kibako2DSandbox` target after a successful build. The sandbox opens a resizable window, loads a single texture, and uses the engine API to batch a few sprites with layered tinting and subtle animation. Press `Esc` to exit.
-
-## Development status
-
-Kibako Engine is an early-stage learning project. The systems are intentionally lean but organized so additional tooling—debug overlays, resource managers, or gameplay layers—can be added as the Astro Void concept evolves.
-
-## License
-
-MIT License © 2025 KibakoDev
-
+<p align="center">
+  <sub>Built with curiosity, patience, and a lot of caffeine ☕</sub>
+</p>
