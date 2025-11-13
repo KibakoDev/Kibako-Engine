@@ -55,5 +55,7 @@ namespace KibakoEngine::Debug {
         } while (0)
 #endif
 
-#define KBK_HR(expression) ::KibakoEngine::Debug::VerifyHRESULT(static_cast<long>(expression), #expression, __FILE__, __LINE__)
+#define KBK_HR(expression) \
+    ::KibakoEngine::Debug::VerifyHRESULT( \
+        static_cast<long>(expression), #expression, __FILE__, __LINE__)
 

@@ -3,7 +3,10 @@
 #include <string>
 
 #include "KibakoEngine/Core/Debug.h"
-#include "KibakoEngine/Renderer/SpriteBatch2D.h"
+
+namespace KibakoEngine {
+    class SpriteBatch2D;
+}
 
 namespace KibakoEngine {
 
