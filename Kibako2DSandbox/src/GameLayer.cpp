@@ -2,18 +2,16 @@
 #include "GameLayer.h"
 
 #include "KibakoEngine/Core/Application.h"
-#include "KibakoEngine/Core/Input.h"
 #include "KibakoEngine/Core/Log.h"
 #include "KibakoEngine/Core/Debug.h"
 #include "KibakoEngine/Renderer/RendererD3D11.h"
 
-#include <SDL2/SDL.h>
 #include <cmath>
 
 using namespace KibakoEngine;
 
 GameLayer::GameLayer(Application& app)
-    : Layer("GameLayer")   // IMPORTANT : Layer n’a pas de constructeur par défaut
+    : Layer("GameLayer")
     , m_app(app)
 {
 }
@@ -30,14 +28,13 @@ void GameLayer::OnAttach()
 
 void GameLayer::OnDetach()
 {
-    // Rien à faire : Texture2D se détruit proprement (RAII)
+    // Rien de spécial : Texture2D se détruit tout seul (RAII)
 }
 
 void GameLayer::OnUpdate(float dt)
 {
+    // Juste un timer pour animer légèrement un sprite
     m_time += dt;
-
-    auto& input = m_app.InputSys();
 }
 
 void GameLayer::OnRender(SpriteBatch2D& batch)
@@ -49,18 +46,16 @@ void GameLayer::OnRender(SpriteBatch2D& batch)
     const float w = static_cast<float>(m_texStar.Width());
     const float h = static_cast<float>(m_texStar.Height());
 
-    // Petit bobbing vertical pour montrer l’animation
+    // Petit bobbing vertical pour montrer que tout tourne
     const float xOffset = std::sin(m_time * 2.0f) * 200.0f;
 
     RectF dstCenter{ 200.0f + xOffset, 150.0f, w, h };
-    RectF dstLeft{ 60.0f,  140.0f,           w, h };
+    RectF dstLeft{ 60.0f, 140.0f,           w, h };
     RectF dstRight{ 340.0f, 160.0f,           w, h };
     const RectF uvFull{ 0.0f, 0.0f, 1.0f, 1.0f };
 
-    // layer -1 : derrière
+    // layer -1 / 0 / +1 juste pour tester le z-order
     batch.Push(m_texStar, dstLeft, uvFull, Color4{ 0.2f, 0.8f, 1.0f, 1.0f }, 0.0f, -1);
-    // layer 0 : centre
     batch.Push(m_texStar, dstCenter, uvFull, Color4::White(), 0.0f, 0);
-    // layer +1 : devant avec rotation
     batch.Push(m_texStar, dstRight, uvFull, Color4{ 1.0f, 0.5f, 0.3f, 1.0f }, 0.0f, 1);
 }
