@@ -104,7 +104,3 @@ These notes help track what to revisit as the 2D pipeline evolves.
 MIT © 2025 **KibakoDev**
 
 ---
-
-<p align="center">
-  <sub>Built to learn today and power original games tomorrow.</sub>
-</p>
