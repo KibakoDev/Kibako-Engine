@@ -28,6 +28,8 @@ namespace KibakoEngine::Debug {
 #    endif
 #endif
 
+#define KBK_TRIGGER_BREAK(reason) ::KibakoEngine::RequestBreakpoint((reason), ::KibakoEngine::LogLevel::Critical)
+
 #define KBK_UNUSED(x) ((void)(x))
 
 #if KBK_DEBUG_BUILD
