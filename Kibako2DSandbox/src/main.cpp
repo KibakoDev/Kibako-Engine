@@ -1,14 +1,13 @@
-// Kibako2DSandbox/src/main.cpp
 #ifndef SDL_MAIN_HANDLED
-#define SDL_MAIN_HANDLED
+#    define SDL_MAIN_HANDLED
 #endif
 
 #ifndef NOMINMAX
-#define NOMINMAX
+#    define NOMINMAX
 #endif
 
 #ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
 #endif
 
 #include "KibakoEngine/Core/Application.h"
@@ -21,16 +20,17 @@ int main()
 {
     Application app;
     if (!app.Init(960, 540, "KibakoEngine Sandbox")) {
-        KbkLog("Sandbox", "Failed to initialize Application");
+        KbkError("Sandbox", "Failed to initialize Application");
         return 1;
     }
 
     GameLayer gameLayer(app);
     app.PushLayer(&gameLayer);
 
-    const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    const float clearColor[4] = { 0.05f, 0.05f, 0.08f, 1.0f };
     app.Run(clearColor, true);
 
     app.Shutdown();
     return 0;
 }
+

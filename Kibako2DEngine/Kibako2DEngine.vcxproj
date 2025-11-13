@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\KibakoEngine\Core\Application.h" />
+    <ClInclude Include="include\KibakoEngine\Core\Profiler.h" />
     <ClInclude Include="include\KibakoEngine\Core\Debug.h" />
     <ClInclude Include="include\KibakoEngine\Core\Input.h" />
     <ClInclude Include="include\KibakoEngine\Core\Layer.h" />
@@ -35,8 +36,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp" />
+    <ClCompile Include="src\Core\Debug.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
+    <ClCompile Include="src\Core\Log.cpp" />
     <ClCompile Include="src\Core\Time.cpp" />
+    <ClCompile Include="src\Core\Profiler.cpp" />
     <ClCompile Include="src\Renderer\Camera2D.cpp" />
     <ClCompile Include="src\Renderer\RendererD3D11.cpp" />
     <ClCompile Include="src\Renderer\SpriteBatch2D.cpp" />

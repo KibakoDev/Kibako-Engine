@@ -1,51 +1,57 @@
 #pragma once
 
-// Minimal debug helpers used across the engine. All macros become no-ops in
-// release builds but still validate expressions in debug configurations.
+#include <cstdint>
 
-#include <cstdio>
-#include <cstdlib>
+#include "KibakoEngine/Core/Log.h"
 
-#ifdef _WIN32
-#    include <windows.h>
+namespace KibakoEngine::Debug {
+
+    void ReportAssertion(const char* type, const char* condition, const char* message, const char* file, int line);
+    bool VerifyHRESULT(long hr, const char* expression, const char* file, int line);
+
+} // namespace KibakoEngine::Debug
+
+#if !defined(KBK_DEBUG_BUILD)
+#    if defined(_DEBUG) || !defined(NDEBUG)
+#        define KBK_DEBUG_BUILD 1
+#    else
+#        define KBK_DEBUG_BUILD 0
+#    endif
 #endif
 
-#if defined(_MSC_VER)
-#    define KBK_BREAK() __debugbreak()
-#else
-#    include <csignal>
-#    define KBK_BREAK() std::raise(SIGTRAP)
+#if !defined(KBK_BREAK)
+#    if defined(_MSC_VER)
+#        include <intrin.h>
+#        define KBK_BREAK() __debugbreak()
+#    else
+#        define KBK_BREAK() ((void)0)
+#    endif
 #endif
 
-#if defined(_DEBUG)
-#    define KBK_ASSERT(cond, msg)                                                                  \
-        do {                                                                                       \
-            if (!(cond)) {                                                                         \
-                std::fprintf(stderr, "[KBK_ASSERT] %s\nFile: %s(%d)\n", (msg), __FILE__, __LINE__); \
-                std::fflush(stderr);                                                               \
-                KBK_BREAK();                                                                       \
-            }                                                                                      \
+#define KBK_UNUSED(x) ((void)(x))
+
+#if KBK_DEBUG_BUILD
+#    define KBK_ASSERT(condition, message)                                                                   \
+        do {                                                                                                 \
+            if (!(condition)) {                                                                              \
+                ::KibakoEngine::Debug::ReportAssertion("ASSERT", #condition, (message), __FILE__, __LINE__); \
+                KBK_BREAK();                                                                                  \
+            }                                                                                                \
         } while (0)
 #else
-#    define KBK_ASSERT(cond, msg) ((void)sizeof(cond))
+#    define KBK_ASSERT(condition, message) ((void)sizeof(condition))
 #endif
 
-#if defined(_DEBUG)
-#    define KBK_HR(expr)                                                                           \
-        do {                                                                                       \
-            const HRESULT _kbk_hr = (expr);                                                        \
-            if (FAILED(_kbk_hr)) {                                                                 \
-                std::fprintf(stderr,                                                               \
-                             "[KBK_HR] hr=0x%08X\nExpr: %s\nFile: %s(%d)\n",                      \
-                             static_cast<unsigned>(_kbk_hr),                                       \
-                             #expr,                                                                \
-                             __FILE__,                                                             \
-                             __LINE__);                                                            \
-                std::fflush(stderr);                                                               \
-                KBK_BREAK();                                                                       \
-            }                                                                                      \
-        } while (0)
+#if KBK_DEBUG_BUILD
+#    define KBK_VERIFY(condition, message) KBK_ASSERT((condition), (message))
 #else
-#    define KBK_HR(expr) ((void)(expr))
+#    define KBK_VERIFY(condition, message)                                                                  \
+        do {                                                                                                \
+            if (!(condition)) {                                                                             \
+                ::KibakoEngine::Debug::ReportAssertion("VERIFY", #condition, (message), __FILE__, __LINE__); \
+            }                                                                                               \
+        } while (0)
 #endif
+
+#define KBK_HR(expression) ::KibakoEngine::Debug::VerifyHRESULT(static_cast<long>(expression), #expression, __FILE__, __LINE__)
 
