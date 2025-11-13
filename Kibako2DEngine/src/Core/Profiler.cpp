@@ -91,8 +91,8 @@ namespace KibakoEngine::Profiler {
             if (data.hits == 0)
                 continue;
             const double avg = data.totalMs / static_cast<double>(data.hits);
-            KbkLog("Profile", "%s -> avg %.3f ms (min %.3f / max %.3f) across %u samples",
-                   name.c_str(), avg, data.minMs, data.maxMs, data.hits);
+            KbkTrace("Profile", "%s -> avg %.3f ms (min %.3f / max %.3f) across %u samples",
+                     name.c_str(), avg, data.minMs, data.maxMs, data.hits);
         }
     }
 

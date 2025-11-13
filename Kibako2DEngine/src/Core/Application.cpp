@@ -15,6 +15,15 @@ namespace KibakoEngine {
     namespace
     {
         constexpr const char* kLogChannel = "App";
+
+        void AnnounceBreakpointStop()
+        {
+            const char* reason = LastBreakpointMessage();
+            KbkWarn(kLogChannel,
+                    "Halting main loop due to diagnostics breakpoint%s%s",
+                    (reason && reason[0] != '\0') ? ": " : "",
+                    (reason && reason[0] != '\0') ? reason : "");
+        }
     }
 
     bool Application::CreateWindowSDL(int width, int height, const char* title)
@@ -142,6 +151,9 @@ namespace KibakoEngine {
         if (!m_running)
             return false;
 
+        if (HasBreakpointRequest())
+            return false;
+
         Profiler::BeginFrame();
 
         m_input.BeginFrame();
@@ -176,6 +188,9 @@ namespace KibakoEngine {
             }
 
             m_input.HandleEvent(evt);
+
+            if (HasBreakpointRequest())
+                return false;
         }
 
         return true;
@@ -199,6 +214,11 @@ namespace KibakoEngine {
         KBK_ASSERT(m_running, "Run() called before Init()");
 
         while (PumpEvents()) {
+            if (ConsumeBreakpointRequest()) {
+                AnnounceBreakpointStop();
+                break;
+            }
+
             KBK_PROFILE_FRAME("Frame");
 
             const float dt = static_cast<float>(m_time.DeltaSeconds());
@@ -219,6 +239,15 @@ namespace KibakoEngine {
 
             batch.End();
             EndFrame(waitForVSync);
+
+            if (ConsumeBreakpointRequest()) {
+                AnnounceBreakpointStop();
+                break;
+            }
+        }
+
+        if (ConsumeBreakpointRequest()) {
+            AnnounceBreakpointStop();
         }
     }
 
