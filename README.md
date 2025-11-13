@@ -91,8 +91,6 @@ Key engine modules today:
 ---
 
 ## 🧹 Known Gaps & Cleanup Targets
-- `Utils/Math.h` exposes helper functions that are not yet used; they will be wired into gameplay/engine code later or trimmed.
-- `SpriteBatch2D::SetPixelSnap` exists but is not hooked to any user-facing toggle yet.
 - Runtime shader compilation is temporary—precompiled `.cso` files are planned.
 - Resource creation is synchronous and lacks caching or streaming.
 
