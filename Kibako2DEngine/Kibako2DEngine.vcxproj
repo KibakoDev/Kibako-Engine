@@ -32,6 +32,7 @@
     <ClInclude Include="include\KibakoEngine\Renderer\SpriteTypes.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\Texture2D.h" />
     <ClInclude Include="include\KibakoEngine\Utils\Math.h" />
+    <ClInclude Include="Ressources\AssetManager.h" />
     <ClInclude Include="third_party\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
@@ -45,6 +46,7 @@
     <ClCompile Include="src\Renderer\RendererD3D11.cpp" />
     <ClCompile Include="src\Renderer\SpriteBatch2D.cpp" />
     <ClCompile Include="src\Renderer\Texture2D.cpp" />
+    <ClCompile Include="src\Resources\AssetManager.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

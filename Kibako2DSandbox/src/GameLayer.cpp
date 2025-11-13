@@ -30,28 +30,35 @@ void GameLayer::OnAttach()
 {
     KBK_PROFILE_SCOPE("GameLayerAttach");
 
-    ID3D11Device* device = m_app.Renderer().GetDevice();
-    KBK_ASSERT(device != nullptr, "Renderer device must exist before loading textures");
+    auto& assets = m_app.Assets();
 
-    if (!m_starTexture.LoadFromFile(device, "assets/star.png", true)) {
+    m_starTexture = assets.LoadTexture("star", "assets/star.png", true);
+    if (!m_starTexture) {
         KbkError(kLogChannel, "Failed to load texture: assets/star.png");
         return;
     }
 
-    const float width = static_cast<float>(m_starTexture.Width());
-    const float height = static_cast<float>(m_starTexture.Height());
+    const float width = static_cast<float>(m_starTexture->Width());
+    const float height = static_cast<float>(m_starTexture->Height());
+
     for (auto& sprite : m_sprites) {
         sprite.baseRect.w = width;
         sprite.baseRect.h = height;
     }
 
-    KbkLog(kLogChannel, "GameLayer attached (%dx%d texture)", m_starTexture.Width(), m_starTexture.Height());
+    if (m_starTexture && m_starTexture->IsValid())
+    {
+        KbkLog(kLogChannel,
+            "GameLayer attached (%d x %d texture)",
+            m_starTexture->Width(),
+            m_starTexture->Height());
+    }
 }
 
 void GameLayer::OnDetach()
 {
     KBK_PROFILE_SCOPE("GameLayerDetach");
-    m_starTexture.Reset();
+    m_starTexture = nullptr;
 }
 
 void GameLayer::OnUpdate(float dt)
@@ -64,7 +71,7 @@ void GameLayer::OnRender(SpriteBatch2D& batch)
 {
     KBK_PROFILE_SCOPE("GameLayerRender");
 
-    if (!m_starTexture.IsValid())
+    if (!m_starTexture || !m_starTexture->IsValid())
         return;
 
     const RectF uvFull{ 0.0f, 0.0f, 1.0f, 1.0f };
@@ -80,7 +87,7 @@ void GameLayer::OnRender(SpriteBatch2D& batch)
         }
 
         const float rotation = sprite.rotationSpeed != 0.0f ? m_time * sprite.rotationSpeed : 0.0f;
-        batch.Push(m_starTexture, dst, uvFull, sprite.color, rotation, sprite.layer);
+        batch.Push(*m_starTexture, dst, uvFull, sprite.color, rotation, sprite.layer);
     }
 }
 

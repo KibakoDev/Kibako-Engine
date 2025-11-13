@@ -119,6 +119,9 @@ namespace KibakoEngine {
             return false;
         }
 
+        m_assets.Init(m_renderer.GetDevice());
+        KbkLog(kLogChannel, "AssetManager initialized");
+
         m_running = true;
         return true;
     }
@@ -136,6 +139,7 @@ namespace KibakoEngine {
         }
         m_layers.clear();
 
+        m_assets.Shutdown();
         m_renderer.Shutdown();
         DestroyWindowSDL();
 

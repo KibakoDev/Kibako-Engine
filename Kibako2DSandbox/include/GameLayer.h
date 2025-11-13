@@ -30,7 +30,7 @@ private:
     };
 
     KibakoEngine::Application& m_app;
-    KibakoEngine::Texture2D m_starTexture{};
+    KibakoEngine::Texture2D* m_starTexture = nullptr;
     std::array<SampleSprite, 3> m_sprites{};
     float m_time = 0.0f;
 };

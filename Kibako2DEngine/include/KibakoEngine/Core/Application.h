@@ -6,6 +6,7 @@
 #include "KibakoEngine/Core/Input.h"
 #include "KibakoEngine/Core/Time.h"
 #include "KibakoEngine/Renderer/RendererD3D11.h"
+#include "KibakoEngine/Resources/AssetManager.h"
 
 struct SDL_Window;
 struct HWND__;
@@ -38,6 +39,9 @@ namespace KibakoEngine {
         Input& InputSys() { return m_input; }
         const Input& InputSys() const { return m_input; }
 
+        AssetManager& Assets() { return m_assets; }
+        const AssetManager& Assets() const { return m_assets; }
+
         int Width() const { return m_width; }
         int Height() const { return m_height; }
 
@@ -59,9 +63,9 @@ namespace KibakoEngine {
         RendererD3D11 m_renderer;
         Time          m_time;
         Input         m_input;
+        AssetManager  m_assets;
 
         std::vector<Layer*> m_layers;
     };
 
 } // namespace KibakoEngine
-
