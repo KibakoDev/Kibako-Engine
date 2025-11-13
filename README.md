@@ -19,17 +19,6 @@
 
 ---
 
-## ⚙️ About
-Kibako Engine is a personal learning playground from a solo developer (19&nbsp;y/o) who wants to ship original games one day. The short-term mission is clear:
-
-- **Focus entirely on 2D rendering and gameplay foundations.**
-- **Experiment quickly** with engine architecture, rendering, and tooling.
-- **Document the journey** while iterating on a real codebase.
-
-Everything here is a prototype—APIs break, systems are replaced, and features appear/disappear as I learn. The long-term dream is to extend these lessons to 3D, but that is a distant goal.
-
----
-
 ## 🚧 Current Status
 > ⚠️ The engine is a fragile prototype. Expect missing features, rough edges, and work-in-progress systems.
 
