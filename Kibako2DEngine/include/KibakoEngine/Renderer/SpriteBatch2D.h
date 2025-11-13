@@ -5,6 +5,7 @@
 
 #include <DirectXMath.h>
 
+#include <cstdint>
 #include <vector>
 
 #include "KibakoEngine/Renderer/SpriteTypes.h"
@@ -71,6 +72,7 @@ namespace KibakoEngine {
         Microsoft::WRL::ComPtr<ID3D11RasterizerState>   m_rasterCullNone;
 
         std::vector<DrawCommand> m_commands;
+        std::vector<Vertex>      m_vertexScratch;
         std::vector<uint32_t>    m_indexScratch;
 
         DirectX::XMFLOAT4X4 m_viewProjT{};

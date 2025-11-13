@@ -1,110 +1,69 @@
-<p align="center"><img src="assets/img/KibakoEngine_Logo_Black.png" alt="Kibako Engine Logo" width="180"/></p>
+# Kibako Engine
 
-<h1 align="center">Kibako Engine</h1>
+Kibako Engine is a compact 2D rendering engine built with C++20, SDL2, and Direct3D 11. It powers a small sandbox application used to explore ideas for a pixel-art project in the style of *Astro Void*. The repository focuses purely on engine-level systems—windowing, input, time keeping, sprite batching, and supporting utilities—without any gameplay-specific logic.
 
-<p align="center">
-    <em>Minimal 2D Direct3D 11 sandbox ready to host a pixel-art game.</em>
-</p>
+## Features
 
----
+- SDL2 window creation, input handling, and high-resolution timing.
+- Direct3D 11 renderer with pixel-perfect 2D camera, swap chain resize handling, and sprite batching tuned for layered textures.
+- Texture loading through `stb_image`, with point sampling defaults suitable for pixel art.
+- Unified logging, assertions, and profiling helpers designed for Visual Studio debugging sessions.
+- Lightweight sandbox demonstrating layered sprites, tinting, and simple motion using the public engine API.
 
-## Highlights
-
-- **Purpose-built for Astro Void** pre-production: modular C++20 core without any gameplay logic.
-- **Deterministic 2D renderer** featuring pixel snapping, point sampling, and texture/layer sprite batching.
-- **SDL2 windowing & input**, Direct3D 11 renderer bootstrap, stb_image texture loading.
-- **Strict debug tooling**: color-coded logging, assert/HRESULT guards, optional monochrome preview.
-- **Zero-dependency build** beyond `SDL2` and `stb_image` (provided through vcpkg).
-
----
-
-## Engine layout
+## Repository structure
 
 ```
 Kibako2DEngine/
-├─ include/KibakoEngine/
-│  ├─ Core/        (Application, Input, Time, Debug, Log)
-│  ├─ Renderer/    (RendererD3D11, Camera2D, SpriteBatch2D, Texture2D, SpriteTypes)
-│  └─ Utils/       (Math helpers)
-├─ src/            (matching implementation files)
-├─ third_party/    (stb_image.h)
-└─ Kibako2DEngine.vcxproj
+├─ include/KibakoEngine/   Public headers for Core, Renderer, and Utils modules
+├─ src/                    Engine implementation files
+├─ third_party/            stb_image.h (header-only)
+└─ Kibako2DEngine.vcxproj  Visual Studio project file
 
 Kibako2DSandbox/
-├─ src/main.cpp    (neutral rendering demo)
-└─ Kibako2DSandbox.vcxproj
+├─ include/                Sandbox layer header
+├─ src/                    Sandbox main loop and demo layer
+└─ Kibako2DSandbox.vcxproj Visual Studio project file
 ```
 
-The engine project builds a static library. The sandbox links against it and demonstrates a few sprites using different layers, tints, and sampling modes.
+The engine is built as a static library and linked by the sandbox application.
 
----
+## Build requirements
 
-## Prerequisites
+- Windows 10/11 with a Direct3D 11 capable GPU.
+- Visual Studio 2022 (v143 toolset) with the **Desktop development with C++** workload.
+- [vcpkg](https://github.com/microsoft/vcpkg) for dependency management (integrated mode recommended).
 
-- **Visual Studio 2022** (v143 toolset) with Desktop development for C++ workload.
-- **vcpkg** for dependency management (integrated mode recommended).
-- Windows 10/11 with the Direct3D 11 runtime.
-
-### Install dependencies via vcpkg
+### Installing dependencies with vcpkg
 
 ```powershell
-# Clone vcpkg if you do not have it yet
+# Clone and bootstrap vcpkg if necessary
 git clone https://github.com/microsoft/vcpkg.git C:\dev\vcpkg
 C:\dev\vcpkg\bootstrap-vcpkg.bat
 
-# Install required libraries for both Win32 and x64
-C:\dev\vcpkg\vcpkg install sdl2:x64-windows sdl2:x86-windows
-```
+# Install SDL2 for both Win32 and x64
+C:\dev\vcpkg\vcpkg install sdl2:x86-windows sdl2:x64-windows
 
-Add the following user-wide integration once:
-
-```powershell
+# Enable user-wide integration so Visual Studio picks up vcpkg automatically
 C:\dev\vcpkg\vcpkg integrate install
 ```
 
-Visual Studio will now pick up SDL2 automatically when you open `KibakoEngine.sln`.
+`stb_image` ships with the repository and does not require installation.
 
-`stb_image` is shipped in `third_party/` and does not require an external package.
-
----
-
-## Building
+### Building the solution
 
 1. Open `KibakoEngine.sln` in Visual Studio 2022.
-2. Select the desired configuration (`Debug`/`Release`) and platform (`Win32`/`x64`).
-3. Build the solution. The engine and sandbox share the same warning level (`/W4`), treat warnings as errors, enforce `/permissive-`, and set `/Zc:__cplusplus`.
+2. Select a configuration (`Debug` or `Release`) and platform (`Win32` or `x64`).
+3. Build the solution. Both projects treat warnings as errors, compile with `/W4`, and request the Direct3D debug layer when available in debug builds.
 
-The Direct3D debug layer is enabled automatically in debug builds (when present) and the swapchain resizes when the window changes size.
+## Running the sandbox
 
----
+Launch the `Kibako2DSandbox` target after a successful build. The sandbox opens a resizable window, loads a single texture, and uses the engine API to batch a few sprites with layered tinting and subtle animation. Press `Esc` to exit.
 
-## Sandbox controls
+## Development status
 
-| Key | Action |
-| --- | ------ |
-| `Esc` | Quit the sandbox |
-| `M` | Toggle monochrome preview (0 ↔ 1) |
-| `P` | Toggle point vs. linear sampling |
-
-The sandbox renders three layered sprites using the same texture with different tints and rotation, demonstrating:
-
-- Pixel snapping (disabled automatically when rotating).
-- Stable batching by layer and texture (one draw call per texture per layer).
-- Per-frame toggles for sampling and monochrome.
-
----
-
-## Next steps
-
-- Hook the sandbox to the future Astro Void gameplay module.
-- Extend the debug overlay (draw calls, frame time) if needed.
-- Add texture atlas helpers and resource hot-reload when the production pipeline requires it.
-
-Until then, Kibako Engine remains a compact, production-ready rendering shell for a pixel-art game.
-
----
+Kibako Engine is an early-stage learning project. The systems are intentionally lean but organized so additional tooling—debug overlays, resource managers, or gameplay layers—can be added as the Astro Void concept evolves.
 
 ## License
 
-MIT © 2025 KibakoDev
+MIT License © 2025 KibakoDev
 

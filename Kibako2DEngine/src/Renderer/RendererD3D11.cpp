@@ -1,37 +1,52 @@
 #ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
 #endif
 
 #ifndef NOMINMAX
-#define NOMINMAX
+#    define NOMINMAX
 #endif
 
 #include "KibakoEngine/Renderer/RendererD3D11.h"
 
 #include "KibakoEngine/Core/Debug.h"
 #include "KibakoEngine/Core/Log.h"
+#include "KibakoEngine/Core/Profiler.h"
 
-#include <iterator>
 #include <windows.h>
 
+#include <iterator>
+
 #ifdef _MSC_VER
-#pragma comment(lib, "d3d11.lib")
-#pragma comment(lib, "dxgi.lib")
+#    pragma comment(lib, "d3d11.lib")
+#    pragma comment(lib, "dxgi.lib")
 #endif
 
 namespace KibakoEngine {
 
-    bool RendererD3D11::Init(HWND hwnd, uint32_t width, uint32_t height)
+    namespace
     {
+        constexpr const char* kLogChannel = "Renderer";
+    }
+
+    bool RendererD3D11::Init(HWND hwnd, std::uint32_t width, std::uint32_t height)
+    {
+        KBK_PROFILE_SCOPE("RendererInit");
+
         m_width = width;
         m_height = height;
 
-        if (!CreateSwapChain(hwnd, width, height))
+        if (!CreateSwapChain(hwnd, width, height)) {
+            KbkError(kLogChannel, "Failed to create swap chain");
             return false;
-        if (!CreateRenderTargets(width, height))
+        }
+        if (!CreateRenderTargets(width, height)) {
+            KbkError(kLogChannel, "Failed to create render targets");
             return false;
-        if (!m_batch.Init(m_device.Get(), m_context.Get()))
+        }
+        if (!m_batch.Init(m_device.Get(), m_context.Get())) {
+            KbkError(kLogChannel, "SpriteBatch2D initialization failed");
             return false;
+        }
 
         m_camera.SetPosition(0.0f, 0.0f);
         m_camera.SetRotation(0.0f);
@@ -40,6 +55,8 @@ namespace KibakoEngine {
 
     void RendererD3D11::Shutdown()
     {
+        KBK_PROFILE_SCOPE("RendererShutdown");
+
         m_batch.Shutdown();
         if (m_context)
             m_context->ClearState();
@@ -53,6 +70,8 @@ namespace KibakoEngine {
 
     void RendererD3D11::BeginFrame(const float clearColor[4])
     {
+        KBK_PROFILE_SCOPE("RendererBeginFrame");
+
         const float color[4] = {
             clearColor ? clearColor[0] : 0.0f,
             clearColor ? clearColor[1] : 0.0f,
@@ -77,15 +96,22 @@ namespace KibakoEngine {
 
     void RendererD3D11::EndFrame(bool waitForVSync)
     {
-        if (m_swapChain)
-            m_swapChain->Present(waitForVSync ? 1 : 0, 0);
-    }
+        KBK_PROFILE_SCOPE("RendererEndFrame");
 
-    void RendererD3D11::OnResize(uint32_t width, uint32_t height)
-    {
         if (!m_swapChain)
             return;
-        if (width == 0 || height == 0)
+
+        const HRESULT hr = m_swapChain->Present(waitForVSync ? 1 : 0, 0);
+        if (FAILED(hr)) {
+            KbkError(kLogChannel, "Swap chain Present failed: 0x%08X", static_cast<unsigned>(hr));
+        }
+    }
+
+    void RendererD3D11::OnResize(std::uint32_t width, std::uint32_t height)
+    {
+        KBK_PROFILE_SCOPE("RendererResize");
+
+        if (!m_swapChain || width == 0 || height == 0)
             return;
         if (width == m_width && height == m_height)
             return;
@@ -95,23 +121,29 @@ namespace KibakoEngine {
 
         m_context->OMSetRenderTargets(0, nullptr, nullptr);
         m_rtv.Reset();
-        HRESULT hr = m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
-        KBK_HR(hr);
-        if (FAILED(hr))
-            return;
 
-        if (!CreateRenderTargets(width, height))
+        const HRESULT hr = m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+        if (FAILED(hr)) {
+            KbkError(kLogChannel, "ResizeBuffers failed: 0x%08X", static_cast<unsigned>(hr));
             return;
+        }
+
+        if (!CreateRenderTargets(width, height)) {
+            KbkError(kLogChannel, "Failed to recreate render targets after resize");
+            return;
+        }
 
         m_camera.SetViewport(static_cast<float>(width), static_cast<float>(height));
     }
 
-    bool RendererD3D11::CreateSwapChain(HWND hwnd, uint32_t width, uint32_t height)
+    bool RendererD3D11::CreateSwapChain(HWND hwnd, std::uint32_t width, std::uint32_t height)
     {
+        KBK_PROFILE_SCOPE("CreateSwapChain");
+
         UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-    #if defined(_DEBUG)
+#if KBK_DEBUG_BUILD
         flags |= D3D11_CREATE_DEVICE_DEBUG;
-    #endif
+#endif
 
         DXGI_SWAP_CHAIN_DESC desc{};
         desc.BufferCount = 2;
@@ -144,8 +176,9 @@ namespace KibakoEngine {
                                                    m_device.GetAddressOf(),
                                                    &m_featureLevel,
                                                    m_context.GetAddressOf());
-    #if defined(_DEBUG)
+#if KBK_DEBUG_BUILD
         if (FAILED(hr)) {
+            KbkWarn(kLogChannel, "Retrying device creation without debug layer");
             flags &= ~D3D11_CREATE_DEVICE_DEBUG;
             hr = D3D11CreateDeviceAndSwapChain(nullptr,
                                                D3D_DRIVER_TYPE_HARDWARE,
@@ -160,27 +193,31 @@ namespace KibakoEngine {
                                                &m_featureLevel,
                                                m_context.GetAddressOf());
         }
-    #endif
-        KBK_HR(hr);
+#endif
+
         if (FAILED(hr))
             return false;
 
-        KbkLog("Renderer", "D3D11 feature level: 0x%04X", static_cast<unsigned>(m_featureLevel));
+        KbkLog(kLogChannel, "D3D11 feature level: 0x%04X", static_cast<unsigned>(m_featureLevel));
         return true;
     }
 
-    bool RendererD3D11::CreateRenderTargets(uint32_t width, uint32_t height)
+    bool RendererD3D11::CreateRenderTargets(std::uint32_t width, std::uint32_t height)
     {
+        KBK_PROFILE_SCOPE("CreateRenderTargets");
+
         Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
         HRESULT hr = m_swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf()));
-        KBK_HR(hr);
-        if (FAILED(hr))
+        if (FAILED(hr)) {
+            KbkError(kLogChannel, "GetBuffer failed: 0x%08X", static_cast<unsigned>(hr));
             return false;
+        }
 
         hr = m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, m_rtv.GetAddressOf());
-        KBK_HR(hr);
-        if (FAILED(hr))
+        if (FAILED(hr)) {
+            KbkError(kLogChannel, "CreateRenderTargetView failed: 0x%08X", static_cast<unsigned>(hr));
             return false;
+        }
 
         m_width = width;
         m_height = height;

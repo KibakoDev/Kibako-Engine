@@ -2,11 +2,17 @@
 
 #include "KibakoEngine/Core/Debug.h"
 #include "KibakoEngine/Core/Log.h"
+#include "KibakoEngine/Core/Profiler.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 namespace KibakoEngine {
+
+    namespace
+    {
+        constexpr const char* kLogChannel = "Texture";
+    }
 
     void Texture2D::Reset()
     {
@@ -18,6 +24,8 @@ namespace KibakoEngine {
 
     bool Texture2D::LoadFromFile(ID3D11Device* device, const std::string& path, bool srgb)
     {
+        KBK_PROFILE_SCOPE("TextureLoad");
+
         KBK_ASSERT(device != nullptr, "Texture2D::LoadFromFile requires a valid device");
         Reset();
 
@@ -27,7 +35,7 @@ namespace KibakoEngine {
         int comp = 0;
         stbi_uc* pixels = stbi_load(path.c_str(), &width, &height, &comp, 4);
         if (!pixels) {
-            KbkLog("Texture", "Failed to load %s", path.c_str());
+            KbkError(kLogChannel, "Failed to load %s", path.c_str());
             return false;
         }
 
@@ -50,20 +58,23 @@ namespace KibakoEngine {
         Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
         HRESULT hr = device->CreateTexture2D(&desc, &data, texture.GetAddressOf());
         stbi_image_free(pixels);
-        KBK_HR(hr);
-        if (FAILED(hr))
+        if (FAILED(hr)) {
+            KbkError(kLogChannel, "CreateTexture2D failed: 0x%08X", static_cast<unsigned>(hr));
             return false;
+        }
 
         Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
         hr = device->CreateShaderResourceView(texture.Get(), nullptr, srv.GetAddressOf());
-        KBK_HR(hr);
-        if (FAILED(hr))
+        if (FAILED(hr)) {
+            KbkError(kLogChannel, "CreateShaderResourceView failed: 0x%08X", static_cast<unsigned>(hr));
             return false;
+        }
 
         m_texture = texture;
         m_srv = srv;
         m_width = width;
         m_height = height;
+        KbkLog(kLogChannel, "Loaded %s (%dx%d)", path.c_str(), m_width, m_height);
         return true;
     }
 

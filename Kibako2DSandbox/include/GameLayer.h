@@ -1,16 +1,16 @@
-// Kibako2DSandbox/include/GameLayer.h
 #pragma once
 
+#include <array>
+
 #include "KibakoEngine/Core/Layer.h"
-#include "KibakoEngine/Renderer/Texture2D.h"
 #include "KibakoEngine/Renderer/SpriteTypes.h"
-#include "KibakoEngine/Renderer/SpriteBatch2D.h"
+#include "KibakoEngine/Renderer/Texture2D.h"
 
 namespace KibakoEngine {
     class Application;
 }
 
-class GameLayer : public KibakoEngine::Layer
+class GameLayer final : public KibakoEngine::Layer
 {
 public:
     explicit GameLayer(KibakoEngine::Application& app);
@@ -21,8 +21,17 @@ public:
     void OnRender(KibakoEngine::SpriteBatch2D& batch) override;
 
 private:
-    KibakoEngine::Application& m_app;
+    struct SampleSprite
+    {
+        KibakoEngine::RectF baseRect;
+        KibakoEngine::Color4 color;
+        float rotationSpeed = 0.0f;
+        int layer = 0;
+    };
 
-    KibakoEngine::Texture2D m_texStar{};
+    KibakoEngine::Application& m_app;
+    KibakoEngine::Texture2D m_starTexture{};
+    std::array<SampleSprite, 3> m_sprites{};
     float m_time = 0.0f;
 };
+
