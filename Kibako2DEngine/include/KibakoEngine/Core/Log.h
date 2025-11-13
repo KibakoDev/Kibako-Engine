@@ -2,6 +2,7 @@
 
 #include <cstdarg>
 #include <cstdint>
+#include <utility>
 
 namespace KibakoEngine {
 
@@ -14,6 +15,15 @@ namespace KibakoEngine {
 
     void LogMessage(LogLevel level, const char* channel, const char* fmt, ...);
     void LogMessageV(LogLevel level, const char* channel, const char* fmt, std::va_list args);
+
+    namespace Detail
+    {
+        template <typename... Args>
+        inline void LogMessageForward(LogLevel level, const char* channel, const char* fmt, Args&&... args)
+        {
+            LogMessage(level, channel, fmt, std::forward<Args>(args)...);
+        }
+    } // namespace Detail
 
 } // namespace KibakoEngine
 
