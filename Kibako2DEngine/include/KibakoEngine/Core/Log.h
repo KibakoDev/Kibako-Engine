@@ -72,23 +72,27 @@ namespace KibakoEngine {
 
 #define KBK_LOG_CHANNEL_DEFAULT "Kibako"
 
-#define KBK_LOG(level, channel, ...)                                                                           \
-    ::KibakoEngine::Detail::LogMessageForward((level),                                                         \
-                                              (channel),                                                       \
-                                              __FILE__,                                                        \
-                                              __LINE__,                                                        \
-                                              __func__,                                                        \
-                                              __VA_ARGS__)
+#define KBK_LOG(level, channel, fmt, ...)                                                                        \
+    ::KibakoEngine::Detail::LogMessageForward((level),                                                          \
+                                              (channel),                                                        \
+                                              __FILE__,                                                         \
+                                              __LINE__,                                                         \
+                                              __func__,                                                         \
+                                              (fmt) __VA_OPT__(, ) __VA_ARGS__)
 
-#define KbkTrace(channel, ...)   KBK_LOG(::KibakoEngine::LogLevel::Trace, (channel), __VA_ARGS__)
-#define KbkLog(channel, ...)     KBK_LOG(::KibakoEngine::LogLevel::Info, (channel), __VA_ARGS__)
-#define KbkWarn(channel, ...)    KBK_LOG(::KibakoEngine::LogLevel::Warning, (channel), __VA_ARGS__)
-#define KbkError(channel, ...)   KBK_LOG(::KibakoEngine::LogLevel::Error, (channel), __VA_ARGS__)
-#define KbkCritical(channel, ...)                                                                              \
-    KBK_LOG(::KibakoEngine::LogLevel::Critical, (channel), __VA_ARGS__)
+#define KbkTrace(channel, fmt, ...)                                                                            \
+    KBK_LOG(::KibakoEngine::LogLevel::Trace, (channel), (fmt) __VA_OPT__(, ) __VA_ARGS__)
+#define KbkLog(channel, fmt, ...)                                                                              \
+    KBK_LOG(::KibakoEngine::LogLevel::Info, (channel), (fmt) __VA_OPT__(, ) __VA_ARGS__)
+#define KbkWarn(channel, fmt, ...)                                                                             \
+    KBK_LOG(::KibakoEngine::LogLevel::Warning, (channel), (fmt) __VA_OPT__(, ) __VA_ARGS__)
+#define KbkError(channel, fmt, ...)                                                                            \
+    KBK_LOG(::KibakoEngine::LogLevel::Error, (channel), (fmt) __VA_OPT__(, ) __VA_ARGS__)
+#define KbkCritical(channel, fmt, ...)                                                                         \
+    KBK_LOG(::KibakoEngine::LogLevel::Critical, (channel), (fmt) __VA_OPT__(, ) __VA_ARGS__)
 
-#define KbkLogDefault(...)      KbkLog(KBK_LOG_CHANNEL_DEFAULT, __VA_ARGS__)
-#define KbkWarnDefault(...)     KbkWarn(KBK_LOG_CHANNEL_DEFAULT, __VA_ARGS__)
-#define KbkErrorDefault(...)    KbkError(KBK_LOG_CHANNEL_DEFAULT, __VA_ARGS__)
-#define KbkCriticalDefault(...) KbkCritical(KBK_LOG_CHANNEL_DEFAULT, __VA_ARGS__)
+#define KbkLogDefault(fmt, ...)  KbkLog(KBK_LOG_CHANNEL_DEFAULT, fmt __VA_OPT__(, ) __VA_ARGS__)
+#define KbkWarnDefault(fmt, ...) KbkWarn(KBK_LOG_CHANNEL_DEFAULT, fmt __VA_OPT__(, ) __VA_ARGS__)
+#define KbkErrorDefault(fmt, ...) KbkError(KBK_LOG_CHANNEL_DEFAULT, fmt __VA_OPT__(, ) __VA_ARGS__)
+#define KbkCriticalDefault(fmt, ...) KbkCritical(KBK_LOG_CHANNEL_DEFAULT, fmt __VA_OPT__(, ) __VA_ARGS__)
 
