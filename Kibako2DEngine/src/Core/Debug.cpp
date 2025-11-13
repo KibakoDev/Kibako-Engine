@@ -22,7 +22,7 @@ namespace KibakoEngine::Debug {
     void ReportAssertion(const char* type, const char* condition, const char* message, const char* file, int line)
     {
         const char* filename = ExtractFilename(file);
-        KbkError("Assert", "%s failed: (%s) -> %s (%s:%d)", type, condition, message ? message : "", filename, line);
+        KbkCritical("Assert", "%s failed: (%s) -> %s (%s:%d)", type, condition, message ? message : "", filename, line);
     }
 
     bool VerifyHRESULT(long hr, const char* expression, const char* file, int line)
