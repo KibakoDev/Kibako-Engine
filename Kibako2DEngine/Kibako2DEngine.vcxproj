@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="include\KibakoEngine\Collision\Collision2D.h" />
     <ClInclude Include="include\KibakoEngine\Core\Application.h" />
+    <ClInclude Include="include\KibakoEngine\Core\DebugUI.h" />
     <ClInclude Include="include\KibakoEngine\Core\Profiler.h" />
     <ClInclude Include="include\KibakoEngine\Core\Debug.h" />
     <ClInclude Include="include\KibakoEngine\Core\Input.h" />
@@ -37,12 +38,21 @@
     <ClInclude Include="include\KibakoEngine\Scene\Scene2D.h" />
     <ClInclude Include="include\KibakoEngine\Utils\Math.h" />
     <ClInclude Include="Ressources\AssetManager.h" />
+    <ClInclude Include="third_party\imgui\backends\imgui_impl_dx11.h" />
+    <ClInclude Include="third_party\imgui\backends\imgui_impl_sdl2.h" />
+    <ClInclude Include="third_party\imgui\imconfig.h" />
+    <ClInclude Include="third_party\imgui\imgui.h" />
+    <ClInclude Include="third_party\imgui\imgui_internal.h" />
+    <ClInclude Include="third_party\imgui\imstb_rectpack.h" />
+    <ClInclude Include="third_party\imgui\imstb_textedit.h" />
+    <ClInclude Include="third_party\imgui\imstb_truetype.h" />
     <ClInclude Include="third_party\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Collision\Collision2D.cpp" />
     <ClCompile Include="src\Core\Application.cpp" />
     <ClCompile Include="src\Core\Debug.cpp" />
+    <ClCompile Include="src\Core\DebugUI.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\Log.cpp" />
     <ClCompile Include="src\Core\Time.cpp" />
@@ -53,6 +63,21 @@
     <ClCompile Include="src\Renderer\Texture2D.cpp" />
     <ClCompile Include="src\Resources\AssetManager.cpp" />
     <ClCompile Include="src\Scene\Scene2D.cpp" />
+    <ClCompile Include="third_party\imgui\backends\imgui_impl_dx11.cpp" />
+    <ClCompile Include="third_party\imgui\backends\imgui_impl_sdl2.cpp" />
+    <ClCompile Include="third_party\imgui\imgui.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_demo.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_draw.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_tables.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_widgets.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="third_party\imgui\.editorconfig" />
+    <None Include="third_party\imgui\.gitattributes" />
+    <None Include="third_party\imgui\.gitignore" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="third_party\imgui\LICENSE.txt" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -151,7 +176,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\C++Development\KibakoEngine\Kibako2DEngine\third_party\imgui;D:\C++Development\KibakoEngine\Kibako2DEngine\third_party\imgui\backends;$(ProjectDir)include;$(ProjectDir)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/permissive- /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -170,7 +195,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\C++Development\KibakoEngine\Kibako2DEngine\third_party\imgui;D:\C++Development\KibakoEngine\Kibako2DEngine\third_party\imgui\backends;$(ProjectDir)include;$(ProjectDir)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/permissive- /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>

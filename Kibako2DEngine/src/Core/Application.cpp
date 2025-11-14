@@ -4,6 +4,7 @@
 #include "KibakoEngine/Core/Layer.h"
 #include "KibakoEngine/Core/Log.h"
 #include "KibakoEngine/Core/Profiler.h"
+#include "KibakoEngine/Core/DebugUI.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
@@ -20,9 +21,9 @@ namespace KibakoEngine {
         {
             const char* reason = LastBreakpointMessage();
             KbkWarn(kLogChannel,
-                    "Halting main loop due to diagnostics breakpoint%s%s",
-                    (reason && reason[0] != '\0') ? ": " : "",
-                    (reason && reason[0] != '\0') ? reason : "");
+                "Halting main loop due to diagnostics breakpoint%s%s",
+                (reason && reason[0] != '\0') ? ": " : "",
+                (reason && reason[0] != '\0') ? reason : "");
         }
     }
 
@@ -37,11 +38,12 @@ namespace KibakoEngine {
         }
 
         m_window = SDL_CreateWindow(title,
-                                    SDL_WINDOWPOS_CENTERED,
-                                    SDL_WINDOWPOS_CENTERED,
-                                    width,
-                                    height,
-                                    SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
+            SDL_WINDOWPOS_CENTERED,
+            SDL_WINDOWPOS_CENTERED,
+            width,
+            height,
+            SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
+
         if (!m_window) {
             KbkError(kLogChannel, "SDL_CreateWindow failed: %s", SDL_GetError());
             SDL_Quit();
@@ -96,7 +98,7 @@ namespace KibakoEngine {
 
         KbkLog(kLogChannel, "Resize -> %dx%d", m_width, m_height);
         m_renderer.OnResize(static_cast<std::uint32_t>(m_width),
-                            static_cast<std::uint32_t>(m_height));
+            static_cast<std::uint32_t>(m_height));
     }
 
     bool Application::Init(int width, int height, const char* title)
@@ -113,11 +115,14 @@ namespace KibakoEngine {
         KbkLog(kLogChannel, "Drawable size: %dx%d", m_width, m_height);
 
         if (!m_renderer.Init(m_hwnd,
-                             static_cast<std::uint32_t>(m_width),
-                             static_cast<std::uint32_t>(m_height))) {
+            static_cast<std::uint32_t>(m_width),
+            static_cast<std::uint32_t>(m_height))) {
             Shutdown();
             return false;
         }
+
+        // --- INIT IMGUI ---
+        DebugUI::Init(m_window, m_renderer.GetDevice(), m_renderer.GetImmediateContext());
 
         m_assets.Init(m_renderer.GetDevice());
         KbkLog(kLogChannel, "AssetManager initialized");
@@ -140,6 +145,10 @@ namespace KibakoEngine {
         m_layers.clear();
 
         m_assets.Shutdown();
+
+        // Shutdown ImGui BEFORE renderer shutdown
+        DebugUI::Shutdown();
+
         m_renderer.Shutdown();
         DestroyWindowSDL();
 
@@ -165,6 +174,9 @@ namespace KibakoEngine {
 
         SDL_Event evt{};
         while (SDL_PollEvent(&evt) != 0) {
+
+            DebugUI::ProcessEvent(evt);
+
             switch (evt.type) {
             case SDL_QUIT:
                 return false;
@@ -218,6 +230,12 @@ namespace KibakoEngine {
         KBK_ASSERT(m_running, "Run() called before Init()");
 
         while (PumpEvents()) {
+
+            // <<< ICI : input est à jour, tu peux lire KeyPressed
+            if (m_input.KeyPressed(SDL_SCANCODE_F2)) {
+                DebugUI::ToggleEnabled();
+            }
+
             if (ConsumeBreakpointRequest()) {
                 AnnounceBreakpointStop();
                 break;
@@ -226,10 +244,15 @@ namespace KibakoEngine {
             KBK_PROFILE_FRAME("Frame");
 
             const float dt = static_cast<float>(m_time.DeltaSeconds());
+
+            // Update layers
             for (Layer* layer : m_layers) {
                 if (layer)
                     layer->OnUpdate(dt);
             }
+
+            // New frame ImGui
+            DebugUI::NewFrame();
 
             BeginFrame(clearColor);
 
@@ -242,6 +265,8 @@ namespace KibakoEngine {
             }
 
             batch.End();
+
+            DebugUI::Render();
             EndFrame(waitForVSync);
 
             if (ConsumeBreakpointRequest()) {
@@ -277,4 +302,3 @@ namespace KibakoEngine {
     }
 
 } // namespace KibakoEngine
-
