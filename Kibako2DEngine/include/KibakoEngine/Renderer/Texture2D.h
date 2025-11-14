@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 
+#include <cstdint>
 #include <string>
 
 namespace KibakoEngine {
@@ -10,6 +11,7 @@ namespace KibakoEngine {
     class Texture2D {
     public:
         bool LoadFromFile(ID3D11Device* device, const std::string& path, bool srgb = false);
+        bool CreateSolidColor(ID3D11Device* device, std::uint32_t width, std::uint32_t height, std::uint32_t rgba);
         void Reset();
 
         [[nodiscard]] int Width() const { return m_width; }

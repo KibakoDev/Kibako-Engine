@@ -2,9 +2,11 @@
 
 namespace KibakoEngine {
 
-    // On déclare juste qu'il existe un Transform2D dans ce namespace.
-    // La définition complète est dans Scene2D.h.
+    // On dclare juste qu'il existe un Transform2D dans ce namespace.
+    // La dfinition complte est dans Scene2D.h.
     struct Transform2D;
+    class Input;
+    class SpriteBatch2D;
 
     // --------------------------
     // ---- Collider Types ------
@@ -23,7 +25,7 @@ namespace KibakoEngine {
         bool  active = true;
     };
 
-    // Composant de collision attachable à une entité 2D
+    // Composant de collision attachable  une entit 2D
     struct CollisionComponent2D
     {
         CircleCollider2D* circle = nullptr;
@@ -39,5 +41,14 @@ namespace KibakoEngine {
 
     bool Intersects(const AABBCollider2D& b1, const Transform2D& t1,
         const AABBCollider2D& b2, const Transform2D& t2);
+
+#if KBK_DEBUG_BUILD
+    namespace CollisionDebug2D
+    {
+        void UpdateToggle(const Input& input);
+        void BeginFrame();
+        void RenderDebug(SpriteBatch2D& batch);
+    }
+#endif
 
 } // namespace KibakoEngine
