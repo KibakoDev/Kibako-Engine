@@ -107,6 +107,10 @@ namespace KibakoEngine {
                 sprite.layer
             );
         }
+
+#if KBK_DEBUG_BUILD
+        CollisionDebug2D::RenderDebug(batch);
+#endif
     }
 
 } // namespace KibakoEngine
