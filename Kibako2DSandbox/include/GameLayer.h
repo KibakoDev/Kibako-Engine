@@ -24,16 +24,19 @@ private:
     KibakoEngine::Application& m_app;
 
     KibakoEngine::Texture2D* m_starTexture = nullptr;
+    KibakoEngine::Texture2D  m_debugPixel;
     KibakoEngine::Scene2D    m_scene;
 
-    // IDs des entités qu’on veut manipuler
+    // IDs des entits quon veut manipuler
     KibakoEngine::EntityID m_entityLeft = 0;
     KibakoEngine::EntityID m_entityCenter = 0;
     KibakoEngine::EntityID m_entityRight = 0;
 
-    // Colliders attachés (propriété du layer, pointeurs stockés dans les entités)
+    // Colliders attachs (proprit du layer, pointeurs stocks dans les entits)
     KibakoEngine::CircleCollider2D m_centerCollider{};
     KibakoEngine::CircleCollider2D m_rightCollider{};
 
     float m_time = 0.0f;
+    bool  m_showCollisionDebug = false;
+    bool  m_lastCollision = false;
 };

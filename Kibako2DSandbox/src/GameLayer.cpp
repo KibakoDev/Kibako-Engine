@@ -6,6 +6,8 @@
 #include "KibakoEngine/Core/Profiler.h"
 #include "KibakoEngine/Renderer/RendererD3D11.h"
 
+#include <DirectXMath.h>
+#include <SDL2/SDL_scancode.h>
 #include <cmath>
 
 using namespace KibakoEngine;
@@ -13,6 +15,97 @@ using namespace KibakoEngine;
 namespace
 {
     constexpr const char* kLogChannel = "Sandbox";
+    constexpr int kDebugDrawLayer = 1000;
+    constexpr float kColliderThickness = 2.0f;
+
+    const RectF kUnitRect = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
+
+    void DrawLine(SpriteBatch2D& batch,
+        Texture2D& pixel,
+        const DirectX::XMFLOAT2& a,
+        const DirectX::XMFLOAT2& b,
+        const Color4& color,
+        float thickness)
+    {
+        const float dx = b.x - a.x;
+        const float dy = b.y - a.y;
+        const float length = std::sqrt(dx * dx + dy * dy);
+        if (length <= 0.0001f)
+            return;
+
+        RectF dst{};
+        dst.w = length;
+        dst.h = thickness;
+
+        const float midX = (a.x + b.x) * 0.5f;
+        const float midY = (a.y + b.y) * 0.5f;
+        dst.x = midX - dst.w * 0.5f;
+        dst.y = midY - dst.h * 0.5f;
+
+        const float angle = std::atan2(dy, dx);
+
+        batch.Push(pixel, dst, kUnitRect, color, angle, kDebugDrawLayer);
+    }
+
+    void DrawCross(SpriteBatch2D& batch,
+        Texture2D& pixel,
+        const DirectX::XMFLOAT2& center,
+        float size,
+        const Color4& color,
+        float thickness)
+    {
+        const float half = size * 0.5f;
+        const DirectX::XMFLOAT2 left{ center.x - half, center.y };
+        const DirectX::XMFLOAT2 right{ center.x + half, center.y };
+        const DirectX::XMFLOAT2 top{ center.x, center.y - half };
+        const DirectX::XMFLOAT2 bottom{ center.x, center.y + half };
+
+        DrawLine(batch, pixel, left, right, color, thickness);
+        DrawLine(batch, pixel, top, bottom, color, thickness);
+    }
+
+    void DrawCircleOutline(SpriteBatch2D& batch,
+        Texture2D& pixel,
+        const DirectX::XMFLOAT2& center,
+        float radius,
+        const Color4& color,
+        float thickness)
+    {
+        if (radius <= 0.0f)
+            return;
+
+        constexpr int segments = 32;
+        DirectX::XMFLOAT2 prev{ center.x + radius, center.y };
+
+        for (int i = 1; i <= segments; ++i) {
+            const float angle = (static_cast<float>(i) / static_cast<float>(segments)) * 6.28318530717958647692f;
+            DirectX::XMFLOAT2 next{
+                center.x + std::cos(angle) * radius,
+                center.y + std::sin(angle) * radius
+            };
+            DrawLine(batch, pixel, prev, next, color, thickness);
+            prev = next;
+        }
+    }
+
+    void DrawAABBOutline(SpriteBatch2D& batch,
+        Texture2D& pixel,
+        const DirectX::XMFLOAT2& center,
+        float halfW,
+        float halfH,
+        const Color4& color,
+        float thickness)
+    {
+        const DirectX::XMFLOAT2 tl{ center.x - halfW, center.y - halfH };
+        const DirectX::XMFLOAT2 tr{ center.x + halfW, center.y - halfH };
+        const DirectX::XMFLOAT2 br{ center.x + halfW, center.y + halfH };
+        const DirectX::XMFLOAT2 bl{ center.x - halfW, center.y + halfH };
+
+        DrawLine(batch, pixel, tl, tr, color, thickness);
+        DrawLine(batch, pixel, tr, br, color, thickness);
+        DrawLine(batch, pixel, br, bl, color, thickness);
+        DrawLine(batch, pixel, bl, tl, color, thickness);
+    }
 }
 
 GameLayer::GameLayer(Application& app)
@@ -33,10 +126,18 @@ void GameLayer::OnAttach()
         return;
     }
 
+    if (ID3D11Device* device = m_app.Renderer().GetDevice()) {
+        if (!m_debugPixel.CreateSolidColor(device, 255, 255, 255, 255)) {
+            KbkError(kLogChannel, "Failed to create debug pixel texture");
+        }
+    } else {
+        KbkError(kLogChannel, "Renderer device unavailable for debug pixel creation");
+    }
+
     const float width = static_cast<float>(m_starTexture->Width());
     const float height = static_cast<float>(m_starTexture->Height());
 
-    // --- Création des 3 entités ---
+    // --- Cration des 3 entits ---
 
     // 1) Sprite gauche (bleu, pas de collider)
     {
@@ -108,6 +209,7 @@ void GameLayer::OnDetach()
     KBK_PROFILE_SCOPE("GameLayerDetach");
 
     m_starTexture = nullptr;
+    m_debugPixel.Reset();
     m_scene.Clear();
 
     m_entityLeft = 0;
@@ -122,12 +224,18 @@ void GameLayer::OnUpdate(float dt)
 {
     KBK_PROFILE_SCOPE("GameLayerUpdate");
 
+    auto& input = m_app.InputSys();
+    if (input.KeyPressed(SDL_SCANCODE_F1)) {
+        m_showCollisionDebug = !m_showCollisionDebug;
+        KbkTrace(kLogChannel, "Collision debug %s", m_showCollisionDebug ? "ON" : "OFF");
+    }
+
     m_time += dt;
 
     const float bobbing = std::sin(m_time * 2.0f) * 32.0f;
     const float sway = std::sin(m_time * 0.2f) * 300.0f;
 
-    // Entité centre : mouvement + rotation
+    // Entit centre : mouvement + rotation
     Entity2D* center = m_scene.FindEntity(m_entityCenter);
     if (center) {
         center->transform.position.x = 200.0f + sway;
@@ -135,7 +243,7 @@ void GameLayer::OnUpdate(float dt)
         center->transform.rotation = m_time * 0.8f;
     }
 
-    // Entité droite : rotation inverse
+    // Entit droite : rotation inverse
     Entity2D* right = m_scene.FindEntity(m_entityRight);
     if (right) {
         right->transform.rotation = -m_time * 0.5f;
@@ -172,6 +280,8 @@ void GameLayer::OnUpdate(float dt)
         KbkTrace(kLogChannel, "Center/Right COLLISION");
     }
 
+    m_lastCollision = hit;
+
     m_scene.Update(dt);
 }
 
@@ -183,4 +293,29 @@ void GameLayer::OnRender(SpriteBatch2D& batch)
         return;
 
     m_scene.Render(batch);
+
+    if (m_showCollisionDebug && m_debugPixel.IsValid()) {
+        const Color4 circleColor = m_lastCollision
+            ? Color4{ 1.0f, 0.3f, 0.3f, 1.0f }
+            : Color4{ 0.2f, 0.9f, 0.9f, 1.0f };
+        const Color4 crossColor = Color4{ 1.0f, 1.0f, 0.4f, 1.0f };
+        const Color4 aabbColor = Color4{ 0.9f, 0.9f, 0.2f, 1.0f };
+
+        for (const Entity2D& entity : m_scene.Entities()) {
+            if (!entity.active)
+                continue;
+
+            const Transform2D& transform = entity.transform;
+
+            if (entity.collision.circle && entity.collision.circle->active) {
+                DrawCircleOutline(batch, m_debugPixel, transform.position, entity.collision.circle->radius, circleColor, kColliderThickness);
+                DrawCross(batch, m_debugPixel, transform.position, 10.0f, crossColor, kColliderThickness);
+            }
+
+            if (entity.collision.aabb && entity.collision.aabb->active) {
+                DrawAABBOutline(batch, m_debugPixel, transform.position, entity.collision.aabb->halfW, entity.collision.aabb->halfH, aabbColor, kColliderThickness);
+                DrawCross(batch, m_debugPixel, transform.position, 10.0f, crossColor, kColliderThickness);
+            }
+        }
+    }
 }
