@@ -14,7 +14,9 @@
 #include <cmath>
 #include <cstdio>
 
-#include "imgui.h"
+#if KBK_DEBUG_BUILD
+#    include "imgui.h"
+#endif
 
 namespace
 {
@@ -22,6 +24,7 @@ namespace
     constexpr int   kDebugDrawLayer = 1000;
     constexpr float kColliderThickness = 2.0f;
 
+#if KBK_DEBUG_BUILD
     void SceneInspectorPanel(void* userData)
     {
         auto* scene = static_cast<KibakoEngine::Scene2D*>(userData);
@@ -77,6 +80,7 @@ namespace
 
         ImGui::End();
     }
+#endif
 
 } // namespace
 
@@ -162,7 +166,9 @@ void GameLayer::OnAttach()
         m_starTexture->Height(),
         m_scene.Entities().size());
 
+#if KBK_DEBUG_BUILD
     KibakoEngine::DebugUI::SetSceneInspector(&m_scene, &SceneInspectorPanel);
+#endif
 }
 
 void GameLayer::OnDetach()
@@ -182,7 +188,9 @@ void GameLayer::OnDetach()
     m_lastCollision = false;
     m_time = 0.0f;
 
+#if KBK_DEBUG_BUILD
     KibakoEngine::DebugUI::SetSceneInspector(nullptr, nullptr);
+#endif
 }
 
 void GameLayer::OnUpdate(float dt)

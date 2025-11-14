@@ -127,7 +127,9 @@ namespace KibakoEngine {
             return false;
         }
 
+#if KBK_DEBUG_BUILD
         DebugUI::Init(m_window, m_renderer.GetDevice(), m_renderer.GetImmediateContext());
+#endif
 
         m_assets.Init(m_renderer.GetDevice());
         KbkLog(kLogChannel, "AssetManager initialized");
@@ -156,7 +158,9 @@ namespace KibakoEngine {
 
         GameServices::Shutdown();
 
+#if KBK_DEBUG_BUILD
         DebugUI::Shutdown();
+#endif
 
         m_renderer.Shutdown();
         DestroyWindowSDL();
@@ -184,7 +188,9 @@ namespace KibakoEngine {
         SDL_Event evt{};
         while (SDL_PollEvent(&evt) != 0) {
 
+#if KBK_DEBUG_BUILD
             DebugUI::ProcessEvent(evt);
+#endif
 
             switch (evt.type) {
             case SDL_QUIT:
@@ -302,9 +308,11 @@ namespace KibakoEngine {
 
         while (PumpEvents()) {
 
+#if KBK_DEBUG_BUILD
             if (m_input.KeyPressed(SDL_SCANCODE_F2)) {
                 DebugUI::ToggleEnabled();
             }
+#endif
 
             if (ConsumeBreakpointRequest()) {
                 AnnounceBreakpointStop();
@@ -322,9 +330,11 @@ namespace KibakoEngine {
                     layer->OnUpdate(scaledDt);
             }
 
+#if KBK_DEBUG_BUILD
             DebugUI::SetVSyncEnabled(waitForVSync);
 
             DebugUI::NewFrame();
+#endif
 
             BeginFrame(clearColor);
 
@@ -338,6 +348,7 @@ namespace KibakoEngine {
 
             batch.End();
 
+#if KBK_DEBUG_BUILD
             const SpriteBatchStats& batchStats = batch.Stats();
             DebugUI::RenderStats rs{};
             rs.drawCalls = batchStats.drawCalls;
@@ -345,6 +356,7 @@ namespace KibakoEngine {
             DebugUI::SetRenderStats(rs);
 
             DebugUI::Render();
+#endif
 
             EndFrame(waitForVSync);
 
