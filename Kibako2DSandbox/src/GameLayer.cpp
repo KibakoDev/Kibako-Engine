@@ -19,7 +19,6 @@ GameLayer::GameLayer(Application& app)
     : Layer("Sandbox.GameLayer")
     , m_app(app)
 {
-    // Rien à faire ici pour l'instant, tout se passe dans OnAttach
 }
 
 void GameLayer::OnAttach()
@@ -37,12 +36,12 @@ void GameLayer::OnAttach()
     const float width = static_cast<float>(m_starTexture->Width());
     const float height = static_cast<float>(m_starTexture->Height());
 
-    // --- Création des 3 entités équivalentes à tes anciens SampleSprite ---
+    // --- Création des 3 entités ---
 
-    // 1) Sprite à gauche (bleu)
+    // 1) Sprite gauche (bleu, pas de collider)
     {
         Entity2D& e = m_scene.CreateEntity();
-        m_entityCenter = e.id;
+        m_entityLeft = e.id;
 
         e.transform.position = { 80.0f, 140.0f };
         e.transform.rotation = 0.0f;
@@ -55,23 +54,28 @@ void GameLayer::OnAttach()
         e.sprite.layer = -1;
     }
 
-    // 2) Sprite au centre (blanc) qui va bouger
+    // 2) Sprite centre (blanc) avec collider
     {
         Entity2D& e = m_scene.CreateEntity();
-        m_entityBobbing = e.id;
+        m_entityCenter = e.id;
 
         e.transform.position = { 200.0f, 150.0f };
         e.transform.rotation = 0.0f;
-        e.transform.scale = { 1.0f, 1.0f };
+        e.transform.scale = { 1.2f, 1.2f }; // un peu plus gros
 
         e.sprite.texture = m_starTexture;
         e.sprite.dst = RectF::FromXYWH(0.0f, 0.0f, width, height);
         e.sprite.src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
         e.sprite.color = Color4::White();
         e.sprite.layer = 0;
+
+        // Collider circulaire centre
+        m_centerCollider.radius = 0.5f * width * e.transform.scale.x;
+        m_centerCollider.active = true;
+        e.collision.circle = &m_centerCollider;
     }
 
-    // 3) Sprite à droite (orange), rotation inverse
+    // 3) Sprite droite (orange) avec collider
     {
         Entity2D& e = m_scene.CreateEntity();
         m_entityRight = e.id;
@@ -85,6 +89,11 @@ void GameLayer::OnAttach()
         e.sprite.src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
         e.sprite.color = Color4{ 1.0f, 0.55f, 0.35f, 1.0f };
         e.sprite.layer = 1;
+
+        // Collider circulaire droite
+        m_rightCollider.radius = 0.5f * width * e.transform.scale.x;
+        m_rightCollider.active = true;
+        e.collision.circle = &m_rightCollider;
     }
 
     KbkLog(kLogChannel,
@@ -100,9 +109,13 @@ void GameLayer::OnDetach()
 
     m_starTexture = nullptr;
     m_scene.Clear();
+
+    m_entityLeft = 0;
     m_entityCenter = 0;
-    m_entityBobbing = 0;
     m_entityRight = 0;
+
+    m_centerCollider = {};
+    m_rightCollider = {};
 }
 
 void GameLayer::OnUpdate(float dt)
@@ -111,24 +124,54 @@ void GameLayer::OnUpdate(float dt)
 
     m_time += dt;
 
-    // Mouvement et rotation sur certaines entités pour tester Scene2D
-
     const float bobbing = std::sin(m_time * 2.0f) * 32.0f;
     const float sway = std::sin(m_time * 1.5f) * 200.0f;
 
-    // Entité "bobbing" (celle du centre)
-    if (auto* e = m_scene.FindEntity(m_entityBobbing)) {
-        e->transform.position.x = 200.0f + sway;
-        e->transform.position.y = 150.0f + bobbing;
-        e->transform.rotation = m_time * 0.8f;
+    // Entité centre : mouvement + rotation
+    Entity2D* center = m_scene.FindEntity(m_entityCenter);
+    if (center) {
+        center->transform.position.x = 200.0f + sway;
+        center->transform.position.y = 150.0f + bobbing;
+        center->transform.rotation = m_time * 0.8f;
     }
 
-    // Entité de droite : légère rotation inverse
-    if (auto* e = m_scene.FindEntity(m_entityRight)) {
-        e->transform.rotation = -m_time * 0.5f;
+    // Entité droite : rotation inverse
+    Entity2D* right = m_scene.FindEntity(m_entityRight);
+    if (right) {
+        right->transform.rotation = -m_time * 0.5f;
     }
 
-    // La scène en elle-même n'a pas de logique interne pour l'instant
+    // Test de collision entre centre et droite
+    bool hit = false;
+
+    if (center && right &&
+        center->collision.circle && right->collision.circle)
+    {
+        hit = Intersects(
+            *center->collision.circle, center->transform,
+            *right->collision.circle, right->transform
+        );
+    }
+
+    // Feedback visuel simple : rouge si collision, sinon couleurs normales
+    if (center) {
+        if (hit)
+            center->sprite.color = Color4{ 1.0f, 0.2f, 0.2f, 1.0f };
+        else
+            center->sprite.color = Color4::White();
+    }
+
+    if (right) {
+        if (hit)
+            right->sprite.color = Color4{ 1.0f, 0.4f, 0.2f, 1.0f };
+        else
+            right->sprite.color = Color4{ 1.0f, 0.55f, 0.35f, 1.0f };
+    }
+
+    if (hit) {
+        KbkTrace(kLogChannel, "Center/Right COLLISION");
+    }
+
     m_scene.Update(dt);
 }
 

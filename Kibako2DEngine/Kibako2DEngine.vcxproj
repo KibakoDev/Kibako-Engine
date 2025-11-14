@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\KibakoEngine\Collision\Collision2D.h" />
     <ClInclude Include="include\KibakoEngine\Core\Application.h" />
     <ClInclude Include="include\KibakoEngine\Core\Profiler.h" />
     <ClInclude Include="include\KibakoEngine\Core\Debug.h" />
@@ -38,6 +39,7 @@
     <ClInclude Include="third_party\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Collision\Collision2D.cpp" />
     <ClCompile Include="src\Core\Application.cpp" />
     <ClCompile Include="src\Core\Debug.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />

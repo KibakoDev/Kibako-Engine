@@ -7,6 +7,7 @@
 
 #include "KibakoEngine/Renderer/SpriteTypes.h"
 #include "KibakoEngine/Renderer/Texture2D.h"
+#include "KibakoEngine/Collision/Collision2D.h"
 
 namespace KibakoEngine {
 
@@ -36,8 +37,9 @@ namespace KibakoEngine {
         EntityID id = 0;
         bool     active = true;
 
-        Transform2D      transform;
-        SpriteRenderer2D sprite;
+        Transform2D        transform;
+        SpriteRenderer2D   sprite;
+        CollisionComponent2D collision;
     };
 
     class Scene2D

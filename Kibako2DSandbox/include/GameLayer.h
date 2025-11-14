@@ -4,6 +4,7 @@
 #include "KibakoEngine/Renderer/SpriteTypes.h"
 #include "KibakoEngine/Renderer/Texture2D.h"
 #include "KibakoEngine/Scene/Scene2D.h"
+#include "KibakoEngine/Collision/Collision2D.h"
 
 namespace KibakoEngine {
     class Application;
@@ -23,12 +24,16 @@ private:
     KibakoEngine::Application& m_app;
 
     KibakoEngine::Texture2D* m_starTexture = nullptr;
+    KibakoEngine::Scene2D    m_scene;
 
-    KibakoEngine::Scene2D m_scene;
-
+    // IDs des entités qu’on veut manipuler
+    KibakoEngine::EntityID m_entityLeft = 0;
     KibakoEngine::EntityID m_entityCenter = 0;
-    KibakoEngine::EntityID m_entityBobbing = 0;
     KibakoEngine::EntityID m_entityRight = 0;
+
+    // Colliders attachés (propriété du layer, pointeurs stockés dans les entités)
+    KibakoEngine::CircleCollider2D m_centerCollider{};
+    KibakoEngine::CircleCollider2D m_rightCollider{};
 
     float m_time = 0.0f;
 };
