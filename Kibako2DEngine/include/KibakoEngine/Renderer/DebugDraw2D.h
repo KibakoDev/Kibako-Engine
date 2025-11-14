@@ -1,3 +1,4 @@
+// DebugDraw2D.h - Declares helpers for visualizing primitives and colliders.
 #pragma once
 
 #include <DirectXMath.h>

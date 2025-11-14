@@ -1,5 +1,6 @@
+// Collision2D.cpp - Implements primitive collider intersection helpers.
 #include "KibakoEngine/Collision/Collision2D.h"
-#include "KibakoEngine/Scene/Scene2D.h" // For the Transform2D definition
+#include "KibakoEngine/Scene/Scene2D.h"
 
 namespace KibakoEngine {
 

@@ -1,3 +1,4 @@
+// Scene2D.cpp - Implements entity storage and sprite rendering helpers.
 #include "KibakoEngine/Scene/Scene2D.h"
 
 #include "KibakoEngine/Core/Debug.h"
@@ -64,8 +65,7 @@ namespace KibakoEngine {
     void Scene2D::Update(float dt)
     {
         KBK_UNUSED(dt);
-        // The scene does not provide implicit behaviour yet.
-        // All logic is driven by gameplay code (GameLayer / GameState).
+        // The scene leaves gameplay logic to higher-level systems.
     }
 
     void Scene2D::Render(SpriteBatch2D& batch) const

@@ -1,3 +1,4 @@
+// GameServices.cpp - Implements lightweight global services such as the time system.
 #include "KibakoEngine/Core/GameServices.h"
 
 #include "KibakoEngine/Core/Debug.h"
@@ -7,10 +8,16 @@ namespace KibakoEngine::GameServices {
 
     namespace
     {
+        constexpr const char* kLogChannel = "GameServices";
+
         GameTime g_time{};
         bool     g_initialized = false;
 
-        constexpr const char* kLogChannel = "GameServices";
+        void EnsureInitialized()
+        {
+            if (!g_initialized)
+                Init();
+        }
     }
 
     void Init()
@@ -28,14 +35,15 @@ namespace KibakoEngine::GameServices {
         if (!g_initialized)
             return;
 
+        g_time = GameTime{};
         g_initialized = false;
+
         KbkLog(kLogChannel, "GameServices shutdown");
     }
 
     void Update(double rawDeltaSeconds)
     {
-        if (!g_initialized)
-            Init(); // sécurité, au cas où
+        EnsureInitialized();
 
         if (rawDeltaSeconds < 0.0)
             rawDeltaSeconds = 0.0;
@@ -45,7 +53,6 @@ namespace KibakoEngine::GameServices {
 
         if (g_time.paused || g_time.timeScale <= 0.0) {
             g_time.scaledDeltaSeconds = 0.0;
-            // même en pause, on pourrait choisir d'accumuler totalScaled ou pas.
             return;
         }
 
@@ -56,11 +63,24 @@ namespace KibakoEngine::GameServices {
 
     const GameTime& GetTime()
     {
+        EnsureInitialized();
         return g_time;
+    }
+
+    double GetScaledDeltaTime()
+    {
+        return GetTime().scaledDeltaSeconds;
+    }
+
+    double GetRawDeltaTime()
+    {
+        return GetTime().rawDeltaSeconds;
     }
 
     void SetTimeScale(double scale)
     {
+        EnsureInitialized();
+
         if (scale < 0.0)
             scale = 0.0;
         g_time.timeScale = scale;
@@ -68,21 +88,23 @@ namespace KibakoEngine::GameServices {
 
     double GetTimeScale()
     {
-        return g_time.timeScale;
+        return GetTime().timeScale;
     }
 
     void SetPaused(bool paused)
     {
+        EnsureInitialized();
         g_time.paused = paused;
     }
 
     bool IsPaused()
     {
-        return g_time.paused;
+        return GetTime().paused;
     }
 
     void TogglePause()
     {
+        EnsureInitialized();
         g_time.paused = !g_time.paused;
     }
 

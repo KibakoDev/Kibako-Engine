@@ -1,12 +1,11 @@
+// Math.h - Declares common math helpers and lightweight random utilities.
 #pragma once
 
 #include <cmath>
-#include <type_traits>
 #include <random>
+#include <type_traits>
 
 namespace KibakoEngine::Math {
-
-    // BASIC MATH UTILITIES
 
     template <typename T>
     [[nodiscard]] constexpr T Clamp(const T& value, const T& minValue, const T& maxValue)
@@ -42,55 +41,48 @@ namespace KibakoEngine::Math {
         const T range = maxValue - minValue;
         if (range == T(0))
             return minValue;
-        while (value < minValue) value += range;
-        while (value >= maxValue) value -= range;
+        while (value < minValue)
+            value += range;
+        while (value >= maxValue)
+            value -= range;
         return value;
     }
-
-
-    // RANDOM UTILITIES
 
     namespace Random
     {
         [[nodiscard]] inline std::mt19937& Engine()
-        [[nodiscard]] inline int Int(int min, int max)
         {
-        [[nodiscard]] inline float Float(float min, float max)
-        [[nodiscard]] inline float Float01()
-        [[nodiscard]] inline bool Bool(float trueProbability = 0.5f)
+            static std::random_device rd;
+            static std::mt19937 engine(rd());
+            return engine;
         }
 
-        [[nodiscard]] inline float Angle()
-} // namespace KibakoEngine::Math
+        [[nodiscard]] inline int Int(int min, int max)
         {
             std::uniform_int_distribution<int> dist(min, max);
             return dist(Engine());
         }
 
-        // Random float in [min, max]
-        inline float Float(float min, float max)
+        [[nodiscard]] inline float Float(float min, float max)
         {
             std::uniform_real_distribution<float> dist(min, max);
             return dist(Engine());
         }
 
-        // Float in [0,1]
-        inline float Float01()
+        [[nodiscard]] inline float Float01()
         {
             return Float(0.0f, 1.0f);
         }
 
-        // Random boolean with probability for true
-        inline bool Bool(float trueProbability = 0.5f)
+        [[nodiscard]] inline bool Bool(float trueProbability = 0.5f)
         {
             return Float01() < trueProbability;
         }
 
-        // Random angle in radians (0 - 2pi)
-        inline float Angle()
+        [[nodiscard]] inline float Angle()
         {
             return Float(0.0f, 6.28318530718f);
         }
-    }
+    } // namespace Random
 
 } // namespace KibakoEngine::Math

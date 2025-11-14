@@ -1,3 +1,4 @@
+// Application.h - Declares the main engine application managing windowing, rendering, and layers.
 #pragma once
 
 #include <cstdint>
@@ -22,10 +23,10 @@ namespace KibakoEngine {
         Application() = default;
         ~Application() = default;
 
-        bool Init(int width, int height, const char* title);
+        [[nodiscard]] bool Init(int width, int height, const char* title);
         void Shutdown();
 
-        bool PumpEvents();
+        [[nodiscard]] bool PumpEvents();
         void BeginFrame(const float clearColor[4]);
         void EndFrame(bool waitForVSync = true);
         void Run(const float clearColor[4], bool waitForVSync = true);

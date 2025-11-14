@@ -1,3 +1,4 @@
+// Log.cpp - Implements formatted logging, breakpoint, and debugger routing.
 #include "KibakoEngine/Core/Log.h"
 
 #include <array>

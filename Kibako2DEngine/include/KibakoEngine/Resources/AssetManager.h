@@ -1,3 +1,4 @@
+// AssetManager.h - Declares the texture asset cache for the engine.
 #pragma once
 
 #include <memory>

@@ -1,3 +1,4 @@
+// Debug.h - Declares assertion and diagnostic helpers.
 #pragma once
 
 #include <cstdint>

@@ -1,3 +1,4 @@
+// Camera2D.cpp - Implements an orthographic camera that feeds the sprite batch.
 #include "KibakoEngine/Renderer/Camera2D.h"
 
 using namespace DirectX;

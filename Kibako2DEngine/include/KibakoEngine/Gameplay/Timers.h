@@ -1,3 +1,4 @@
+// Timers.h - Declares reusable gameplay timers and countdown helpers.
 #pragma once
 
 #include <algorithm>

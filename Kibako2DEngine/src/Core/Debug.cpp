@@ -1,3 +1,4 @@
+// Debug.cpp - Implements assertion reporting and HRESULT verification.
 #include "KibakoEngine/Core/Debug.h"
 
 #include <cstdio>

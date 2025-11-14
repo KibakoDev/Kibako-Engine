@@ -1,3 +1,4 @@
+// RendererD3D11.cpp - Implements the Direct3D 11 renderer setup and presentation.
 #ifndef WIN32_LEAN_AND_MEAN
 #    define WIN32_LEAN_AND_MEAN
 #endif

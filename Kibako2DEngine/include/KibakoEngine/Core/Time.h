@@ -1,3 +1,4 @@
+// Time.h - Declares a simple high-resolution frame timer.
 #pragma once
 
 #include <cstdint>

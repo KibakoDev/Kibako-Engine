@@ -1,3 +1,4 @@
+// Texture2D.cpp - Implements Direct3D 11 texture loading utilities.
 #include "KibakoEngine/Renderer/Texture2D.h"
 
 #include "KibakoEngine/Core/Debug.h"
