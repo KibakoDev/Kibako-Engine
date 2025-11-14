@@ -62,7 +62,7 @@ namespace KibakoEngine {
     void Scene2D::Update(float dt)
     {
         KBK_UNUSED(dt);
-        // Pour l'instant, la scène ne gère aucune logique automatique.
+        // Pour l'instant, la scÃ¨ne ne gÃ¨re aucune logique automatique.
         // Tout se fait dans le code gameplay (GameLayer / GameState).
     }
 
@@ -77,15 +77,26 @@ namespace KibakoEngine {
             if (!sprite.texture || !sprite.texture->IsValid())
                 continue;
 
-            RectF dst = sprite.dst;
+            const RectF& local = sprite.dst;
 
-            // Apply scale
-            dst.w *= e.transform.scale.x;
-            dst.h *= e.transform.scale.y;
+            // Compute scaled size (retain local dimensions)
+            const float scaledWidth = local.w * e.transform.scale.x;
+            const float scaledHeight = local.h * e.transform.scale.y;
 
-            // Apply position
-            dst.x = e.transform.position.x + sprite.dst.x;
-            dst.y = e.transform.position.y + sprite.dst.y;
+            // Local offsets are expressed relative to the entity center
+            const float offsetX = local.x * e.transform.scale.x;
+            const float offsetY = local.y * e.transform.scale.y;
+
+            RectF dst{};
+            dst.w = scaledWidth;
+            dst.h = scaledHeight;
+
+            const float worldCenterX = e.transform.position.x + offsetX;
+            const float worldCenterY = e.transform.position.y + offsetY;
+
+            // Convert to top-left rectangle coordinates for rendering
+            dst.x = worldCenterX - scaledWidth * 0.5f;
+            dst.y = worldCenterY - scaledHeight * 0.5f;
 
             batch.Push(
                 *sprite.texture,
