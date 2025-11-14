@@ -2,8 +2,11 @@
 
 #include <cmath>
 #include <type_traits>
+#include <random>
 
 namespace KibakoEngine::Math {
+
+    // BASIC MATH UTILITIES
 
     template <typename T>
     [[nodiscard]] constexpr T Clamp(const T& value, const T& minValue, const T& maxValue)
@@ -44,5 +47,50 @@ namespace KibakoEngine::Math {
         return value;
     }
 
-} // namespace KibakoEngine::Math
 
+    // RANDOM UTILITIES
+
+    namespace Random
+    {
+        // Global RNG engine —seeded automatically
+        inline std::mt19937& Engine()
+        {
+            static std::random_device rd;
+            static std::mt19937 eng(rd());
+            return eng;
+        }
+
+        // Random integer in [min, max]
+        inline int Int(int min, int max)
+        {
+            std::uniform_int_distribution<int> dist(min, max);
+            return dist(Engine());
+        }
+
+        // Random float in [min, max]
+        inline float Float(float min, float max)
+        {
+            std::uniform_real_distribution<float> dist(min, max);
+            return dist(Engine());
+        }
+
+        // Float in [0,1]
+        inline float Float01()
+        {
+            return Float(0.0f, 1.0f);
+        }
+
+        // Random boolean with probability for true
+        inline bool Bool(float trueProbability = 0.5f)
+        {
+            return Float01() < trueProbability;
+        }
+
+        // Random angle in radians (0 - 2pi)
+        inline float Angle()
+        {
+            return Float(0.0f, 6.28318530718f);
+        }
+    }
+
+} // namespace KibakoEngine::Math
