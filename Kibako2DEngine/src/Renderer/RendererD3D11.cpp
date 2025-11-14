@@ -13,6 +13,7 @@
 #include "KibakoEngine/Core/Profiler.h"
 
 #include <windows.h>
+#include <dxgi.h>
 
 #include <iterator>
 
@@ -197,6 +198,17 @@ namespace KibakoEngine {
 
         if (FAILED(hr))
             return false;
+
+        Microsoft::WRL::ComPtr<IDXGIDevice> dxgiDevice;
+        if (SUCCEEDED(m_device.As(&dxgiDevice)) && dxgiDevice) {
+            Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
+            if (SUCCEEDED(dxgiDevice->GetAdapter(adapter.GetAddressOf())) && adapter) {
+                Microsoft::WRL::ComPtr<IDXGIFactory> factory;
+                if (SUCCEEDED(adapter->GetParent(IID_PPV_ARGS(factory.GetAddressOf()))) && factory) {
+                    factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
+                }
+            }
+        }
 
         KbkLog(kLogChannel, "D3D11 feature level: 0x%04X", static_cast<unsigned>(m_featureLevel));
         return true;
