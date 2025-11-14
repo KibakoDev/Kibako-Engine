@@ -5,7 +5,7 @@
 namespace KibakoEngine::Gameplay {
 
     // ------------------------------------------------------------
-    // Stopwatch : compteur de temps qui monte (chronomètre)
+    // Stopwatch : compteur de temps qui monte (chronomÃ¨tre)
     // ------------------------------------------------------------
     class Stopwatch
     {
@@ -41,12 +41,12 @@ namespace KibakoEngine::Gameplay {
             m_time += dt;
         }
 
-        float GetTime() const
+        [[nodiscard]] float GetTime() const
         {
             return m_time;
         }
 
-        bool IsRunning() const
+        [[nodiscard]] bool IsRunning() const
         {
             return m_running;
         }
@@ -58,12 +58,12 @@ namespace KibakoEngine::Gameplay {
 
 
     // ------------------------------------------------------------
-    // CountdownTimer : timer qui descend jusqu'à 0 (cooldown)
-    // ------------------------------------------------------------
-    class CountdownTimer
-    {
-    public:
-        explicit CountdownTimer(float durationSeconds = 0.0f)
+        [[nodiscard]] float GetDuration() const
+        [[nodiscard]] bool IsFinished() const
+        [[nodiscard]] bool IsRunning() const
+        [[nodiscard]] float GetRemainingTime() const
+        [[nodiscard]] float GetProgress01() const
+} // namespace KibakoEngine::Gameplay
             : m_duration(durationSeconds)
         {
         }
@@ -148,7 +148,7 @@ namespace KibakoEngine::Gameplay {
         }
 
     private:
-        float m_duration = 0.0f;  // durée totale
+        float m_duration = 0.0f;  // durÃ©e totale
         float m_remaining = 0.0f;  // temps restant
         bool  m_running = false;
         bool  m_finished = false;

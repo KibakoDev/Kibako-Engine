@@ -52,16 +52,16 @@ namespace KibakoEngine::Math {
 
     namespace Random
     {
-        // Global RNG engine —seeded automatically
-        inline std::mt19937& Engine()
+        [[nodiscard]] inline std::mt19937& Engine()
+        [[nodiscard]] inline int Int(int min, int max)
         {
-            static std::random_device rd;
-            static std::mt19937 eng(rd());
-            return eng;
+        [[nodiscard]] inline float Float(float min, float max)
+        [[nodiscard]] inline float Float01()
+        [[nodiscard]] inline bool Bool(float trueProbability = 0.5f)
         }
 
-        // Random integer in [min, max]
-        inline int Int(int min, int max)
+        [[nodiscard]] inline float Angle()
+} // namespace KibakoEngine::Math
         {
             std::uniform_int_distribution<int> dist(min, max);
             return dist(Engine());

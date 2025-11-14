@@ -15,14 +15,14 @@ namespace KibakoEngine {
     public:
         AssetManager() = default;
 
-        // Doit être appelé une fois après la création du RendererD3D11
-        void Init(ID3D11Device* device);
-
-        // Libère toutes les ressources chargées
+        [[nodiscard]] Texture2D* LoadTexture(const std::string& id,
+        [[nodiscard]] Texture2D* GetTexture(const std::string& id);
+        [[nodiscard]] const Texture2D* GetTexture(const std::string& id) const;
+} // namespace KibakoEngine
         void Shutdown();
 
-        // Charge une texture si elle n'existe pas déjà pour cet id
-        // Retourne toujours le pointeur stocké (nouveau ou existant)
+        // Charge une texture si elle n'existe pas dÃ©jÃ  pour cet id
+        // Retourne toujours le pointeur stockÃ© (nouveau ou existant)
         Texture2D* LoadTexture(const std::string& id,
             const std::string& path,
             bool sRGB = true);
@@ -31,7 +31,7 @@ namespace KibakoEngine {
         Texture2D* GetTexture(const std::string& id);
         const Texture2D* GetTexture(const std::string& id) const;
 
-        // Supprime toutes les textures chargées (appelé par Shutdown)
+        // Supprime toutes les textures chargÃ©es (appelÃ© par Shutdown)
         void Clear();
 
     private:
