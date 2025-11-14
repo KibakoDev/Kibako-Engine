@@ -1,8 +1,8 @@
 #pragma once
 
-#include <array>
 #include <vector>
 
+#include "KibakoEngine/Collision/Collision2D.h"
 #include "KibakoEngine/Core/Layer.h"
 #include "KibakoEngine/Renderer/SpriteTypes.h"
 #include "KibakoEngine/Renderer/Texture2D.h"
@@ -23,27 +23,26 @@ public:
     void OnUpdate(float dt) override;
     void OnRender(KibakoEngine::SpriteBatch2D& batch) override;
 
-    // Accès pour le panel ImGui (Scene / Entities)
-    KibakoEngine::Scene2D& Scene() { return m_scene; }
-    const KibakoEngine::Scene2D& Scene() const { return m_scene; }
+    [[nodiscard]] KibakoEngine::Scene2D& Scene() { return m_scene; }
+    [[nodiscard]] const KibakoEngine::Scene2D& Scene() const { return m_scene; }
 
-    std::vector<KibakoEngine::Entity2D>& Entities() { return m_entities; }
-    const std::vector<KibakoEngine::Entity2D>& Entities() const { return m_entities; }
+    [[nodiscard]] std::vector<KibakoEngine::Entity2D>& Entities() { return m_scene.Entities(); }
+    [[nodiscard]] const std::vector<KibakoEngine::Entity2D>& Entities() const { return m_scene.Entities(); }
 
 private:
-    struct SampleSprite
-    {
-        KibakoEngine::RectF  baseRect;
-        KibakoEngine::Color4 color;
-        float                rotationSpeed = 0.0f;
-        int                  layer = 0;
-    };
-
     KibakoEngine::Application& m_app;
     KibakoEngine::Texture2D* m_starTexture = nullptr;
-    std::array<SampleSprite, 3>         m_sprites{};
-    float                               m_time = 0.0f;
+    KibakoEngine::Texture2D m_debugPixel;
 
-    KibakoEngine::Scene2D               m_scene;
-    std::vector<KibakoEngine::Entity2D> m_entities;
+    KibakoEngine::EntityID m_entityCenter = 0;
+    KibakoEngine::EntityID m_entityRight = 0;
+
+    KibakoEngine::CircleCollider2D m_centerCollider{};
+    KibakoEngine::CircleCollider2D m_rightCollider{};
+
+    bool  m_showCollisionDebug = false;
+    bool  m_lastCollision = false;
+    float m_time = 0.0f;
+
+    KibakoEngine::Scene2D m_scene;
 };
