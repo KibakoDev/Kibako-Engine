@@ -5,10 +5,6 @@
 #include "KibakoEngine/Core/Log.h"
 #include "KibakoEngine/Core/Profiler.h"
 
-#if KBK_DEBUG_BUILD
-#include "KibakoEngine/Collision/Collision2D.h"
-#endif
-
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
 
@@ -228,11 +224,6 @@ namespace KibakoEngine {
             }
 
             KBK_PROFILE_FRAME("Frame");
-
-#if KBK_DEBUG_BUILD
-            CollisionDebug2D::UpdateToggle(m_input);
-            CollisionDebug2D::BeginFrame();
-#endif
 
             const float dt = static_cast<float>(m_time.DeltaSeconds());
             for (Layer* layer : m_layers) {
