@@ -37,6 +37,8 @@ namespace KibakoEngine {
         void ResetStats() { m_stats = {}; }
         const SpriteBatchStats& Stats() const { return m_stats; }
 
+        [[nodiscard]] const Texture2D* DefaultWhiteTexture() const;
+
     private:
         struct Vertex {
             DirectX::XMFLOAT3 position;
@@ -88,6 +90,8 @@ namespace KibakoEngine {
         bool                m_isDrawing = false;
 
         SpriteBatchStats    m_stats{};
+
+        Texture2D m_defaultWhite;
     };
 
 } // namespace KibakoEngine

@@ -5,12 +5,12 @@
 #include "KibakoEngine/Collision/Collision2D.h"
 #include "KibakoEngine/Core/Layer.h"
 #include "KibakoEngine/Renderer/SpriteTypes.h"
-#include "KibakoEngine/Renderer/Texture2D.h"
 #include "KibakoEngine/Renderer/SpriteBatch2D.h"
 #include "KibakoEngine/Scene/Scene2D.h"
 
 namespace KibakoEngine {
     class Application;
+    class Texture2D;
 }
 
 class GameLayer final : public KibakoEngine::Layer
@@ -32,7 +32,6 @@ public:
 private:
     KibakoEngine::Application& m_app;
     KibakoEngine::Texture2D* m_starTexture = nullptr;
-    KibakoEngine::Texture2D m_debugPixel;
 
     KibakoEngine::EntityID m_entityCenter = 0;
     KibakoEngine::EntityID m_entityRight = 0;
