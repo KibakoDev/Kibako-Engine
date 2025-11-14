@@ -22,6 +22,7 @@
     <ClInclude Include="include\KibakoEngine\Collision\Collision2D.h" />
     <ClInclude Include="include\KibakoEngine\Core\Application.h" />
     <ClInclude Include="include\KibakoEngine\Core\DebugUI.h" />
+    <ClInclude Include="include\KibakoEngine\Core\GameServices.h" />
     <ClInclude Include="include\KibakoEngine\Core\Profiler.h" />
     <ClInclude Include="include\KibakoEngine\Core\Debug.h" />
     <ClInclude Include="include\KibakoEngine\Core\Input.h" />
@@ -54,6 +55,7 @@
     <ClCompile Include="src\Core\Application.cpp" />
     <ClCompile Include="src\Core\Debug.cpp" />
     <ClCompile Include="src\Core\DebugUI.cpp" />
+    <ClCompile Include="src\Core\GameServices.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\Log.cpp" />
     <ClCompile Include="src\Core\Time.cpp" />

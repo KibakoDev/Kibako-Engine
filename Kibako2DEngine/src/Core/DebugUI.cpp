@@ -2,10 +2,10 @@
 
 #include "KibakoEngine/Core/Debug.h"
 #include "KibakoEngine/Core/Log.h"
+#include "KibakoEngine/Core/GameServices.h"
 
 #include <d3d11.h>
 
-// Dear ImGui
 #include "imgui.h"
 #include "backends/imgui_impl_dx11.h"
 #include "backends/imgui_impl_sdl2.h"
@@ -176,6 +176,27 @@ namespace KibakoEngine::DebugUI {
         // ==========================
         if (g_SceneInspectorCallback && g_SceneInspectorUserData) {
             g_SceneInspectorCallback(g_SceneInspectorUserData);
+        }
+        // ==========================
+        // 5) 
+        // ==========================
+        const GameTime& gt = GameServices::GetTime();
+
+        ImGui::Separator();
+        ImGui::Text("Game Time");
+        ImGui::BulletText("dt (scaled): %.5f s", gt.scaledDeltaSeconds);
+        ImGui::BulletText("dt (raw):    %.5f s", gt.rawDeltaSeconds);
+        ImGui::BulletText("Total scaled: %.2f s", gt.totalScaledSeconds);
+        ImGui::BulletText("Total raw:    %.2f s", gt.totalRawSeconds);
+
+        float timeScale = static_cast<float>(gt.timeScale);
+        if (ImGui::SliderFloat("Time scale", &timeScale, 0.0f, 3.0f, "%.2f")) {
+            GameServices::SetTimeScale(timeScale);
+        }
+
+        bool paused = gt.paused;
+        if (ImGui::Checkbox("Paused", &paused)) {
+            GameServices::SetPaused(paused);
         }
 
         ImGui::Render();

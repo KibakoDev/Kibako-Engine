@@ -5,6 +5,7 @@
 #include "KibakoEngine/Core/Log.h"
 #include "KibakoEngine/Core/Profiler.h"
 #include "KibakoEngine/Core/DebugUI.h"
+#include "KibakoEngine/Core/GameServices.h"
 #include "KibakoEngine/Renderer/DebugDraw2D.h"
 
 #include <DirectXMath.h>
@@ -105,8 +106,10 @@ void GameLayer::OnAttach()
 
     const float width = static_cast<float>(m_starTexture->Width());
     const float height = static_cast<float>(m_starTexture->Height());
-    const KibakoEngine::RectF spriteRect = KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, width, height);
-    const KibakoEngine::RectF uvRect = KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
+    const KibakoEngine::RectF spriteRect =
+        KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, width, height);
+    const KibakoEngine::RectF uvRect =
+        KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
 
     auto configureSprite = [&](KibakoEngine::Entity2D& entity,
         const DirectX::XMFLOAT2& position,
@@ -199,13 +202,20 @@ void GameLayer::OnUpdate(float dt)
 {
     KBK_PROFILE_SCOPE("GameLayerUpdate");
 
+    // Toggle debug collisions
     auto& input = m_app.InputSys();
     if (input.KeyPressed(SDL_SCANCODE_F1)) {
         m_showCollisionDebug = !m_showCollisionDebug;
         KbkTrace(kLogChannel, "Collision debug %s", m_showCollisionDebug ? "ON" : "OFF");
     }
 
-    m_time += dt;
+    // === GameServices: temps global (timeScale / pause) ===
+    KibakoEngine::GameServices::Update(static_cast<double>(dt));
+    const double scaledDt = KibakoEngine::GameServices::GetScaledDeltaTime();
+    const float  fdt = static_cast<float>(scaledDt);
+
+    // On avance notre "time" sandbox avec le temps SCALÉ
+    m_time += fdt;
 
     const float bobbing = std::sin(m_time * 2.0f) * 32.0f;
     const float sway = std::sin(m_time * 0.2f) * 300.0f;
@@ -237,13 +247,13 @@ void GameLayer::OnUpdate(float dt)
     if (centerEntity) {
         centerEntity->sprite.color = hit
             ? KibakoEngine::Color4{ 1.0f, 0.2f, 0.2f, 1.0f }
-            : KibakoEngine::Color4::White();
+        : KibakoEngine::Color4::White();
     }
 
     if (rightEntity) {
         rightEntity->sprite.color = hit
             ? KibakoEngine::Color4{ 1.0f, 0.4f, 0.2f, 1.0f }
-            : KibakoEngine::Color4{ 1.0f, 0.55f, 0.35f, 1.0f };
+        : KibakoEngine::Color4{ 1.0f, 0.55f, 0.35f, 1.0f };
     }
 
     if (hit) {
@@ -252,7 +262,8 @@ void GameLayer::OnUpdate(float dt)
 
     m_lastCollision = hit;
 
-    m_scene.Update(dt);
+    // La scène aussi est mise à jour avec le temps SCALÉ
+    m_scene.Update(fdt);
 }
 
 void GameLayer::OnRender(KibakoEngine::SpriteBatch2D& batch)
@@ -267,10 +278,12 @@ void GameLayer::OnRender(KibakoEngine::SpriteBatch2D& batch)
     if (m_showCollisionDebug) {
         const KibakoEngine::Color4 circleColor = m_lastCollision
             ? KibakoEngine::Color4{ 1.0f, 0.3f, 0.3f, 1.0f }
-            : KibakoEngine::Color4{ 0.2f, 0.9f, 0.9f, 1.0f };
+        : KibakoEngine::Color4{ 0.2f, 0.9f, 0.9f, 1.0f };
 
-        const KibakoEngine::Color4 crossColor = KibakoEngine::Color4{ 1.0f, 1.0f, 0.4f, 1.0f };
-        const KibakoEngine::Color4 aabbColor = KibakoEngine::Color4{ 0.9f, 0.9f, 0.2f, 1.0f };
+        const KibakoEngine::Color4 crossColor =
+            KibakoEngine::Color4{ 1.0f, 1.0f, 0.4f, 1.0f };
+        const KibakoEngine::Color4 aabbColor =
+            KibakoEngine::Color4{ 0.9f, 0.9f, 0.2f, 1.0f };
 
         for (const KibakoEngine::Entity2D& entity : m_scene.Entities()) {
             if (!entity.active)
@@ -278,14 +291,15 @@ void GameLayer::OnRender(KibakoEngine::SpriteBatch2D& batch)
 
             const KibakoEngine::Transform2D& transform = entity.transform;
 
-            const bool drewCollider = KibakoEngine::DebugDraw2D::DrawCollisionComponent(batch,
-                transform,
-                entity.collision,
-                circleColor,
-                aabbColor,
-                kColliderThickness,
-                kDebugDrawLayer,
-                48);
+            const bool drewCollider =
+                KibakoEngine::DebugDraw2D::DrawCollisionComponent(batch,
+                    transform,
+                    entity.collision,
+                    circleColor,
+                    aabbColor,
+                    kColliderThickness,
+                    kDebugDrawLayer,
+                    48);
 
             if (drewCollider) {
                 KibakoEngine::DebugDraw2D::DrawCross(batch,
