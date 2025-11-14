@@ -5,7 +5,7 @@
 #include "KibakoEngine/Core/Log.h"
 #include "KibakoEngine/Core/Profiler.h"
 #include "KibakoEngine/Core/DebugUI.h"
-#include "KibakoEngine/Renderer/RendererD3D11.h"
+#include "KibakoEngine/Renderer/DebugDraw2D.h"
 
 #include <DirectXMath.h>
 #include <SDL2/SDL_scancode.h>
@@ -20,96 +20,6 @@ namespace
     constexpr const char* kLogChannel = "Sandbox";
     constexpr int   kDebugDrawLayer = 1000;
     constexpr float kColliderThickness = 2.0f;
-    constexpr int   kCircleSegments = 32;
-    constexpr float kTwoPi = 6.28318530717958647692f;
-
-    const KibakoEngine::RectF kUnitRect = KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
-
-    void DrawLine(KibakoEngine::SpriteBatch2D& batch,
-        KibakoEngine::Texture2D& pixel,
-        const DirectX::XMFLOAT2& a,
-        const DirectX::XMFLOAT2& b,
-        const KibakoEngine::Color4& color,
-        float thickness)
-    {
-        const float dx = b.x - a.x;
-        const float dy = b.y - a.y;
-        const float length = std::sqrt((dx * dx) + (dy * dy));
-        if (length <= 0.0001f)
-            return;
-
-        KibakoEngine::RectF dst{};
-        dst.w = length;
-        dst.h = thickness;
-
-        const float midX = (a.x + b.x) * 0.5f;
-        const float midY = (a.y + b.y) * 0.5f;
-        dst.x = midX - (dst.w * 0.5f);
-        dst.y = midY - (dst.h * 0.5f);
-
-        const float angle = std::atan2(dy, dx);
-
-        batch.Push(pixel, dst, kUnitRect, color, angle, kDebugDrawLayer);
-    }
-
-    void DrawCross(KibakoEngine::SpriteBatch2D& batch,
-        KibakoEngine::Texture2D& pixel,
-        const DirectX::XMFLOAT2& center,
-        float size,
-        const KibakoEngine::Color4& color,
-        float thickness)
-    {
-        const float half = size * 0.5f;
-        const DirectX::XMFLOAT2 left{ center.x - half, center.y };
-        const DirectX::XMFLOAT2 right{ center.x + half, center.y };
-        const DirectX::XMFLOAT2 top{ center.x, center.y - half };
-        const DirectX::XMFLOAT2 bottom{ center.x, center.y + half };
-
-        DrawLine(batch, pixel, left, right, color, thickness);
-        DrawLine(batch, pixel, top, bottom, color, thickness);
-    }
-
-    void DrawCircleOutline(KibakoEngine::SpriteBatch2D& batch,
-        KibakoEngine::Texture2D& pixel,
-        const DirectX::XMFLOAT2& center,
-        float radius,
-        const KibakoEngine::Color4& color,
-        float thickness)
-    {
-        if (radius <= 0.0f)
-            return;
-
-        DirectX::XMFLOAT2 prev{ center.x + radius, center.y };
-
-        for (int i = 1; i <= kCircleSegments; ++i) {
-            const float angle = (static_cast<float>(i) / static_cast<float>(kCircleSegments)) * kTwoPi;
-            DirectX::XMFLOAT2 next{
-                center.x + std::cos(angle) * radius,
-                center.y + std::sin(angle) * radius
-            };
-            DrawLine(batch, pixel, prev, next, color, thickness);
-            prev = next;
-        }
-    }
-
-    void DrawAABBOutline(KibakoEngine::SpriteBatch2D& batch,
-        KibakoEngine::Texture2D& pixel,
-        const DirectX::XMFLOAT2& center,
-        float halfW,
-        float halfH,
-        const KibakoEngine::Color4& color,
-        float thickness)
-    {
-        const DirectX::XMFLOAT2 tl{ center.x - halfW, center.y - halfH };
-        const DirectX::XMFLOAT2 tr{ center.x + halfW, center.y - halfH };
-        const DirectX::XMFLOAT2 br{ center.x + halfW, center.y + halfH };
-        const DirectX::XMFLOAT2 bl{ center.x - halfW, center.y + halfH };
-
-        DrawLine(batch, pixel, tl, tr, color, thickness);
-        DrawLine(batch, pixel, tr, br, color, thickness);
-        DrawLine(batch, pixel, br, bl, color, thickness);
-        DrawLine(batch, pixel, bl, tl, color, thickness);
-    }
 
     // ==========================
     // Scene / Entity Inspector panel
@@ -193,15 +103,6 @@ void GameLayer::OnAttach()
         return;
     }
 
-    if (ID3D11Device* device = m_app.Renderer().GetDevice()) {
-        if (!m_debugPixel.CreateSolidColor(device, 255, 255, 255, 255)) {
-            KbkError(kLogChannel, "Failed to create debug pixel texture");
-        }
-    }
-    else {
-        KbkError(kLogChannel, "Renderer device unavailable for debug pixel creation");
-    }
-
     const float width = static_cast<float>(m_starTexture->Width());
     const float height = static_cast<float>(m_starTexture->Height());
     const KibakoEngine::RectF spriteRect = KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, width, height);
@@ -279,7 +180,6 @@ void GameLayer::OnDetach()
     KBK_PROFILE_SCOPE("GameLayerDetach");
 
     m_starTexture = nullptr;
-    m_debugPixel.Reset();
     m_scene.Clear();
 
     m_entityCenter = 0;
@@ -364,7 +264,7 @@ void GameLayer::OnRender(KibakoEngine::SpriteBatch2D& batch)
 
     m_scene.Render(batch);
 
-    if (m_showCollisionDebug && m_debugPixel.IsValid()) {
+    if (m_showCollisionDebug) {
         const KibakoEngine::Color4 circleColor = m_lastCollision
             ? KibakoEngine::Color4{ 1.0f, 0.3f, 0.3f, 1.0f }
             : KibakoEngine::Color4{ 0.2f, 0.9f, 0.9f, 1.0f };
@@ -379,24 +279,34 @@ void GameLayer::OnRender(KibakoEngine::SpriteBatch2D& batch)
             const KibakoEngine::Transform2D& transform = entity.transform;
 
             if (entity.collision.circle && entity.collision.circle->active) {
-                DrawCircleOutline(batch,
-                    m_debugPixel,
+                KibakoEngine::DebugDraw2D::DrawCircleOutline(batch,
                     transform.position,
                     entity.collision.circle->radius,
                     circleColor,
-                    kColliderThickness);
-                DrawCross(batch, m_debugPixel, transform.position, 10.0f, crossColor, kColliderThickness);
+                    kColliderThickness,
+                    kDebugDrawLayer);
+                KibakoEngine::DebugDraw2D::DrawCross(batch,
+                    transform.position,
+                    10.0f,
+                    crossColor,
+                    kColliderThickness,
+                    kDebugDrawLayer);
             }
 
             if (entity.collision.aabb && entity.collision.aabb->active) {
-                DrawAABBOutline(batch,
-                    m_debugPixel,
+                KibakoEngine::DebugDraw2D::DrawAABBOutline(batch,
                     transform.position,
                     entity.collision.aabb->halfW,
                     entity.collision.aabb->halfH,
                     aabbColor,
-                    kColliderThickness);
-                DrawCross(batch, m_debugPixel, transform.position, 10.0f, crossColor, kColliderThickness);
+                    kColliderThickness,
+                    kDebugDrawLayer);
+                KibakoEngine::DebugDraw2D::DrawCross(batch,
+                    transform.position,
+                    10.0f,
+                    crossColor,
+                    kColliderThickness,
+                    kDebugDrawLayer);
             }
         }
     }

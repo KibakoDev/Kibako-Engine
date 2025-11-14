@@ -22,6 +22,11 @@ namespace KibakoEngine {
         constexpr const char* kLogChannel = "SpriteBatch";
     }
 
+    const Texture2D* SpriteBatch2D::DefaultWhiteTexture() const
+    {
+        return m_defaultWhite.IsValid() ? &m_defaultWhite : nullptr;
+    }
+
     bool SpriteBatch2D::Init(ID3D11Device* device, ID3D11DeviceContext* context)
     {
         KBK_PROFILE_SCOPE("SpriteBatchInit");
@@ -44,6 +49,10 @@ namespace KibakoEngine {
         if (!EnsureIndexCapacity(256))
             return false;
 
+        if (!m_defaultWhite.CreateSolidColor(device, 255, 255, 255, 255)) {
+            KbkWarn(kLogChannel, "Failed to create default white texture for SpriteBatch2D");
+        }
+
         return true;
     }
 
@@ -54,6 +63,8 @@ namespace KibakoEngine {
         m_indexScratch.clear();
         m_vertexScratch.clear();
         m_commands.clear();
+
+        m_defaultWhite.Reset();
 
         m_vertexBuffer.Reset();
         m_indexBuffer.Reset();
