@@ -6,6 +6,7 @@
 
 #include <d3d11.h>
 
+// ImGui
 #include "imgui.h"
 #include "backends/imgui_impl_dx11.h"
 #include "backends/imgui_impl_sdl2.h"
@@ -19,12 +20,13 @@ namespace KibakoEngine::DebugUI {
         ID3D11Device* g_Device = nullptr;
         ID3D11DeviceContext* g_Context = nullptr;
 
-        bool                 g_VSyncEnabled = true;
         RenderStats          g_RenderStats{};
+        bool                 g_VSyncEnabled = true;
 
-        // Scene inspector callback hook.
         void* g_SceneInspectorUserData = nullptr;
         PanelCallback g_SceneInspectorCallback = nullptr;
+
+        constexpr const char* kLogChannel = "DebugUI";
     }
 
     void Init(SDL_Window* window, ID3D11Device* device, ID3D11DeviceContext* context)
@@ -42,7 +44,7 @@ namespace KibakoEngine::DebugUI {
         (void)io;
 
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        // Docking is not enabled for the current ImGui configuration.
+        // PAS de docking, ta version d'ImGui ne le supporte pas
 
         ImGui::StyleColorsDark();
 
@@ -51,7 +53,7 @@ namespace KibakoEngine::DebugUI {
 
         g_Initialized = true;
 
-        KbkLog("DebugUI", "Dear ImGui initialized");
+        KbkLog(kLogChannel, "Dear ImGui initialized");
     }
 
     void Shutdown()
@@ -70,7 +72,7 @@ namespace KibakoEngine::DebugUI {
         g_SceneInspectorUserData = nullptr;
         g_SceneInspectorCallback = nullptr;
 
-        KbkLog("DebugUI", "Dear ImGui shutdown");
+        KbkLog(kLogChannel, "Dear ImGui shutdown");
     }
 
     void NewFrame()
@@ -79,7 +81,7 @@ namespace KibakoEngine::DebugUI {
             return;
 
         ImGui_ImplDX11_NewFrame();
-        ImGui_ImplSDL2_NewFrame();
+        ImGui_ImplSDL2_NewFrame();  // ta version ne prend pas de SDL_Window
         ImGui::NewFrame();
     }
 
@@ -98,106 +100,126 @@ namespace KibakoEngine::DebugUI {
 
         ImGuiIO& io = ImGui::GetIO();
 
-        // ==========================
-        // 1) ENGINE PANEL
-        // ==========================
-        ImGui::Begin("Kibako - Engine");
+        // ====== Main dock-like window ======
+        ImGui::SetNextWindowPos(ImVec2(10.0f, 10.0f), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(420.0f, 520.0f), ImGuiCond_Once);
+
+        ImGuiWindowFlags flags =
+            ImGuiWindowFlags_NoCollapse |
+            ImGuiWindowFlags_NoNav;
+
+        ImGui::Begin("Kibako - Debug", nullptr, flags);
+
+        if (ImGui::BeginTabBar("KibakoDebugTabs"))
         {
-            const float fps = io.Framerate;
-            const float frameMs = (fps > 0.0f) ? (1000.0f / fps) : 0.0f;
-            const float deltaTime = io.DeltaTime;
-            const ImVec2 display = io.DisplaySize;
+            // ================= TAB: ENGINE =================
+            if (ImGui::BeginTabItem("Engine"))
+            {
+                const float fps = io.Framerate;
+                const float frameMs = (fps > 0.0f) ? (1000.0f / fps) : 0.0f;
+                const float deltaTime = io.DeltaTime;
+                const ImVec2 display = io.DisplaySize;
 
-            ImGui::Text("Frame: %.3f ms (%.1f FPS)", frameMs, fps);
-            ImGui::Text("DeltaTime: %.5f s", deltaTime);
+                ImGui::Text("Frame: %.3f ms (%.1f FPS)", frameMs, fps);
+                ImGui::Text("DeltaTime: %.5f s", deltaTime);
 
-            ImGui::Separator();
-            ImGui::Text("Renderer");
-            ImGui::BulletText("Backbuffer: %.0f x %.0f", display.x, display.y);
-            ImGui::BulletText("VSync: %s", g_VSyncEnabled ? "ON" : "OFF");
-            ImGui::BulletText("Sprites: %u", g_RenderStats.spritesSubmitted);
-            ImGui::BulletText("Draw calls: %u", g_RenderStats.drawCalls);
+                ImGui::Separator();
+                ImGui::Text("Renderer");
+                ImGui::BulletText("Backbuffer: %.0f x %.0f", display.x, display.y);
+                ImGui::BulletText("VSync: %s", g_VSyncEnabled ? "ON" : "OFF");
+                ImGui::BulletText("Sprites: %u", g_RenderStats.spritesSubmitted);
+                ImGui::BulletText("Draw calls: %u", g_RenderStats.drawCalls);
 
-            ImGui::Separator();
-            ImGui::Text("Debug UI: %s", g_Enabled ? "ENABLED" : "DISABLED");
-            ImGui::Text("F2: toggle ImGui");
-            ImGui::Text("F1: collision overlay");
+                // Game time (scaled / raw)
+                const GameTime& gt = GameServices::GetTime();
+
+                ImGui::Separator();
+                ImGui::Text("Game Time");
+                ImGui::BulletText("dt (scaled): %.5f s", gt.scaledDeltaSeconds);
+                ImGui::BulletText("dt (raw):    %.5f s", gt.rawDeltaSeconds);
+                ImGui::BulletText("Total scaled: %.2f s", gt.totalScaledSeconds);
+                ImGui::BulletText("Total raw:    %.2f s", gt.totalRawSeconds);
+
+                float timeScale = static_cast<float>(gt.timeScale);
+                if (ImGui::SliderFloat("Time scale", &timeScale, 0.0f, 3.0f, "%.2f")) {
+                    GameServices::SetTimeScale(timeScale);
+                }
+
+                bool paused = gt.paused;
+                if (ImGui::Checkbox("Paused", &paused)) {
+                    GameServices::SetPaused(paused);
+                }
+
+                ImGui::Separator();
+                ImGui::Text("Debug UI");
+                ImGui::BulletText("F2: toggle all debug");
+                ImGui::BulletText("F1: collision overlay (sandbox)");
+
+                ImGui::EndTabItem();
+            }
+
+            // ================= TAB: PERFORMANCE =================
+            if (ImGui::BeginTabItem("Performance"))
+            {
+                static float frameHistory[120] = {};
+                static int   historyIndex = 0;
+                const int    historySize = IM_ARRAYSIZE(frameHistory);
+
+                float frameMs = (io.Framerate > 0.0f) ? (1000.0f / io.Framerate) : 0.0f;
+                frameHistory[historyIndex] = frameMs;
+                historyIndex = (historyIndex + 1) % historySize;
+
+                ImGui::Text("Frame time history (ms)");
+                ImGui::PlotLines(
+                    "##frametime",
+                    frameHistory,
+                    historySize,
+                    historyIndex,
+                    nullptr,
+                    0.0f,
+                    40.0f,
+                    ImVec2(0.0f, 80.0f)
+                );
+                ImGui::Text("Target: 16.6 ms (60 FPS)");
+
+                ImGui::EndTabItem();
+            }
+
+            // ================= TAB: INPUT =================
+            if (ImGui::BeginTabItem("Input"))
+            {
+                ImGui::Text("Mouse");
+                ImGui::BulletText("Position: (%.0f, %.0f)", io.MousePos.x, io.MousePos.y);
+
+                ImGui::Separator();
+                ImGui::Text("Mouse buttons:");
+                ImGui::BulletText("Left:   %s", io.MouseDown[0] ? "Down" : "Up");
+                ImGui::BulletText("Right:  %s", io.MouseDown[1] ? "Down" : "Up");
+                ImGui::BulletText("Middle: %s", io.MouseDown[2] ? "Down" : "Up");
+
+                ImGui::Separator();
+                ImGui::TextDisabled("(Gameplay input géré par KibakoEngine::Input)");
+
+                ImGui::EndTabItem();
+            }
+
+            // ================= TAB: SCENE =================
+            if (ImGui::BeginTabItem("Scene"))
+            {
+                if (g_SceneInspectorCallback && g_SceneInspectorUserData) {
+                    g_SceneInspectorCallback(g_SceneInspectorUserData);
+                }
+                else {
+                    ImGui::TextDisabled("No Scene2D inspector registered.");
+                }
+
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
         }
-        ImGui::End();
 
-        // ==========================
-        // 2) PERFORMANCE PANEL
-        // ==========================
-        {
-            static float frameHistory[120] = {};
-            static int   historyIndex = 0;
-            const int    historySize = IM_ARRAYSIZE(frameHistory);
-
-            float frameMs = (io.Framerate > 0.0f) ? (1000.0f / io.Framerate) : 0.0f;
-            frameHistory[historyIndex] = frameMs;
-            historyIndex = (historyIndex + 1) % historySize;
-
-            ImGui::Begin("Kibako - Performance");
-            ImGui::Text("Frame time history (ms)");
-            ImGui::PlotLines(
-                "##frametime",
-                frameHistory,
-                historySize,
-                historyIndex,
-                nullptr,
-                0.0f,
-                40.0f,
-                ImVec2(0.0f, 80.0f)
-            );
-            ImGui::Text("Target: 16.6 ms (60 FPS)");
-            ImGui::End();
-        }
-
-        // ==========================
-        // 3) INPUT PANEL
-        // ==========================
-        ImGui::Begin("Kibako - Input");
-        {
-            ImGui::Text("Mouse position: (%.0f, %.0f)", io.MousePos.x, io.MousePos.y);
-
-            ImGui::Separator();
-            ImGui::Text("Mouse buttons:");
-            ImGui::BulletText("Left:   %s", io.MouseDown[0] ? "Down" : "Up");
-            ImGui::BulletText("Right:  %s", io.MouseDown[1] ? "Down" : "Up");
-            ImGui::BulletText("Middle: %s", io.MouseDown[2] ? "Down" : "Up");
-
-            ImGui::Separator();
-            ImGui::TextDisabled("(Gameplay input is handled by the engine; this is the ImGui view.)");
-        }
-        ImGui::End();
-
-        // ==========================
-        // 4) SCENE INSPECTOR PANEL
-        // ==========================
-        if (g_SceneInspectorCallback && g_SceneInspectorUserData) {
-            g_SceneInspectorCallback(g_SceneInspectorUserData);
-        }
-        // ==========================
-        // 5) 
-        // ==========================
-        const GameTime& gt = GameServices::GetTime();
-
-        ImGui::Separator();
-        ImGui::Text("Game Time");
-        ImGui::BulletText("dt (scaled): %.5f s", gt.scaledDeltaSeconds);
-        ImGui::BulletText("dt (raw):    %.5f s", gt.rawDeltaSeconds);
-        ImGui::BulletText("Total scaled: %.2f s", gt.totalScaledSeconds);
-        ImGui::BulletText("Total raw:    %.2f s", gt.totalRawSeconds);
-
-        float timeScale = static_cast<float>(gt.timeScale);
-        if (ImGui::SliderFloat("Time scale", &timeScale, 0.0f, 3.0f, "%.2f")) {
-            GameServices::SetTimeScale(timeScale);
-        }
-
-        bool paused = gt.paused;
-        if (ImGui::Checkbox("Paused", &paused)) {
-            GameServices::SetPaused(paused);
-        }
+        ImGui::End(); // "Kibako - Debug"
 
         ImGui::Render();
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
