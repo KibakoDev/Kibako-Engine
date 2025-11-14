@@ -17,19 +17,21 @@ namespace
     constexpr const char* kLogChannel = "Sandbox";
     constexpr int kDebugDrawLayer = 1000;
     constexpr float kColliderThickness = 2.0f;
+    constexpr int kCircleSegments = 32;
+    constexpr float kTwoPi = 6.28318530717958647692f;
 
     const RectF kUnitRect = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
 
     void DrawLine(SpriteBatch2D& batch,
-        Texture2D& pixel,
-        const DirectX::XMFLOAT2& a,
-        const DirectX::XMFLOAT2& b,
-        const Color4& color,
-        float thickness)
+                  Texture2D& pixel,
+                  const DirectX::XMFLOAT2& a,
+                  const DirectX::XMFLOAT2& b,
+                  const Color4& color,
+                  float thickness)
     {
         const float dx = b.x - a.x;
         const float dy = b.y - a.y;
-        const float length = std::sqrt(dx * dx + dy * dy);
+        const float length = std::sqrt((dx * dx) + (dy * dy));
         if (length <= 0.0001f)
             return;
 
@@ -39,8 +41,8 @@ namespace
 
         const float midX = (a.x + b.x) * 0.5f;
         const float midY = (a.y + b.y) * 0.5f;
-        dst.x = midX - dst.w * 0.5f;
-        dst.y = midY - dst.h * 0.5f;
+        dst.x = midX - (dst.w * 0.5f);
+        dst.y = midY - (dst.h * 0.5f);
 
         const float angle = std::atan2(dy, dx);
 
@@ -48,11 +50,11 @@ namespace
     }
 
     void DrawCross(SpriteBatch2D& batch,
-        Texture2D& pixel,
-        const DirectX::XMFLOAT2& center,
-        float size,
-        const Color4& color,
-        float thickness)
+                   Texture2D& pixel,
+                   const DirectX::XMFLOAT2& center,
+                   float size,
+                   const Color4& color,
+                   float thickness)
     {
         const float half = size * 0.5f;
         const DirectX::XMFLOAT2 left{ center.x - half, center.y };
@@ -65,36 +67,34 @@ namespace
     }
 
     void DrawCircleOutline(SpriteBatch2D& batch,
-        Texture2D& pixel,
-        const DirectX::XMFLOAT2& center,
-        float radius,
-        const Color4& color,
-        float thickness)
+                           Texture2D& pixel,
+                           const DirectX::XMFLOAT2& center,
+                           float radius,
+                           const Color4& color,
+                           float thickness)
     {
         if (radius <= 0.0f)
             return;
 
-        constexpr int segments = 32;
         DirectX::XMFLOAT2 prev{ center.x + radius, center.y };
 
-        for (int i = 1; i <= segments; ++i) {
-            const float angle = (static_cast<float>(i) / static_cast<float>(segments)) * 6.28318530717958647692f;
+        for (int i = 1; i <= kCircleSegments; ++i) {
+            const float angle = (static_cast<float>(i) / static_cast<float>(kCircleSegments)) * kTwoPi;
             DirectX::XMFLOAT2 next{
                 center.x + std::cos(angle) * radius,
-                center.y + std::sin(angle) * radius
-            };
+                center.y + std::sin(angle) * radius};
             DrawLine(batch, pixel, prev, next, color, thickness);
             prev = next;
         }
     }
 
     void DrawAABBOutline(SpriteBatch2D& batch,
-        Texture2D& pixel,
-        const DirectX::XMFLOAT2& center,
-        float halfW,
-        float halfH,
-        const Color4& color,
-        float thickness)
+                         Texture2D& pixel,
+                         const DirectX::XMFLOAT2& center,
+                         float halfW,
+                         float halfH,
+                         const Color4& color,
+                         float thickness)
     {
         const DirectX::XMFLOAT2 tl{ center.x - halfW, center.y - halfH };
         const DirectX::XMFLOAT2 tr{ center.x + halfW, center.y - halfH };
@@ -136,72 +136,71 @@ void GameLayer::OnAttach()
 
     const float width = static_cast<float>(m_starTexture->Width());
     const float height = static_cast<float>(m_starTexture->Height());
+    const RectF spriteRect = RectF::FromXYWH(0.0f, 0.0f, width, height);
+    const RectF uvRect = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
 
-    // --- Cration des 3 entits ---
+    auto configureSprite = [&](Entity2D& entity,
+                               const DirectX::XMFLOAT2& position,
+                               const DirectX::XMFLOAT2& scale,
+                               const Color4& color,
+                               int layer) {
+        entity.transform.position = position;
+        entity.transform.rotation = 0.0f;
+        entity.transform.scale = scale;
 
-    // 1) Sprite gauche (bleu, pas de collider)
+        entity.sprite.texture = m_starTexture;
+        entity.sprite.dst = spriteRect;
+        entity.sprite.src = uvRect;
+        entity.sprite.color = color;
+        entity.sprite.layer = layer;
+    };
+
+    // Left sprite (blue, no collider)
     {
-        Entity2D& e = m_scene.CreateEntity();
-        m_entityLeft = e.id;
-
-        e.transform.position = { 80.0f, 140.0f };
-        e.transform.rotation = 0.0f;
-        e.transform.scale = { 1.0f, 1.0f };
-
-        e.sprite.texture = m_starTexture;
-        e.sprite.dst = RectF::FromXYWH(0.0f, 0.0f, width, height);
-        e.sprite.src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
-        e.sprite.color = Color4{ 0.25f, 0.8f, 1.0f, 1.0f };
-        e.sprite.layer = -1;
+        Entity2D& entity = m_scene.CreateEntity();
+        m_entityLeft = entity.id;
+        configureSprite(entity,
+                        { 80.0f, 140.0f },
+                        { 1.0f, 1.0f },
+                        Color4{ 0.25f, 0.8f, 1.0f, 1.0f },
+                        -1);
     }
 
-    // 2) Sprite centre (blanc) avec collider
+    // Center sprite (white) with collider
     {
-        Entity2D& e = m_scene.CreateEntity();
-        m_entityCenter = e.id;
+        Entity2D& entity = m_scene.CreateEntity();
+        m_entityCenter = entity.id;
+        configureSprite(entity,
+                        { 200.0f, 150.0f },
+                        { 1.2f, 1.2f },
+                        Color4::White(),
+                        0);
 
-        e.transform.position = { 200.0f, 150.0f };
-        e.transform.rotation = 0.0f;
-        e.transform.scale = { 1.2f, 1.2f }; // un peu plus gros
-
-        e.sprite.texture = m_starTexture;
-        e.sprite.dst = RectF::FromXYWH(0.0f, 0.0f, width, height);
-        e.sprite.src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
-        e.sprite.color = Color4::White();
-        e.sprite.layer = 0;
-
-        // Collider circulaire centre
-        m_centerCollider.radius = 0.5f * width * e.transform.scale.x;
+        m_centerCollider.radius = 0.5f * width * entity.transform.scale.x;
         m_centerCollider.active = true;
-        e.collision.circle = &m_centerCollider;
+        entity.collision.circle = &m_centerCollider;
     }
 
-    // 3) Sprite droite (orange) avec collider
+    // Right sprite (orange) with collider
     {
-        Entity2D& e = m_scene.CreateEntity();
-        m_entityRight = e.id;
+        Entity2D& entity = m_scene.CreateEntity();
+        m_entityRight = entity.id;
+        configureSprite(entity,
+                        { 340.0f, 160.0f },
+                        { 1.0f, 1.0f },
+                        Color4{ 1.0f, 0.55f, 0.35f, 1.0f },
+                        1);
 
-        e.transform.position = { 340.0f, 160.0f };
-        e.transform.rotation = 0.0f;
-        e.transform.scale = { 1.0f, 1.0f };
-
-        e.sprite.texture = m_starTexture;
-        e.sprite.dst = RectF::FromXYWH(0.0f, 0.0f, width, height);
-        e.sprite.src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
-        e.sprite.color = Color4{ 1.0f, 0.55f, 0.35f, 1.0f };
-        e.sprite.layer = 1;
-
-        // Collider circulaire droite
-        m_rightCollider.radius = 0.5f * width * e.transform.scale.x;
+        m_rightCollider.radius = 0.5f * width * entity.transform.scale.x;
         m_rightCollider.active = true;
-        e.collision.circle = &m_rightCollider;
+        entity.collision.circle = &m_rightCollider;
     }
 
     KbkLog(kLogChannel,
-        "GameLayer attached (%d x %d texture, %zu entities)",
-        m_starTexture->Width(),
-        m_starTexture->Height(),
-        m_scene.Entities().size());
+           "GameLayer attached (%d x %d texture, %zu entities)",
+           m_starTexture->Width(),
+           m_starTexture->Height(),
+           m_scene.Entities().size());
 }
 
 void GameLayer::OnDetach()
@@ -235,45 +234,35 @@ void GameLayer::OnUpdate(float dt)
     const float bobbing = std::sin(m_time * 2.0f) * 32.0f;
     const float sway = std::sin(m_time * 0.2f) * 300.0f;
 
-    // Entit centre : mouvement + rotation
-    Entity2D* center = m_scene.FindEntity(m_entityCenter);
-    if (center) {
-        center->transform.position.x = 200.0f + sway;
-        center->transform.position.y = 150.0f + bobbing;
-        center->transform.rotation = m_time * 0.8f;
+    Entity2D* centerEntity = m_scene.FindEntity(m_entityCenter);
+    Entity2D* rightEntity = m_scene.FindEntity(m_entityRight);
+
+    // Center entity: movement + rotation
+    if (centerEntity) {
+        centerEntity->transform.position.x = 200.0f + sway;
+        centerEntity->transform.position.y = 150.0f + bobbing;
+        centerEntity->transform.rotation = m_time * 0.8f;
     }
 
-    // Entit droite : rotation inverse
-    Entity2D* right = m_scene.FindEntity(m_entityRight);
-    if (right) {
-        right->transform.rotation = -m_time * 0.5f;
+    // Right entity: counter rotation
+    if (rightEntity) {
+        rightEntity->transform.rotation = -m_time * 0.5f;
     }
 
-    // Test de collision entre centre et droite
     bool hit = false;
-
-    if (center && right &&
-        center->collision.circle && right->collision.circle)
-    {
-        hit = Intersects(
-            *center->collision.circle, center->transform,
-            *right->collision.circle, right->transform
-        );
+    if (centerEntity && rightEntity && centerEntity->collision.circle && rightEntity->collision.circle) {
+        hit = Intersects(*centerEntity->collision.circle, centerEntity->transform,
+                         *rightEntity->collision.circle, rightEntity->transform);
     }
 
-    // Feedback visuel simple : rouge si collision, sinon couleurs normales
-    if (center) {
-        if (hit)
-            center->sprite.color = Color4{ 1.0f, 0.2f, 0.2f, 1.0f };
-        else
-            center->sprite.color = Color4::White();
+    // Visual feedback: switch colours when colliding
+    if (centerEntity) {
+        centerEntity->sprite.color = hit ? Color4{ 1.0f, 0.2f, 0.2f, 1.0f } : Color4::White();
     }
 
-    if (right) {
-        if (hit)
-            right->sprite.color = Color4{ 1.0f, 0.4f, 0.2f, 1.0f };
-        else
-            right->sprite.color = Color4{ 1.0f, 0.55f, 0.35f, 1.0f };
+    if (rightEntity) {
+        rightEntity->sprite.color = hit ? Color4{ 1.0f, 0.4f, 0.2f, 1.0f }
+                                        : Color4{ 1.0f, 0.55f, 0.35f, 1.0f };
     }
 
     if (hit) {

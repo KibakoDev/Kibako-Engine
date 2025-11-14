@@ -15,7 +15,7 @@ namespace KibakoEngine {
 
     class SpriteBatch2D {
     public:
-        bool Init(ID3D11Device* device, ID3D11DeviceContext* context);
+        [[nodiscard]] bool Init(ID3D11Device* device, ID3D11DeviceContext* context);
         void Shutdown();
 
         void Begin(const DirectX::XMFLOAT4X4& viewProjT);
@@ -48,10 +48,10 @@ namespace KibakoEngine {
             DirectX::XMFLOAT4X4 viewProjT;
         };
 
-        bool CreateShaders(ID3D11Device* device);
-        bool CreateStates(ID3D11Device* device);
-        bool EnsureVertexCapacity(size_t spriteCount);
-        bool EnsureIndexCapacity(size_t spriteCount);
+        [[nodiscard]] bool CreateShaders(ID3D11Device* device);
+        [[nodiscard]] bool CreateStates(ID3D11Device* device);
+        [[nodiscard]] bool EnsureVertexCapacity(size_t spriteCount);
+        [[nodiscard]] bool EnsureIndexCapacity(size_t spriteCount);
         void UpdateVSConstants();
         void BuildVertices(std::vector<Vertex>& outVertices) const;
 

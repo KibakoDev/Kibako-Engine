@@ -181,12 +181,9 @@ namespace KibakoEngine {
     {
 #if KBK_DEBUG_BUILD
         KBK_ASSERT(m_isDrawing, "SpriteBatch2D::Push called outside Begin/End");
-        if (!m_isDrawing)
-            return;
-#else
-        if (!m_isDrawing)
-            return;
 #endif
+        if (!m_isDrawing)
+            return;
 
         m_commands.push_back({ &texture, dst, src, color, rotation, layer });
     }

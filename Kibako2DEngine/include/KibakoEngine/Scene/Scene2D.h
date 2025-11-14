@@ -17,8 +17,8 @@ namespace KibakoEngine {
 
     struct Transform2D
     {
-        DirectX::XMFLOAT2 position{ 0.0f, 0.0f }; // centre en coordonnées monde
-        float              rotation = 0.0f; // radians
+        DirectX::XMFLOAT2 position{ 0.0f, 0.0f }; // world-space center
+        float              rotation = 0.0f;       // radians
         DirectX::XMFLOAT2  scale{ 1.0f, 1.0f };
     };
 
@@ -26,7 +26,7 @@ namespace KibakoEngine {
     {
         Texture2D* texture = nullptr;
 
-        RectF  dst{ 0.0f, 0.0f, 0.0f, 0.0f };        // dimensions locales et décalage relatif au centre
+        RectF  dst{ 0.0f, 0.0f, 0.0f, 0.0f };        // local size and relative offset from center
         RectF  src{ 0.0f, 0.0f, 1.0f, 1.0f };        // UV [0..1]
         Color4 color = Color4::White();
         int    layer = 0;
@@ -47,23 +47,23 @@ namespace KibakoEngine {
     public:
         Scene2D() = default;
 
-        // Création / destruction
+        // Creation / destruction
         [[nodiscard]] Entity2D& CreateEntity();
-        void      DestroyEntity(EntityID id); // marque comme inactive
+        void                   DestroyEntity(EntityID id); // marks entity as inactive
 
-        void Clear(); // supprime toutes les entités
+        void Clear(); // removes all entities
 
-        // Accès
-        [[nodiscard]] Entity2D* FindEntity(EntityID id);
+        // Lookup
+        [[nodiscard]] Entity2D*       FindEntity(EntityID id);
         [[nodiscard]] const Entity2D* FindEntity(EntityID id) const;
 
         std::vector<Entity2D>& Entities() { return m_entities; }
         const std::vector<Entity2D>& Entities() const { return m_entities; }
 
-        // Update générique (rien à l'intérieur pour l'instant)
+        // Placeholder update (no internal logic yet)
         void Update(float dt);
 
-        // Rendu de toutes les entités actives avec sprite
+        // Render every active entity that has a valid sprite
         void Render(SpriteBatch2D& batch) const;
 
     private:

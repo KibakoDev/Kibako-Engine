@@ -27,12 +27,12 @@ private:
     KibakoEngine::Texture2D  m_debugPixel;
     KibakoEngine::Scene2D    m_scene;
 
-    // IDs des entits quon veut manipuler
+    // Entity identifiers used during gameplay updates
     KibakoEngine::EntityID m_entityLeft = 0;
     KibakoEngine::EntityID m_entityCenter = 0;
     KibakoEngine::EntityID m_entityRight = 0;
 
-    // Colliders attachs (proprit du layer, pointeurs stocks dans les entits)
+    // Colliders owned by the layer (entities keep raw pointers)
     KibakoEngine::CircleCollider2D m_centerCollider{};
     KibakoEngine::CircleCollider2D m_rightCollider{};
 
