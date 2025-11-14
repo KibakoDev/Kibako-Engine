@@ -13,7 +13,7 @@
 #include <cmath>
 #include <cstdio>
 
-#include "imgui.h"
+#include "../../Kibako2DEngine/third_party/imgui/imgui.h"
 
 namespace
 {

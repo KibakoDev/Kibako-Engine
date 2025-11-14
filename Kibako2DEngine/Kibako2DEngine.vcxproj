@@ -35,7 +35,6 @@
     <ClInclude Include="include\KibakoEngine\Renderer\SpriteTypes.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\Texture2D.h" />
     <ClInclude Include="include\KibakoEngine\Resources\AssetManager.h" />
-    <ClInclude Include="include\KibakoEngine\Scene\Entity2D.h" />
     <ClInclude Include="include\KibakoEngine\Scene\Scene2D.h" />
     <ClInclude Include="include\KibakoEngine\Utils\Math.h" />
     <ClInclude Include="Ressources\AssetManager.h" />
