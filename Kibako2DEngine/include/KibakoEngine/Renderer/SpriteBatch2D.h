@@ -28,8 +28,6 @@ namespace KibakoEngine {
                   float rotation = 0.0f,
                   int layer = 0);
 
-        [[nodiscard]] ID3D11Device* GetDevice() const { return m_device; }
-
     private:
         struct Vertex {
             DirectX::XMFLOAT3 position;
