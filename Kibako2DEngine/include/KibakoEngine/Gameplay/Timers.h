@@ -4,9 +4,7 @@
 
 namespace KibakoEngine::Gameplay {
 
-    // ------------------------------------------------------------
-    // Stopwatch : compteur de temps qui monte (chronomètre)
-    // ------------------------------------------------------------
+    // Stopwatch: accumulates elapsed time while running
     class Stopwatch
     {
     public:
@@ -56,15 +54,15 @@ namespace KibakoEngine::Gameplay {
         bool  m_running = false;
     };
 
+    // CountdownTimer: counts down from a duration towards zero
+    class CountdownTimer
+    {
+    public:
+        CountdownTimer() = default;
 
-    // ------------------------------------------------------------
-        [[nodiscard]] float GetDuration() const
-        [[nodiscard]] bool IsFinished() const
-        [[nodiscard]] bool IsRunning() const
-        [[nodiscard]] float GetRemainingTime() const
-        [[nodiscard]] float GetProgress01() const
-} // namespace KibakoEngine::Gameplay
+        explicit CountdownTimer(float durationSeconds)
             : m_duration(durationSeconds)
+            , m_remaining(durationSeconds)
         {
         }
 
@@ -74,7 +72,7 @@ namespace KibakoEngine::Gameplay {
             m_remaining = std::min(m_remaining, m_duration);
         }
 
-        float GetDuration() const
+        [[nodiscard]] float GetDuration() const
         {
             return m_duration;
         }
@@ -89,7 +87,7 @@ namespace KibakoEngine::Gameplay {
         void Restart()
         {
             m_remaining = m_duration;
-            m_running = true;
+            m_running = m_duration > 0.0f;
             m_finished = false;
         }
 
@@ -116,42 +114,43 @@ namespace KibakoEngine::Gameplay {
                 return;
 
             m_remaining -= dt;
-            if (m_remaining <= 0.0f)
-            {
+            if (m_remaining <= 0.0f) {
                 m_remaining = 0.0f;
                 m_running = false;
                 m_finished = true;
             }
         }
 
-        bool IsFinished() const
+        [[nodiscard]] bool IsFinished() const
         {
             return m_finished;
         }
 
-        bool IsRunning() const
+        [[nodiscard]] bool IsRunning() const
         {
             return m_running;
         }
 
-        float GetRemainingTime() const
+        [[nodiscard]] float GetRemainingTime() const
         {
             return m_remaining;
         }
 
-        float GetProgress01() const
+        [[nodiscard]] float GetProgress01() const
         {
             if (m_duration <= 0.0f)
                 return 1.0f;
-            float t = 1.0f - (m_remaining / m_duration);
-            return t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+
+            const float progress = 1.0f - (m_remaining / m_duration);
+            return std::clamp(progress, 0.0f, 1.0f);
         }
 
     private:
-        float m_duration = 0.0f;  // durée totale
-        float m_remaining = 0.0f;  // temps restant
+        float m_duration = 0.0f;   // total duration in seconds
+        float m_remaining = 0.0f;  // time remaining in seconds
         bool  m_running = false;
         bool  m_finished = false;
     };
 
 } // namespace KibakoEngine::Gameplay
+

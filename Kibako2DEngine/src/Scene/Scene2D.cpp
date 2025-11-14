@@ -11,6 +11,14 @@ namespace KibakoEngine {
     namespace
     {
         constexpr const char* kLogChannel = "Scene2D";
+
+        template <typename Container>
+        auto FindEntityIt(Container& entities, EntityID id)
+        {
+            return std::find_if(entities.begin(), entities.end(), [id](const Entity2D& entity) {
+                return entity.id == id;
+            });
+        }
     }
 
     Entity2D& Scene2D::CreateEntity()
@@ -26,9 +34,7 @@ namespace KibakoEngine {
 
     void Scene2D::DestroyEntity(EntityID id)
     {
-        const auto it = std::find_if(m_entities.begin(), m_entities.end(), [id](const Entity2D& entity) {
-            return entity.id == id;
-        });
+        const auto it = FindEntityIt(m_entities, id);
         if (it == m_entities.end())
             return;
 
@@ -45,67 +51,60 @@ namespace KibakoEngine {
 
     Entity2D* Scene2D::FindEntity(EntityID id)
     {
-        const auto it = std::find_if(m_entities.begin(), m_entities.end(), [id](const Entity2D& entity) {
-            return entity.id == id;
-        });
+        const auto it = FindEntityIt(m_entities, id);
         return it != m_entities.end() ? &(*it) : nullptr;
     }
 
     const Entity2D* Scene2D::FindEntity(EntityID id) const
     {
-        const auto it = std::find_if(m_entities.begin(), m_entities.end(), [id](const Entity2D& entity) {
-            return entity.id == id;
-        });
+        const auto it = FindEntityIt(m_entities, id);
         return it != m_entities.end() ? &(*it) : nullptr;
     }
 
     void Scene2D::Update(float dt)
     {
         KBK_UNUSED(dt);
-        // Pour l'instant, la scène ne gère aucune logique automatique.
-        // Tout se fait dans le code gameplay (GameLayer / GameState).
+        // The scene does not provide implicit behaviour yet.
+        // All logic is driven by gameplay code (GameLayer / GameState).
     }
 
     void Scene2D::Render(SpriteBatch2D& batch) const
     {
-
         for (const auto& entity : m_entities) {
             if (!entity.active)
                 continue;
 
-            const auto& sprite = entity.sprite;
-            if (!sprite.texture || !sprite.texture->IsValid())
+            const Texture2D* texture = entity.sprite.texture;
+            if (!texture || !texture->IsValid())
                 continue;
 
-            const RectF& local = sprite.dst;
+            const RectF& local = entity.sprite.dst;
+            const Transform2D& transform = entity.transform;
 
             // Compute scaled size (retain local dimensions)
-            const float scaledWidth = local.w * entity.transform.scale.x;
-            const float scaledHeight = local.h * entity.transform.scale.y;
+            const float scaledWidth = local.w * transform.scale.x;
+            const float scaledHeight = local.h * transform.scale.y;
 
             // Local offsets are expressed relative to the entity center
-            const float offsetX = local.x * entity.transform.scale.x;
-            const float offsetY = local.y * entity.transform.scale.y;
+            const float offsetX = local.x * transform.scale.x;
+            const float offsetY = local.y * transform.scale.y;
+
+            const float worldCenterX = transform.position.x + offsetX;
+            const float worldCenterY = transform.position.y + offsetY;
 
             RectF dst{};
             dst.w = scaledWidth;
             dst.h = scaledHeight;
-
-            const float worldCenterX = entity.transform.position.x + offsetX;
-            const float worldCenterY = entity.transform.position.y + offsetY;
-
-            // Convert to top-left rectangle coordinates for rendering
-            dst.x = worldCenterX - scaledWidth * 0.5f;
-            dst.y = worldCenterY - scaledHeight * 0.5f;
+            dst.x = worldCenterX - (scaledWidth * 0.5f);
+            dst.y = worldCenterY - (scaledHeight * 0.5f);
 
             batch.Push(
-                *sprite.texture,
+                *texture,
                 dst,
-                sprite.src,
-                sprite.color,
-                entity.transform.rotation,
-                sprite.layer
-            );
+                entity.sprite.src,
+                entity.sprite.color,
+                transform.rotation,
+                entity.sprite.layer);
         }
     }
 
