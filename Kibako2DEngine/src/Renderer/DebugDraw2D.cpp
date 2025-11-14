@@ -9,7 +9,7 @@ namespace KibakoEngine::DebugDraw2D {
 
     namespace
     {
-        constexpr RectF kUnitRect = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
+        constexpr RectF kUnitRect{ 0.0f, 0.0f, 1.0f, 1.0f };
 
         const Texture2D* ResolveTexture(SpriteBatch2D& batch)
         {
