@@ -1,12 +1,12 @@
+// DebugUI.cpp - Implements the Dear ImGui debug overlay and shared panels.
 #include "KibakoEngine/Core/DebugUI.h"
 
 #include "KibakoEngine/Core/Debug.h"
-#include "KibakoEngine/Core/Log.h"
 #include "KibakoEngine/Core/GameServices.h"
+#include "KibakoEngine/Core/Log.h"
 
 #include <d3d11.h>
 
-// ImGui
 #include "imgui.h"
 #include "backends/imgui_impl_dx11.h"
 #include "backends/imgui_impl_sdl2.h"
@@ -15,79 +15,76 @@ namespace KibakoEngine::DebugUI {
 
     namespace
     {
-        bool                 g_Enabled = true;
-        bool                 g_Initialized = false;
-        ID3D11Device* g_Device = nullptr;
-        ID3D11DeviceContext* g_Context = nullptr;
-
-        RenderStats          g_RenderStats{};
-        bool                 g_VSyncEnabled = true;
-
-        void* g_SceneInspectorUserData = nullptr;
-        PanelCallback g_SceneInspectorCallback = nullptr;
-
         constexpr const char* kLogChannel = "DebugUI";
+
+        bool                 g_enabled = true;
+        bool                 g_initialized = false;
+        ID3D11Device*        g_device = nullptr;
+        ID3D11DeviceContext* g_context = nullptr;
+
+        RenderStats g_renderStats{};
+        bool        g_vsyncEnabled = true;
+
+        void*         g_sceneInspectorUserData = nullptr;
+        PanelCallback g_sceneInspectorCallback = nullptr;
     }
 
     void Init(SDL_Window* window, ID3D11Device* device, ID3D11DeviceContext* context)
     {
-        KBK_ASSERT(!g_Initialized, "DebugUI::Init called twice");
-        KBK_ASSERT(window != nullptr, "DebugUI::Init: window is null");
-        KBK_ASSERT(device != nullptr && context != nullptr, "DebugUI::Init: device/context null");
+        KBK_ASSERT(!g_initialized, "DebugUI::Init called twice");
+        KBK_ASSERT(window != nullptr, "DebugUI::Init requires a valid SDL window");
+        KBK_ASSERT(device != nullptr && context != nullptr, "DebugUI::Init requires valid D3D11 handles");
 
-        g_Device = device;
-        g_Context = context;
+        g_device = device;
+        g_context = context;
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
-        (void)io;
-
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        // PAS de docking, ta version d'ImGui ne le supporte pas
 
         ImGui::StyleColorsDark();
 
         ImGui_ImplSDL2_InitForD3D(window);
         ImGui_ImplDX11_Init(device, context);
 
-        g_Initialized = true;
+        g_initialized = true;
 
         KbkLog(kLogChannel, "Dear ImGui initialized");
     }
 
     void Shutdown()
     {
-        if (!g_Initialized)
+        if (!g_initialized)
             return;
 
         ImGui_ImplDX11_Shutdown();
         ImGui_ImplSDL2_Shutdown();
         ImGui::DestroyContext();
 
-        g_Device = nullptr;
-        g_Context = nullptr;
-        g_Initialized = false;
+        g_device = nullptr;
+        g_context = nullptr;
+        g_initialized = false;
 
-        g_SceneInspectorUserData = nullptr;
-        g_SceneInspectorCallback = nullptr;
+        g_sceneInspectorUserData = nullptr;
+        g_sceneInspectorCallback = nullptr;
 
         KbkLog(kLogChannel, "Dear ImGui shutdown");
     }
 
     void NewFrame()
     {
-        if (!g_Initialized || !g_Enabled)
+        if (!g_initialized || !g_enabled)
             return;
 
         ImGui_ImplDX11_NewFrame();
-        ImGui_ImplSDL2_NewFrame();  // ta version ne prend pas de SDL_Window
+        ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
     }
 
     void ProcessEvent(const SDL_Event& e)
     {
-        if (!g_Initialized || !g_Enabled)
+        if (!g_initialized || !g_enabled)
             return;
 
         ImGui_ImplSDL2_ProcessEvent(&e);
@@ -95,42 +92,36 @@ namespace KibakoEngine::DebugUI {
 
     void Render()
     {
-        if (!g_Initialized || !g_Enabled)
+        if (!g_initialized || !g_enabled)
             return;
 
         ImGuiIO& io = ImGui::GetIO();
 
-        // ====== Main dock-like window ======
         ImGui::SetNextWindowPos(ImVec2(10.0f, 10.0f), ImGuiCond_Once);
         ImGui::SetNextWindowSize(ImVec2(420.0f, 520.0f), ImGuiCond_Once);
 
-        ImGuiWindowFlags flags =
-            ImGuiWindowFlags_NoCollapse |
-            ImGuiWindowFlags_NoNav;
+        const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoNav;
 
-        ImGui::Begin("Kibako - Debug", nullptr, flags);
+        ImGui::Begin("Kibako - Debug", nullptr, windowFlags);
 
-        if (ImGui::BeginTabBar("KibakoDebugTabs"))
-        {
-            // ================= TAB: ENGINE =================
-            if (ImGui::BeginTabItem("Engine"))
-            {
+        if (ImGui::BeginTabBar("KibakoDebugTabs")) {
+
+            if (ImGui::BeginTabItem("Engine")) {
                 const float fps = io.Framerate;
                 const float frameMs = (fps > 0.0f) ? (1000.0f / fps) : 0.0f;
                 const float deltaTime = io.DeltaTime;
                 const ImVec2 display = io.DisplaySize;
 
                 ImGui::Text("Frame: %.3f ms (%.1f FPS)", frameMs, fps);
-                ImGui::Text("DeltaTime: %.5f s", deltaTime);
+                ImGui::Text("Delta time: %.5f s", deltaTime);
 
                 ImGui::Separator();
                 ImGui::Text("Renderer");
                 ImGui::BulletText("Backbuffer: %.0f x %.0f", display.x, display.y);
-                ImGui::BulletText("VSync: %s", g_VSyncEnabled ? "ON" : "OFF");
-                ImGui::BulletText("Sprites: %u", g_RenderStats.spritesSubmitted);
-                ImGui::BulletText("Draw calls: %u", g_RenderStats.drawCalls);
+                ImGui::BulletText("VSync: %s", g_vsyncEnabled ? "ON" : "OFF");
+                ImGui::BulletText("Sprites: %u", g_renderStats.spritesSubmitted);
+                ImGui::BulletText("Draw calls: %u", g_renderStats.drawCalls);
 
-                // Game time (scaled / raw)
                 const GameTime& gt = GameServices::GetTime();
 
                 ImGui::Separator();
@@ -151,21 +142,19 @@ namespace KibakoEngine::DebugUI {
                 }
 
                 ImGui::Separator();
-                ImGui::Text("Debug UI");
-                ImGui::BulletText("F2: toggle all debug");
-                ImGui::BulletText("F1: collision overlay (sandbox)");
+                ImGui::Text("Shortcuts");
+                ImGui::BulletText("F2: toggle debug overlay");
+                ImGui::BulletText("F1: toggle collision overlay (sandbox)");
 
                 ImGui::EndTabItem();
             }
 
-            // ================= TAB: PERFORMANCE =================
-            if (ImGui::BeginTabItem("Performance"))
-            {
+            if (ImGui::BeginTabItem("Performance")) {
                 static float frameHistory[120] = {};
                 static int   historyIndex = 0;
                 const int    historySize = IM_ARRAYSIZE(frameHistory);
 
-                float frameMs = (io.Framerate > 0.0f) ? (1000.0f / io.Framerate) : 0.0f;
+                const float frameMs = (io.Framerate > 0.0f) ? (1000.0f / io.Framerate) : 0.0f;
                 frameHistory[historyIndex] = frameMs;
                 historyIndex = (historyIndex + 1) % historySize;
 
@@ -178,36 +167,31 @@ namespace KibakoEngine::DebugUI {
                     nullptr,
                     0.0f,
                     40.0f,
-                    ImVec2(0.0f, 80.0f)
-                );
+                    ImVec2(0.0f, 80.0f));
                 ImGui::Text("Target: 16.6 ms (60 FPS)");
 
                 ImGui::EndTabItem();
             }
 
-            // ================= TAB: INPUT =================
-            if (ImGui::BeginTabItem("Input"))
-            {
+            if (ImGui::BeginTabItem("Input")) {
                 ImGui::Text("Mouse");
                 ImGui::BulletText("Position: (%.0f, %.0f)", io.MousePos.x, io.MousePos.y);
 
                 ImGui::Separator();
-                ImGui::Text("Mouse buttons:");
+                ImGui::Text("Mouse buttons");
                 ImGui::BulletText("Left:   %s", io.MouseDown[0] ? "Down" : "Up");
                 ImGui::BulletText("Right:  %s", io.MouseDown[1] ? "Down" : "Up");
                 ImGui::BulletText("Middle: %s", io.MouseDown[2] ? "Down" : "Up");
 
                 ImGui::Separator();
-                ImGui::TextDisabled("(Gameplay input géré par KibakoEngine::Input)");
+                ImGui::TextDisabled("Gameplay input handled by KibakoEngine::Input");
 
                 ImGui::EndTabItem();
             }
 
-            // ================= TAB: SCENE =================
-            if (ImGui::BeginTabItem("Scene"))
-            {
-                if (g_SceneInspectorCallback && g_SceneInspectorUserData) {
-                    g_SceneInspectorCallback(g_SceneInspectorUserData);
+            if (ImGui::BeginTabItem("Scene")) {
+                if (g_sceneInspectorCallback && g_sceneInspectorUserData) {
+                    g_sceneInspectorCallback(g_sceneInspectorUserData);
                 }
                 else {
                     ImGui::TextDisabled("No Scene2D inspector registered.");
@@ -219,7 +203,7 @@ namespace KibakoEngine::DebugUI {
             ImGui::EndTabBar();
         }
 
-        ImGui::End(); // "Kibako - Debug"
+        ImGui::End();
 
         ImGui::Render();
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -227,43 +211,43 @@ namespace KibakoEngine::DebugUI {
 
     void SetEnabled(bool enabled)
     {
-        g_Enabled = enabled;
+        g_enabled = enabled;
     }
 
     bool IsEnabled()
     {
-        return g_Enabled;
+        return g_enabled;
     }
 
     void ToggleEnabled()
     {
-        g_Enabled = !g_Enabled;
+        g_enabled = !g_enabled;
     }
 
     void SetVSyncEnabled(bool enabled)
     {
-        g_VSyncEnabled = enabled;
+        g_vsyncEnabled = enabled;
     }
 
     bool IsVSyncEnabled()
     {
-        return g_VSyncEnabled;
+        return g_vsyncEnabled;
     }
 
     void SetRenderStats(const RenderStats& stats)
     {
-        g_RenderStats = stats;
+        g_renderStats = stats;
     }
 
     RenderStats GetRenderStats()
     {
-        return g_RenderStats;
+        return g_renderStats;
     }
 
     void SetSceneInspector(void* userData, PanelCallback callback)
     {
-        g_SceneInspectorUserData = userData;
-        g_SceneInspectorCallback = callback;
+        g_sceneInspectorUserData = userData;
+        g_sceneInspectorCallback = callback;
     }
 
 } // namespace KibakoEngine::DebugUI

@@ -1,3 +1,4 @@
+// GameLayer.h - Declares the sandbox gameplay layer built on Kibako Engine.
 #pragma once
 
 #include <vector>

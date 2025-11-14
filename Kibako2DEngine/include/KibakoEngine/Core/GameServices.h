@@ -1,52 +1,39 @@
+// GameServices.h - Declares global services such as the gameplay time system.
 #pragma once
 
 #include <cstdint>
 
 namespace KibakoEngine {
 
-    // État global du temps de jeu
     struct GameTime
     {
-        double rawDeltaSeconds = 0.0;  // dt brut (temps réel)
-        double scaledDeltaSeconds = 0.0;  // dt après timeScale / pause
+        double rawDeltaSeconds = 0.0;
+        double scaledDeltaSeconds = 0.0;
 
-        double totalRawSeconds = 0.0;  // temps cumulé brut
-        double totalScaledSeconds = 0.0;  // temps cumulé avec scaling
+        double totalRawSeconds = 0.0;
+        double totalScaledSeconds = 0.0;
 
-        double timeScale = 1.0;  // 1.0 = normal, 0.5 = ralenti, 2.0 = accéléré
+        double timeScale = 1.0;
         bool   paused = false;
     };
 
     namespace GameServices
     {
-        // À appeler une fois au démarrage (si besoin de reset explicite)
         void Init();
         void Shutdown();
 
-        // À appeler une fois par frame avec le dt BRUT (non-scalé)
         void Update(double rawDeltaSeconds);
 
-        // Accès lecture seule
-        const GameTime& GetTime();
+        [[nodiscard]] const GameTime& GetTime();
 
-        // Helpers
-        inline double GetScaledDeltaTime()
-        {
-            return GetTime().scaledDeltaSeconds;
-        }
+        [[nodiscard]] double GetScaledDeltaTime();
+        [[nodiscard]] double GetRawDeltaTime();
 
-        inline double GetRawDeltaTime()
-        {
-            return GetTime().rawDeltaSeconds;
-        }
-
-        // Contrôle du time scale
         void   SetTimeScale(double scale);
-        double GetTimeScale();
+        [[nodiscard]] double GetTimeScale();
 
-        // Pause globale
         void SetPaused(bool paused);
-        bool IsPaused();
+        [[nodiscard]] bool IsPaused();
         void TogglePause();
     }
 

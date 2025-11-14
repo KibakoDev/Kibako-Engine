@@ -1,3 +1,4 @@
+// Collision2D.h - Declares collider types and intersection helpers.
 #pragma once
 
 namespace KibakoEngine {
@@ -18,14 +19,12 @@ namespace KibakoEngine {
         bool  active = true;
     };
 
-    // Collision component attachable to a 2D entity
     struct CollisionComponent2D
     {
         CircleCollider2D* circle = nullptr;
         AABBCollider2D*   aabb = nullptr;
     };
 
-    // Collision tests
     bool Intersects(const CircleCollider2D& c1, const Transform2D& t1,
                     const CircleCollider2D& c2, const Transform2D& t2);
 

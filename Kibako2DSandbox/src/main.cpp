@@ -1,3 +1,4 @@
+// main.cpp - Entry point for the Kibako Engine sandbox application.
 #ifndef SDL_MAIN_HANDLED
 #    define SDL_MAIN_HANDLED
 #endif

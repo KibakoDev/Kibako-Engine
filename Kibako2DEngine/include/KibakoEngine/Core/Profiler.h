@@ -1,3 +1,4 @@
+// Profiler.h - Declares optional scoped profiling helpers.
 #pragma once
 
 #include <cstdint>

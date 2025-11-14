@@ -1,3 +1,4 @@
+// RendererD3D11.h - Declares the Direct3D 11 renderer and sprite batch owner.
 #pragma once
 
 #include <d3d11.h>

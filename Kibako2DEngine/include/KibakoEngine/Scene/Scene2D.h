@@ -1,3 +1,4 @@
+// Scene2D.h - Declares basic 2D entities, sprites, and scene management.
 #pragma once
 
 #include <cstdint>
@@ -17,8 +18,8 @@ namespace KibakoEngine {
 
     struct Transform2D
     {
-        DirectX::XMFLOAT2 position{ 0.0f, 0.0f }; // world-space center
-        float              rotation = 0.0f;       // radians
+        DirectX::XMFLOAT2 position{ 0.0f, 0.0f };
+        float              rotation = 0.0f;
         DirectX::XMFLOAT2  scale{ 1.0f, 1.0f };
     };
 
@@ -26,8 +27,8 @@ namespace KibakoEngine {
     {
         Texture2D* texture = nullptr;
 
-        RectF  dst{ 0.0f, 0.0f, 0.0f, 0.0f };        // local size and relative offset from center
-        RectF  src{ 0.0f, 0.0f, 1.0f, 1.0f };        // UV [0..1]
+        RectF  dst{ 0.0f, 0.0f, 0.0f, 0.0f };
+        RectF  src{ 0.0f, 0.0f, 1.0f, 1.0f };
         Color4 color = Color4::White();
         int    layer = 0;
     };
@@ -47,23 +48,19 @@ namespace KibakoEngine {
     public:
         Scene2D() = default;
 
-        // Creation / destruction
         [[nodiscard]] Entity2D& CreateEntity();
-        void                   DestroyEntity(EntityID id); // marks entity as inactive
+        void                   DestroyEntity(EntityID id);
 
-        void Clear(); // removes all entities
+        void Clear();
 
-        // Lookup
         [[nodiscard]] Entity2D*       FindEntity(EntityID id);
         [[nodiscard]] const Entity2D* FindEntity(EntityID id) const;
 
         std::vector<Entity2D>& Entities() { return m_entities; }
         const std::vector<Entity2D>& Entities() const { return m_entities; }
 
-        // Placeholder update (no internal logic yet)
         void Update(float dt);
 
-        // Render every active entity that has a valid sprite
         void Render(SpriteBatch2D& batch) const;
 
     private:

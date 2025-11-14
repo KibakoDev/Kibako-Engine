@@ -1,3 +1,4 @@
+// Layer.h - Declares the base interface for application layers.
 #pragma once
 
 #include <string>

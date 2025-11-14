@@ -1,3 +1,4 @@
+// DebugUI.h - Declares the Dear ImGui-based debug overlay utilities.
 #pragma once
 
 #include <SDL2/SDL.h>
@@ -16,7 +17,7 @@ namespace KibakoEngine {
             std::uint32_t spritesSubmitted = 0;
         };
 
-        using PanelCallback = void(*)(void* userData);
+        using PanelCallback = void (*)(void* userData);
 
         void Init(SDL_Window* window, ID3D11Device* device, ID3D11DeviceContext* context);
         void Shutdown();
@@ -26,16 +27,16 @@ namespace KibakoEngine {
         void Render();
 
         void SetEnabled(bool enabled);
-        bool IsEnabled();
+        [[nodiscard]] bool IsEnabled();
         void ToggleEnabled();
 
         void SetVSyncEnabled(bool enabled);
-        bool IsVSyncEnabled();
+        [[nodiscard]] bool IsVSyncEnabled();
 
         void SetRenderStats(const RenderStats& stats);
-        RenderStats GetRenderStats();
+        [[nodiscard]] RenderStats GetRenderStats();
 
-        // Hook pour Scene Inspector (GameLayer l’utilise déjà)
+        // Registers an external scene inspector panel (implemented by the sandbox).
         void SetSceneInspector(void* userData, PanelCallback callback);
     }
 

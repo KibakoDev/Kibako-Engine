@@ -1,3 +1,4 @@
+// DebugDraw2D.cpp - Implements sprite-based debug primitives and collider overlays.
 #include "KibakoEngine/Renderer/DebugDraw2D.h"
 
 #include <algorithm>

@@ -1,10 +1,12 @@
+// Application.cpp - Implements the engine application loop and system integration.
 #include "KibakoEngine/Core/Application.h"
 
 #include "KibakoEngine/Core/Debug.h"
+#include "KibakoEngine/Core/DebugUI.h"
+#include "KibakoEngine/Core/GameServices.h"
 #include "KibakoEngine/Core/Layer.h"
 #include "KibakoEngine/Core/Log.h"
 #include "KibakoEngine/Core/Profiler.h"
-#include "KibakoEngine/Core/DebugUI.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
@@ -125,11 +127,12 @@ namespace KibakoEngine {
             return false;
         }
 
-        // --- INIT IMGUI ---
         DebugUI::Init(m_window, m_renderer.GetDevice(), m_renderer.GetImmediateContext());
 
         m_assets.Init(m_renderer.GetDevice());
         KbkLog(kLogChannel, "AssetManager initialized");
+
+        GameServices::Init();
 
         m_running = true;
         m_fullscreen = (SDL_GetWindowFlags(m_window) & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0u;
@@ -151,7 +154,8 @@ namespace KibakoEngine {
 
         m_assets.Shutdown();
 
-        // Shutdown ImGui BEFORE renderer shutdown
+        GameServices::Shutdown();
+
         DebugUI::Shutdown();
 
         m_renderer.Shutdown();
@@ -298,7 +302,6 @@ namespace KibakoEngine {
 
         while (PumpEvents()) {
 
-            // Toggle ImGui
             if (m_input.KeyPressed(SDL_SCANCODE_F2)) {
                 DebugUI::ToggleEnabled();
             }
@@ -310,27 +313,24 @@ namespace KibakoEngine {
 
             KBK_PROFILE_FRAME("Frame");
 
-            const float dt = static_cast<float>(m_time.DeltaSeconds());
+            const double rawDt = m_time.DeltaSeconds();
+            GameServices::Update(rawDt);
+            const float scaledDt = static_cast<float>(GameServices::GetScaledDeltaTime());
 
-            // --- Update layers ---
             for (Layer* layer : m_layers) {
                 if (layer)
-                    layer->OnUpdate(dt);
+                    layer->OnUpdate(scaledDt);
             }
 
-            // Infos VSync pour l'UI
             DebugUI::SetVSyncEnabled(waitForVSync);
 
-            // --- NEW FRAME IMGUI ---
             DebugUI::NewFrame();
 
-            // --- Begin rendering ---
             BeginFrame(clearColor);
 
             SpriteBatch2D& batch = m_renderer.Batch();
             batch.Begin(m_renderer.Camera().GetViewProjectionT());
 
-            // Render layers
             for (Layer* layer : m_layers) {
                 if (layer)
                     layer->OnRender(batch);
@@ -338,14 +338,12 @@ namespace KibakoEngine {
 
             batch.End();
 
-            // Stats de rendu - DebugUI
             const SpriteBatchStats& batchStats = batch.Stats();
             DebugUI::RenderStats rs{};
             rs.drawCalls = batchStats.drawCalls;
             rs.spritesSubmitted = batchStats.spritesSubmitted;
             DebugUI::SetRenderStats(rs);
 
-            // --- IMGUI RENDER ---
             DebugUI::Render();
 
             EndFrame(waitForVSync);

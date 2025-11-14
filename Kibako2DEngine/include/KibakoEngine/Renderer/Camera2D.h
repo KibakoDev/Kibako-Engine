@@ -1,3 +1,4 @@
+// Camera2D.h - Declares a simple orthographic camera for 2D rendering.
 #pragma once
 
 #include <DirectXMath.h>

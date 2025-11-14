@@ -1,3 +1,4 @@
+// Log.h - Declares the lightweight logging and breakpoint helpers.
 #pragma once
 
 #include <cstdarg>
