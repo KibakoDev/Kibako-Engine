@@ -4,6 +4,8 @@
 #include "KibakoEngine/Core/Log.h"
 #include "KibakoEngine/Renderer/SpriteBatch2D.h"
 
+#include <algorithm>
+
 namespace KibakoEngine {
 
     namespace
@@ -13,50 +15,48 @@ namespace KibakoEngine {
 
     Entity2D& Scene2D::CreateEntity()
     {
-        Entity2D entity;
+        Entity2D& entity = m_entities.emplace_back();
         entity.id = m_nextID++;
         entity.active = true;
 
-        m_entities.push_back(entity);
-
         KbkTrace(kLogChannel, "Created Entity2D id=%u", entity.id);
 
-        return m_entities.back();
+        return entity;
     }
 
     void Scene2D::DestroyEntity(EntityID id)
     {
-        for (auto& e : m_entities) {
-            if (e.id == id) {
-                e.active = false;
-                KbkTrace(kLogChannel, "Destroyed Entity2D id=%u (marked inactive)", id);
-                return;
-            }
-        }
+        const auto it = std::find_if(m_entities.begin(), m_entities.end(), [id](const Entity2D& entity) {
+            return entity.id == id;
+        });
+        if (it == m_entities.end())
+            return;
+
+        it->active = false;
+        KbkTrace(kLogChannel, "Destroyed Entity2D id=%u (marked inactive)", id);
     }
 
     void Scene2D::Clear()
     {
         m_entities.clear();
+        m_nextID = 1;
         KbkLog(kLogChannel, "Scene2D cleared");
     }
 
     Entity2D* Scene2D::FindEntity(EntityID id)
     {
-        for (auto& e : m_entities) {
-            if (e.id == id)
-                return &e;
-        }
-        return nullptr;
+        const auto it = std::find_if(m_entities.begin(), m_entities.end(), [id](const Entity2D& entity) {
+            return entity.id == id;
+        });
+        return it != m_entities.end() ? &(*it) : nullptr;
     }
 
     const Entity2D* Scene2D::FindEntity(EntityID id) const
     {
-        for (const auto& e : m_entities) {
-            if (e.id == id)
-                return &e;
-        }
-        return nullptr;
+        const auto it = std::find_if(m_entities.begin(), m_entities.end(), [id](const Entity2D& entity) {
+            return entity.id == id;
+        });
+        return it != m_entities.end() ? &(*it) : nullptr;
     }
 
     void Scene2D::Update(float dt)
@@ -69,30 +69,30 @@ namespace KibakoEngine {
     void Scene2D::Render(SpriteBatch2D& batch) const
     {
 
-        for (const auto& e : m_entities) {
-            if (!e.active)
+        for (const auto& entity : m_entities) {
+            if (!entity.active)
                 continue;
 
-            const auto& sprite = e.sprite;
+            const auto& sprite = entity.sprite;
             if (!sprite.texture || !sprite.texture->IsValid())
                 continue;
 
             const RectF& local = sprite.dst;
 
             // Compute scaled size (retain local dimensions)
-            const float scaledWidth = local.w * e.transform.scale.x;
-            const float scaledHeight = local.h * e.transform.scale.y;
+            const float scaledWidth = local.w * entity.transform.scale.x;
+            const float scaledHeight = local.h * entity.transform.scale.y;
 
             // Local offsets are expressed relative to the entity center
-            const float offsetX = local.x * e.transform.scale.x;
-            const float offsetY = local.y * e.transform.scale.y;
+            const float offsetX = local.x * entity.transform.scale.x;
+            const float offsetY = local.y * entity.transform.scale.y;
 
             RectF dst{};
             dst.w = scaledWidth;
             dst.h = scaledHeight;
 
-            const float worldCenterX = e.transform.position.x + offsetX;
-            const float worldCenterY = e.transform.position.y + offsetY;
+            const float worldCenterX = entity.transform.position.x + offsetX;
+            const float worldCenterY = entity.transform.position.y + offsetY;
 
             // Convert to top-left rectangle coordinates for rendering
             dst.x = worldCenterX - scaledWidth * 0.5f;
@@ -103,7 +103,7 @@ namespace KibakoEngine {
                 dst,
                 sprite.src,
                 sprite.color,
-                e.transform.rotation,
+                entity.transform.rotation,
                 sprite.layer
             );
         }

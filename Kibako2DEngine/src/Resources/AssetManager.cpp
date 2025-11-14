@@ -48,7 +48,7 @@ namespace KibakoEngine {
         }
 
         auto texture = std::make_unique<Texture2D>();
-        if (!texture->LoadFromFile(m_device, path.c_str(), sRGB)) {
+        if (!texture->LoadFromFile(m_device, path, sRGB)) {
             KbkError(kLogChannel,
                 "Failed to load texture from '%s' (id='%s')",
                 path.c_str(), id.c_str());

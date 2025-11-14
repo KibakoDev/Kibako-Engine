@@ -48,14 +48,14 @@ namespace KibakoEngine {
         Scene2D() = default;
 
         // Création / destruction
-        Entity2D& CreateEntity();
+        [[nodiscard]] Entity2D& CreateEntity();
         void      DestroyEntity(EntityID id); // marque comme inactive
 
         void Clear(); // supprime toutes les entités
 
         // Accès
-        Entity2D* FindEntity(EntityID id);
-        const Entity2D* FindEntity(EntityID id) const;
+        [[nodiscard]] Entity2D* FindEntity(EntityID id);
+        [[nodiscard]] const Entity2D* FindEntity(EntityID id) const;
 
         std::vector<Entity2D>& Entities() { return m_entities; }
         const std::vector<Entity2D>& Entities() const { return m_entities; }

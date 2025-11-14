@@ -30,20 +30,20 @@ namespace KibakoEngine {
         void EndFrame(bool waitForVSync = true);
         void Run(const float clearColor[4], bool waitForVSync = true);
 
-        RendererD3D11& Renderer() { return m_renderer; }
-        const RendererD3D11& Renderer() const { return m_renderer; }
+        [[nodiscard]] RendererD3D11& Renderer() { return m_renderer; }
+        [[nodiscard]] const RendererD3D11& Renderer() const { return m_renderer; }
 
-        Time& TimeSys() { return m_time; }
-        const Time& TimeSys() const { return m_time; }
+        [[nodiscard]] Time& TimeSys() { return m_time; }
+        [[nodiscard]] const Time& TimeSys() const { return m_time; }
 
-        Input& InputSys() { return m_input; }
-        const Input& InputSys() const { return m_input; }
+        [[nodiscard]] Input& InputSys() { return m_input; }
+        [[nodiscard]] const Input& InputSys() const { return m_input; }
 
-        AssetManager& Assets() { return m_assets; }
-        const AssetManager& Assets() const { return m_assets; }
+        [[nodiscard]] AssetManager& Assets() { return m_assets; }
+        [[nodiscard]] const AssetManager& Assets() const { return m_assets; }
 
-        int Width() const { return m_width; }
-        int Height() const { return m_height; }
+        [[nodiscard]] int Width() const { return m_width; }
+        [[nodiscard]] int Height() const { return m_height; }
 
         void PushLayer(Layer* layer);
         void PopLayer(Layer* layer);
