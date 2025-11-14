@@ -1,10 +1,9 @@
 #pragma once
 
-#include <array>
-
 #include "KibakoEngine/Core/Layer.h"
 #include "KibakoEngine/Renderer/SpriteTypes.h"
 #include "KibakoEngine/Renderer/Texture2D.h"
+#include "KibakoEngine/Scene/Scene2D.h"
 
 namespace KibakoEngine {
     class Application;
@@ -21,17 +20,15 @@ public:
     void OnRender(KibakoEngine::SpriteBatch2D& batch) override;
 
 private:
-    struct SampleSprite
-    {
-        KibakoEngine::RectF baseRect;
-        KibakoEngine::Color4 color;
-        float rotationSpeed = 0.0f;
-        int layer = 0;
-    };
-
     KibakoEngine::Application& m_app;
+
     KibakoEngine::Texture2D* m_starTexture = nullptr;
-    std::array<SampleSprite, 3> m_sprites{};
+
+    KibakoEngine::Scene2D m_scene;
+
+    KibakoEngine::EntityID m_entityCenter = 0;
+    KibakoEngine::EntityID m_entityBobbing = 0;
+    KibakoEngine::EntityID m_entityRight = 0;
+
     float m_time = 0.0f;
 };
-
