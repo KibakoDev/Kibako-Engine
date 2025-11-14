@@ -50,6 +50,8 @@ namespace KibakoEngine {
             return false;
         }
 
+        SDL_GetWindowSize(m_window, &m_windowedWidth, &m_windowedHeight);
+
         SDL_SysWMinfo info{};
         SDL_VERSION(&info.version);
         if (SDL_GetWindowWMInfo(m_window, &info) == SDL_FALSE) {
@@ -75,6 +77,12 @@ namespace KibakoEngine {
         }
         SDL_Quit();
         m_hwnd = nullptr;
+        m_hasPendingResize = false;
+        m_fullscreen = false;
+        m_pendingWidth = 0;
+        m_pendingHeight = 0;
+        m_windowedWidth = 0;
+        m_windowedHeight = 0;
     }
 
     void Application::HandleResize()
@@ -90,15 +98,9 @@ namespace KibakoEngine {
         if (drawableW <= 0 || drawableH <= 0)
             return;
 
-        if (drawableW == m_width && drawableH == m_height)
-            return;
-
-        m_width = drawableW;
-        m_height = drawableH;
-
-        KbkLog(kLogChannel, "Resize -> %dx%d", m_width, m_height);
-        m_renderer.OnResize(static_cast<std::uint32_t>(m_width),
-            static_cast<std::uint32_t>(m_height));
+        m_pendingWidth = drawableW;
+        m_pendingHeight = drawableH;
+        m_hasPendingResize = true;
     }
 
     bool Application::Init(int width, int height, const char* title)
@@ -112,6 +114,8 @@ namespace KibakoEngine {
             return false;
 
         SDL_GetWindowSizeInPixels(m_window, &m_width, &m_height);
+        m_pendingWidth = m_width;
+        m_pendingHeight = m_height;
         KbkLog(kLogChannel, "Drawable size: %dx%d", m_width, m_height);
 
         if (!m_renderer.Init(m_hwnd,
@@ -128,6 +132,7 @@ namespace KibakoEngine {
         KbkLog(kLogChannel, "AssetManager initialized");
 
         m_running = true;
+        m_fullscreen = (SDL_GetWindowFlags(m_window) & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0u;
         return true;
     }
 
@@ -196,6 +201,11 @@ namespace KibakoEngine {
                 }
                 break;
             case SDL_KEYDOWN:
+                if (!evt.key.repeat &&
+                    (evt.key.keysym.sym == SDLK_RETURN || evt.key.keysym.sym == SDLK_KP_ENTER) &&
+                    (evt.key.keysym.mod & KMOD_ALT)) {
+                    ToggleFullscreen();
+                }
                 if (evt.key.keysym.scancode == SDL_SCANCODE_ESCAPE)
                     return false;
                 break;
@@ -209,7 +219,64 @@ namespace KibakoEngine {
                 return false;
         }
 
+        ApplyPendingResize();
         return true;
+    }
+
+    void Application::ApplyPendingResize()
+    {
+        if (!m_hasPendingResize)
+            return;
+
+        m_hasPendingResize = false;
+
+        const int newWidth = m_pendingWidth;
+        const int newHeight = m_pendingHeight;
+
+        if (newWidth <= 0 || newHeight <= 0)
+            return;
+
+        if (newWidth == m_width && newHeight == m_height)
+            return;
+
+        m_width = newWidth;
+        m_height = newHeight;
+
+        if (!m_fullscreen && m_window) {
+            SDL_GetWindowSize(m_window, &m_windowedWidth, &m_windowedHeight);
+        }
+
+        KbkLog(kLogChannel, "Resize -> %dx%d", m_width, m_height);
+        m_renderer.OnResize(static_cast<std::uint32_t>(m_width),
+            static_cast<std::uint32_t>(m_height));
+    }
+
+    void Application::ToggleFullscreen()
+    {
+        if (!m_window)
+            return;
+
+        if (!m_fullscreen) {
+            SDL_GetWindowSize(m_window, &m_windowedWidth, &m_windowedHeight);
+            if (SDL_SetWindowFullscreen(m_window, SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) {
+                KbkError(kLogChannel, "SDL_SetWindowFullscreen failed: %s", SDL_GetError());
+                return;
+            }
+            m_fullscreen = true;
+        }
+        else {
+            if (SDL_SetWindowFullscreen(m_window, 0) != 0) {
+                KbkError(kLogChannel, "SDL_SetWindowFullscreen failed: %s", SDL_GetError());
+                return;
+            }
+            m_fullscreen = false;
+
+            if (m_windowedWidth > 0 && m_windowedHeight > 0) {
+                SDL_SetWindowSize(m_window, m_windowedWidth, m_windowedHeight);
+            }
+        }
+
+        HandleResize();
     }
 
     void Application::BeginFrame(const float clearColor[4])

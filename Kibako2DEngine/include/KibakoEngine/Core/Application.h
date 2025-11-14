@@ -52,12 +52,20 @@ namespace KibakoEngine {
         bool CreateWindowSDL(int width, int height, const char* title);
         void DestroyWindowSDL();
         void HandleResize();
+        void ApplyPendingResize();
+        void ToggleFullscreen();
 
         SDL_Window* m_window = nullptr;
         HWND        m_hwnd = nullptr;
 
         int  m_width = 0;
         int  m_height = 0;
+        int  m_pendingWidth = 0;
+        int  m_pendingHeight = 0;
+        int  m_windowedWidth = 0;
+        int  m_windowedHeight = 0;
+        bool m_hasPendingResize = false;
+        bool m_fullscreen = false;
         bool m_running = false;
 
         RendererD3D11 m_renderer;
