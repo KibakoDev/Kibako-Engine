@@ -125,7 +125,7 @@ void GameLayer::OnUpdate(float dt)
     m_time += dt;
 
     const float bobbing = std::sin(m_time * 2.0f) * 32.0f;
-    const float sway = std::sin(m_time * 1.5f) * 200.0f;
+    const float sway = std::sin(m_time * 0.2f) * 300.0f;
 
     // Entité centre : mouvement + rotation
     Entity2D* center = m_scene.FindEntity(m_entityCenter);
