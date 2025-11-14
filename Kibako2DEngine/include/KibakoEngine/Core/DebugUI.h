@@ -16,40 +16,40 @@ namespace KibakoEngine {
             std::uint32_t spritesSubmitted = 0;
         };
 
-        // Type générique pour des callbacks de panels custom
-        using PanelCallback = void(*)(void* userData);
+        // Generic callback signature for custom panels.
+        using PanelCallback = void (*)(void* userData);
 
-        // Appelé une seule fois après l'init du renderer
+        // Called once after the renderer has been initialised.
         void Init(SDL_Window* window, ID3D11Device* device, ID3D11DeviceContext* context);
 
-        // Appelé une fois à la fin
+        // Called once during shutdown.
         void Shutdown();
 
-        // Une fois par frame, AVANT tout dessin ImGui
+        // Invoke once per frame before any ImGui rendering.
         void NewFrame();
 
-        // À appeler pour chaque SDL_Event dans Application::PumpEvents()
+        // Consume every SDL_Event in Application::PumpEvents().
         void ProcessEvent(const SDL_Event& e);
 
-        // Après ton rendu 2D (SpriteBatch::End), juste avant Application::EndFrame()
+        // Submit ImGui rendering after SpriteBatch::End and before Application::EndFrame.
         void Render();
 
-        // Toggle global ON/OFF (F2)
+        // Toggle the debug UI on/off (mapped to F2 in the sandbox).
         void SetEnabled(bool enabled);
         bool IsEnabled();
         void ToggleEnabled();
 
-        // Infos renderer (VSync)
+        // Renderer information (VSync state).
         void SetVSyncEnabled(bool enabled);
         bool IsVSyncEnabled();
 
-        // Stats de rendu (SpriteBatch2D)
+        // Sprite batch rendering statistics.
         void SetRenderStats(const RenderStats& stats);
         RenderStats GetRenderStats();
 
-        // === HOOK SCENE INSPECTOR ===
-        // userData  : typiquement un pointeur vers Scene2D (ou ce que tu veux)
-        // callback  : fonction qui dessine l'inspecteur ImGui pour cette scène
+        // === Scene inspector hook ===
+        // userData  : typically a pointer to Scene2D (or any context object)
+        // callback  : function rendering the ImGui inspector for that scene
         void SetSceneInspector(void* userData, PanelCallback callback);
     }
 

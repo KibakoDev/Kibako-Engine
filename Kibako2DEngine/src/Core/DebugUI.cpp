@@ -22,7 +22,7 @@ namespace KibakoEngine::DebugUI {
         bool                 g_VSyncEnabled = true;
         RenderStats          g_RenderStats{};
 
-        // Hook pour Scene Inspector
+        // Scene inspector callback hook.
         void* g_SceneInspectorUserData = nullptr;
         PanelCallback g_SceneInspectorCallback = nullptr;
     }
@@ -42,7 +42,7 @@ namespace KibakoEngine::DebugUI {
         (void)io;
 
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        // Pas de docking flag ici, ta version d'ImGui ne le supporte pas
+        // Docking is not enabled for the current ImGui configuration.
 
         ImGui::StyleColorsDark();
 
@@ -99,7 +99,7 @@ namespace KibakoEngine::DebugUI {
         ImGuiIO& io = ImGui::GetIO();
 
         // ==========================
-        // 1) PANNEAU ENGINE
+        // 1) ENGINE PANEL
         // ==========================
         ImGui::Begin("Kibako - Engine");
         {
@@ -126,7 +126,7 @@ namespace KibakoEngine::DebugUI {
         ImGui::End();
 
         // ==========================
-        // 2) PANNEAU PERFORMANCE
+        // 2) PERFORMANCE PANEL
         // ==========================
         {
             static float frameHistory[120] = {};
@@ -154,7 +154,7 @@ namespace KibakoEngine::DebugUI {
         }
 
         // ==========================
-        // 3) PANNEAU INPUT
+        // 3) INPUT PANEL
         // ==========================
         ImGui::Begin("Kibako - Input");
         {
@@ -167,12 +167,12 @@ namespace KibakoEngine::DebugUI {
             ImGui::BulletText("Middle: %s", io.MouseDown[2] ? "Down" : "Up");
 
             ImGui::Separator();
-            ImGui::TextDisabled("(Input gameplay géré par ton moteur, ici c'est juste la vision ImGui)");
+            ImGui::TextDisabled("(Gameplay input is handled by the engine; this is the ImGui view.)");
         }
         ImGui::End();
 
         // ==========================
-        // 4) HOOK SCENE INSPECTOR
+        // 4) SCENE INSPECTOR PANEL
         // ==========================
         if (g_SceneInspectorCallback && g_SceneInspectorUserData) {
             g_SceneInspectorCallback(g_SceneInspectorUserData);

@@ -9,12 +9,11 @@
 
 #include <DirectXMath.h>
 #include <SDL2/SDL_scancode.h>
+#include <cstddef>
 #include <cmath>
 #include <cstdio>
 
 #include "imgui.h"
-
-using namespace KibakoEngine;
 
 namespace
 {
@@ -24,13 +23,13 @@ namespace
     constexpr int   kCircleSegments = 32;
     constexpr float kTwoPi = 6.28318530717958647692f;
 
-    const RectF kUnitRect = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
+    const KibakoEngine::RectF kUnitRect = KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
 
-    void DrawLine(SpriteBatch2D& batch,
-        Texture2D& pixel,
+    void DrawLine(KibakoEngine::SpriteBatch2D& batch,
+        KibakoEngine::Texture2D& pixel,
         const DirectX::XMFLOAT2& a,
         const DirectX::XMFLOAT2& b,
-        const Color4& color,
+        const KibakoEngine::Color4& color,
         float thickness)
     {
         const float dx = b.x - a.x;
@@ -39,7 +38,7 @@ namespace
         if (length <= 0.0001f)
             return;
 
-        RectF dst{};
+        KibakoEngine::RectF dst{};
         dst.w = length;
         dst.h = thickness;
 
@@ -53,11 +52,11 @@ namespace
         batch.Push(pixel, dst, kUnitRect, color, angle, kDebugDrawLayer);
     }
 
-    void DrawCross(SpriteBatch2D& batch,
-        Texture2D& pixel,
+    void DrawCross(KibakoEngine::SpriteBatch2D& batch,
+        KibakoEngine::Texture2D& pixel,
         const DirectX::XMFLOAT2& center,
         float size,
-        const Color4& color,
+        const KibakoEngine::Color4& color,
         float thickness)
     {
         const float half = size * 0.5f;
@@ -70,11 +69,11 @@ namespace
         DrawLine(batch, pixel, top, bottom, color, thickness);
     }
 
-    void DrawCircleOutline(SpriteBatch2D& batch,
-        Texture2D& pixel,
+    void DrawCircleOutline(KibakoEngine::SpriteBatch2D& batch,
+        KibakoEngine::Texture2D& pixel,
         const DirectX::XMFLOAT2& center,
         float radius,
-        const Color4& color,
+        const KibakoEngine::Color4& color,
         float thickness)
     {
         if (radius <= 0.0f)
@@ -93,12 +92,12 @@ namespace
         }
     }
 
-    void DrawAABBOutline(SpriteBatch2D& batch,
-        Texture2D& pixel,
+    void DrawAABBOutline(KibakoEngine::SpriteBatch2D& batch,
+        KibakoEngine::Texture2D& pixel,
         const DirectX::XMFLOAT2& center,
         float halfW,
         float halfH,
-        const Color4& color,
+        const KibakoEngine::Color4& color,
         float thickness)
     {
         const DirectX::XMFLOAT2 tl{ center.x - halfW, center.y - halfH };
@@ -115,26 +114,26 @@ namespace
     // ==========================
     // Scene / Entity Inspector panel
     // ==========================
-    static void SceneInspectorPanel(void* userData)
+    void SceneInspectorPanel(void* userData)
     {
-        auto* scene = static_cast<Scene2D*>(userData);
+        auto* scene = static_cast<KibakoEngine::Scene2D*>(userData);
         if (!scene)
             return;
 
         auto& entities = scene->Entities();
+
+        static int selectedIndex = -1;
+        if (selectedIndex >= static_cast<int>(entities.size()))
+            selectedIndex = -1;
 
         ImGui::Begin("Kibako - Scene2D");
 
         ImGui::Text("Entities: %d", static_cast<int>(entities.size()));
         ImGui::Separator();
 
-        static int selectedIndex = -1;
-
-        if (ImGui::BeginListBox("Entities"))
-        {
-            for (int i = 0; i < static_cast<int>(entities.size()); ++i)
-            {
-                const Entity2D& e = entities[static_cast<std::size_t>(i)];
+        if (ImGui::BeginListBox("Entities")) {
+            for (int i = 0; i < static_cast<int>(entities.size()); ++i) {
+                const KibakoEngine::Entity2D& e = entities[static_cast<std::size_t>(i)];
 
                 char label[64];
                 std::snprintf(label, sizeof(label), "ID %u%s",
@@ -153,15 +152,14 @@ namespace
 
         ImGui::Separator();
 
-        if (selectedIndex >= 0 && selectedIndex < static_cast<int>(entities.size()))
-        {
-            Entity2D& e = entities[static_cast<std::size_t>(selectedIndex)];
+        if (selectedIndex >= 0 && selectedIndex < static_cast<int>(entities.size())) {
+            KibakoEngine::Entity2D& e = entities[static_cast<std::size_t>(selectedIndex)];
 
             ImGui::Text("Selected ID: %u", e.id);
 
             ImGui::Checkbox("Active", &e.active);
 
-            Transform2D& t = e.transform;
+            KibakoEngine::Transform2D& t = e.transform;
 
             ImGui::Text("Transform2D");
             ImGui::DragFloat2("Position", &t.position.x, 1.0f);
@@ -177,7 +175,7 @@ namespace
 
 } // anonymous namespace
 
-GameLayer::GameLayer(Application& app)
+GameLayer::GameLayer(KibakoEngine::Application& app)
     : Layer("Sandbox.GameLayer")
     , m_app(app)
 {
@@ -206,13 +204,13 @@ void GameLayer::OnAttach()
 
     const float width = static_cast<float>(m_starTexture->Width());
     const float height = static_cast<float>(m_starTexture->Height());
-    const RectF  spriteRect = RectF::FromXYWH(0.0f, 0.0f, width, height);
-    const RectF  uvRect = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
+    const KibakoEngine::RectF spriteRect = KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, width, height);
+    const KibakoEngine::RectF uvRect = KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
 
-    auto configureSprite = [&](Entity2D& entity,
+    auto configureSprite = [&](KibakoEngine::Entity2D& entity,
         const DirectX::XMFLOAT2& position,
         const DirectX::XMFLOAT2& scale,
-        const Color4& color,
+        const KibakoEngine::Color4& color,
         int layer)
         {
             entity.transform.position = position;
@@ -228,23 +226,22 @@ void GameLayer::OnAttach()
 
     // Left sprite (blue, no collider)
     {
-        Entity2D& entity = m_scene.CreateEntity();
-        m_entityLeft = entity.id;
+        KibakoEngine::Entity2D& entity = m_scene.CreateEntity();
         configureSprite(entity,
             { 80.0f, 140.0f },
             { 1.0f, 1.0f },
-            Color4{ 0.25f, 0.8f, 1.0f, 1.0f },
+            KibakoEngine::Color4{ 0.25f, 0.8f, 1.0f, 1.0f },
             -1);
     }
 
     // Center sprite (white) with collider
     {
-        Entity2D& entity = m_scene.CreateEntity();
+        KibakoEngine::Entity2D& entity = m_scene.CreateEntity();
         m_entityCenter = entity.id;
         configureSprite(entity,
             { 200.0f, 150.0f },
             { 1.2f, 1.2f },
-            Color4::White(),
+            KibakoEngine::Color4::White(),
             0);
 
         m_centerCollider.radius = 0.5f * width * entity.transform.scale.x;
@@ -254,12 +251,12 @@ void GameLayer::OnAttach()
 
     // Right sprite (orange) with collider
     {
-        Entity2D& entity = m_scene.CreateEntity();
+        KibakoEngine::Entity2D& entity = m_scene.CreateEntity();
         m_entityRight = entity.id;
         configureSprite(entity,
             { 340.0f, 160.0f },
             { 1.0f, 1.0f },
-            Color4{ 1.0f, 0.55f, 0.35f, 1.0f },
+            KibakoEngine::Color4{ 1.0f, 0.55f, 0.35f, 1.0f },
             1);
 
         m_rightCollider.radius = 0.5f * width * entity.transform.scale.x;
@@ -273,8 +270,8 @@ void GameLayer::OnAttach()
         m_starTexture->Height(),
         m_scene.Entities().size());
 
-    // === Hook du Scene Inspector dans DebugUI ===
-    DebugUI::SetSceneInspector(&m_scene, &SceneInspectorPanel);
+    // Register the Scene Inspector panel with the debug UI.
+    KibakoEngine::DebugUI::SetSceneInspector(&m_scene, &SceneInspectorPanel);
 }
 
 void GameLayer::OnDetach()
@@ -285,14 +282,17 @@ void GameLayer::OnDetach()
     m_debugPixel.Reset();
     m_scene.Clear();
 
-    m_entityLeft = 0;
     m_entityCenter = 0;
     m_entityRight = 0;
 
     m_centerCollider = {};
     m_rightCollider = {};
 
-    DebugUI::SetSceneInspector(nullptr, nullptr);
+    m_showCollisionDebug = false;
+    m_lastCollision = false;
+    m_time = 0.0f;
+
+    KibakoEngine::DebugUI::SetSceneInspector(nullptr, nullptr);
 }
 
 void GameLayer::OnUpdate(float dt)
@@ -310,8 +310,8 @@ void GameLayer::OnUpdate(float dt)
     const float bobbing = std::sin(m_time * 2.0f) * 32.0f;
     const float sway = std::sin(m_time * 0.2f) * 300.0f;
 
-    Entity2D* centerEntity = m_scene.FindEntity(m_entityCenter);
-    Entity2D* rightEntity = m_scene.FindEntity(m_entityRight);
+    auto* centerEntity = m_scene.FindEntity(m_entityCenter);
+    auto* rightEntity = m_scene.FindEntity(m_entityRight);
 
     // Center entity: movement + rotation
     if (centerEntity) {
@@ -329,21 +329,21 @@ void GameLayer::OnUpdate(float dt)
     if (centerEntity && rightEntity &&
         centerEntity->collision.circle && rightEntity->collision.circle) {
 
-        hit = Intersects(*centerEntity->collision.circle, centerEntity->transform,
+        hit = KibakoEngine::Intersects(*centerEntity->collision.circle, centerEntity->transform,
             *rightEntity->collision.circle, rightEntity->transform);
     }
 
     // Visual feedback: switch colours when colliding
     if (centerEntity) {
         centerEntity->sprite.color = hit
-            ? Color4{ 1.0f, 0.2f, 0.2f, 1.0f }
-        : Color4::White();
+            ? KibakoEngine::Color4{ 1.0f, 0.2f, 0.2f, 1.0f }
+            : KibakoEngine::Color4::White();
     }
 
     if (rightEntity) {
         rightEntity->sprite.color = hit
-            ? Color4{ 1.0f, 0.4f, 0.2f, 1.0f }
-        : Color4{ 1.0f, 0.55f, 0.35f, 1.0f };
+            ? KibakoEngine::Color4{ 1.0f, 0.4f, 0.2f, 1.0f }
+            : KibakoEngine::Color4{ 1.0f, 0.55f, 0.35f, 1.0f };
     }
 
     if (hit) {
@@ -355,7 +355,7 @@ void GameLayer::OnUpdate(float dt)
     m_scene.Update(dt);
 }
 
-void GameLayer::OnRender(SpriteBatch2D& batch)
+void GameLayer::OnRender(KibakoEngine::SpriteBatch2D& batch)
 {
     KBK_PROFILE_SCOPE("GameLayerRender");
 
@@ -365,18 +365,18 @@ void GameLayer::OnRender(SpriteBatch2D& batch)
     m_scene.Render(batch);
 
     if (m_showCollisionDebug && m_debugPixel.IsValid()) {
-        const Color4 circleColor = m_lastCollision
-            ? Color4{ 1.0f, 0.3f, 0.3f, 1.0f }
-        : Color4{ 0.2f, 0.9f, 0.9f, 1.0f };
+        const KibakoEngine::Color4 circleColor = m_lastCollision
+            ? KibakoEngine::Color4{ 1.0f, 0.3f, 0.3f, 1.0f }
+            : KibakoEngine::Color4{ 0.2f, 0.9f, 0.9f, 1.0f };
 
-        const Color4 crossColor = Color4{ 1.0f, 1.0f, 0.4f, 1.0f };
-        const Color4 aabbColor = Color4{ 0.9f, 0.9f, 0.2f, 1.0f };
+        const KibakoEngine::Color4 crossColor = KibakoEngine::Color4{ 1.0f, 1.0f, 0.4f, 1.0f };
+        const KibakoEngine::Color4 aabbColor = KibakoEngine::Color4{ 0.9f, 0.9f, 0.2f, 1.0f };
 
-        for (const Entity2D& entity : m_scene.Entities()) {
+        for (const KibakoEngine::Entity2D& entity : m_scene.Entities()) {
             if (!entity.active)
                 continue;
 
-            const Transform2D& transform = entity.transform;
+            const KibakoEngine::Transform2D& transform = entity.transform;
 
             if (entity.collision.circle && entity.collision.circle->active) {
                 DrawCircleOutline(batch,
