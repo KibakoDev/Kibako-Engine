@@ -4,12 +4,18 @@
 #include <wrl/client.h>
 
 #include <string>
+#include <cstdint>
 
 namespace KibakoEngine {
 
     class Texture2D {
     public:
         bool LoadFromFile(ID3D11Device* device, const std::string& path, bool srgb = false);
+        bool CreateSolidColor(ID3D11Device* device,
+                              std::uint8_t r,
+                              std::uint8_t g,
+                              std::uint8_t b,
+                              std::uint8_t a = 255);
         void Reset();
 
         [[nodiscard]] int Width() const { return m_width; }
