@@ -71,11 +71,14 @@ namespace KibakoEngine {
         m_vertexCapacitySprites = 0;
         m_indexCapacitySprites = 0;
         m_isDrawing = false;
+        m_stats = {};
     }
 
     void SpriteBatch2D::Begin(const XMFLOAT4X4& viewProjT)
     {
         KBK_PROFILE_SCOPE("SpriteBatchBegin");
+
+        m_stats = {};
 
         KBK_ASSERT(!m_isDrawing, "SpriteBatch2D::Begin without End");
         m_isDrawing = true;
@@ -90,20 +93,26 @@ namespace KibakoEngine {
         KBK_ASSERT(m_isDrawing, "SpriteBatch2D::End without Begin");
         m_isDrawing = false;
 
-        m_commands.erase(std::remove_if(m_commands.begin(), m_commands.end(), [](const DrawCommand& cmd) {
-                              return cmd.texture == nullptr || cmd.texture->GetSRV() == nullptr;
-                          }),
-            m_commands.end());
+        m_commands.erase(
+            std::remove_if(
+                m_commands.begin(), m_commands.end(),
+                [](const DrawCommand& cmd) {
+                    return cmd.texture == nullptr || cmd.texture->GetSRV() == nullptr;
+                }),
+            m_commands.end()
+        );
         if (m_commands.empty())
             return;
 
-        std::stable_sort(m_commands.begin(), m_commands.end(), [](const DrawCommand& a, const DrawCommand& b) {
-            if (a.layer != b.layer)
-                return a.layer < b.layer;
-            const auto srvA = a.texture->GetSRV();
-            const auto srvB = b.texture->GetSRV();
-            return srvA < srvB;
-        });
+        std::stable_sort(
+            m_commands.begin(), m_commands.end(),
+            [](const DrawCommand& a, const DrawCommand& b) {
+                if (a.layer != b.layer)
+                    return a.layer < b.layer;
+                const auto srvA = a.texture->GetSRV();
+                const auto srvB = b.texture->GetSRV();
+                return srvA < srvB;
+            });
 
         const size_t spriteCount = m_commands.size();
         if (!EnsureVertexCapacity(spriteCount) || !EnsureIndexCapacity(spriteCount))
@@ -168,16 +177,18 @@ namespace KibakoEngine {
             ID3D11ShaderResourceView* nullSrv = nullptr;
             m_context->PSSetShaderResources(0, 1, &nullSrv);
 
+            m_stats.drawCalls++;
+
             start = end;
         }
     }
 
     void SpriteBatch2D::Push(const Texture2D& texture,
-                              const RectF& dst,
-                              const RectF& src,
-                              const Color4& color,
-                              float rotation,
-                              int layer)
+        const RectF& dst,
+        const RectF& src,
+        const Color4& color,
+        float rotation,
+        int layer)
     {
 #if KBK_DEBUG_BUILD
         KBK_ASSERT(m_isDrawing, "SpriteBatch2D::Push called outside Begin/End");
@@ -186,6 +197,7 @@ namespace KibakoEngine {
             return;
 
         m_commands.push_back({ &texture, dst, src, color, rotation, layer });
+        m_stats.spritesSubmitted++;
     }
 
     bool SpriteBatch2D::CreateShaders(ID3D11Device* device)
@@ -238,7 +250,7 @@ float4 main(float4 position : SV_Position, float2 texcoord : TEXCOORD0, float4 c
         Microsoft::WRL::ComPtr<ID3DBlob> errors;
 
         HRESULT hr = D3DCompile(VS_SOURCE, std::strlen(VS_SOURCE), nullptr, nullptr, nullptr, "main", "vs_5_0", 0, 0,
-                                 vsBlob.GetAddressOf(), errors.GetAddressOf());
+            vsBlob.GetAddressOf(), errors.GetAddressOf());
         if (FAILED(hr)) {
             if (errors)
                 KbkError(kLogChannel, "VS compile error: %s", static_cast<const char*>(errors->GetBufferPointer()));
@@ -247,7 +259,7 @@ float4 main(float4 position : SV_Position, float2 texcoord : TEXCOORD0, float4 c
         errors.Reset();
 
         hr = D3DCompile(PS_SOURCE, std::strlen(PS_SOURCE), nullptr, nullptr, nullptr, "main", "ps_5_0", 0, 0,
-                        psBlob.GetAddressOf(), errors.GetAddressOf());
+            psBlob.GetAddressOf(), errors.GetAddressOf());
         if (FAILED(hr)) {
             if (errors)
                 KbkError(kLogChannel, "PS compile error: %s", static_cast<const char*>(errors->GetBufferPointer()));
@@ -266,12 +278,12 @@ float4 main(float4 position : SV_Position, float2 texcoord : TEXCOORD0, float4 c
         }
 
         D3D11_INPUT_ELEMENT_DESC layout[] = {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
         hr = device->CreateInputLayout(layout, static_cast<UINT>(std::size(layout)), vsBlob->GetBufferPointer(),
-                                       vsBlob->GetBufferSize(), m_inputLayout.GetAddressOf());
+            vsBlob->GetBufferSize(), m_inputLayout.GetAddressOf());
         if (FAILED(hr)) {
             KbkError(kLogChannel, "CreateInputLayout failed: 0x%08X", static_cast<unsigned>(hr));
             return false;
@@ -449,10 +461,10 @@ float4 main(float4 position : SV_Position, float2 texcoord : TEXCOORD0, float4 c
             const float bottom = cmd.dst.y + cmd.dst.h;
 
             XMFLOAT2 corners[4] = {
-                { left, top },
-                { right, top },
+                { left,  top    },
+                { right, top    },
                 { right, bottom },
-                { left, bottom },
+                { left,  bottom },
             };
 
             if (std::fabs(cmd.rotation) > 0.0001f) {
@@ -485,4 +497,3 @@ float4 main(float4 position : SV_Position, float2 texcoord : TEXCOORD0, float4 c
     }
 
 } // namespace KibakoEngine
-

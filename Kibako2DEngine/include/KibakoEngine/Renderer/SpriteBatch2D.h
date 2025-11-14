@@ -13,6 +13,12 @@
 
 namespace KibakoEngine {
 
+    struct SpriteBatchStats
+    {
+        std::uint32_t drawCalls = 0;
+        std::uint32_t spritesSubmitted = 0;
+    };
+
     class SpriteBatch2D {
     public:
         [[nodiscard]] bool Init(ID3D11Device* device, ID3D11DeviceContext* context);
@@ -22,11 +28,14 @@ namespace KibakoEngine {
         void End();
 
         void Push(const Texture2D& texture,
-                  const RectF& dst,
-                  const RectF& src,
-                  const Color4& color,
-                  float rotation = 0.0f,
-                  int layer = 0);
+            const RectF& dst,
+            const RectF& src,
+            const Color4& color,
+            float rotation = 0.0f,
+            int layer = 0);
+
+        void ResetStats() { m_stats = {}; }
+        const SpriteBatchStats& Stats() const { return m_stats; }
 
     private:
         struct Vertex {
@@ -55,29 +64,30 @@ namespace KibakoEngine {
         void UpdateVSConstants();
         void BuildVertices(std::vector<Vertex>& outVertices) const;
 
-        ID3D11Device*        m_device = nullptr;
+        ID3D11Device* m_device = nullptr;
         ID3D11DeviceContext* m_context = nullptr;
 
-        Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vs;
-        Microsoft::WRL::ComPtr<ID3D11PixelShader>  m_ps;
-        Microsoft::WRL::ComPtr<ID3D11InputLayout>  m_inputLayout;
-        Microsoft::WRL::ComPtr<ID3D11Buffer>       m_vertexBuffer;
-        Microsoft::WRL::ComPtr<ID3D11Buffer>       m_indexBuffer;
-        Microsoft::WRL::ComPtr<ID3D11Buffer>       m_cbVS;
-        Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerPoint;
-        Microsoft::WRL::ComPtr<ID3D11BlendState>   m_blendAlpha;
+        Microsoft::WRL::ComPtr<ID3D11VertexShader>      m_vs;
+        Microsoft::WRL::ComPtr<ID3D11PixelShader>       m_ps;
+        Microsoft::WRL::ComPtr<ID3D11InputLayout>       m_inputLayout;
+        Microsoft::WRL::ComPtr<ID3D11Buffer>            m_vertexBuffer;
+        Microsoft::WRL::ComPtr<ID3D11Buffer>            m_indexBuffer;
+        Microsoft::WRL::ComPtr<ID3D11Buffer>            m_cbVS;
+        Microsoft::WRL::ComPtr<ID3D11SamplerState>      m_samplerPoint;
+        Microsoft::WRL::ComPtr<ID3D11BlendState>        m_blendAlpha;
         Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_depthDisabled;
         Microsoft::WRL::ComPtr<ID3D11RasterizerState>   m_rasterCullNone;
 
         std::vector<DrawCommand> m_commands;
         std::vector<Vertex>      m_vertexScratch;
-        std::vector<uint32_t>    m_indexScratch;
+        std::vector<std::uint32_t> m_indexScratch;
 
         DirectX::XMFLOAT4X4 m_viewProjT{};
-        size_t m_vertexCapacitySprites = 0;
-        size_t m_indexCapacitySprites = 0;
-        bool   m_isDrawing = false;
+        size_t              m_vertexCapacitySprites = 0;
+        size_t              m_indexCapacitySprites = 0;
+        bool                m_isDrawing = false;
+
+        SpriteBatchStats    m_stats{};
     };
 
 } // namespace KibakoEngine
-

@@ -231,7 +231,7 @@ namespace KibakoEngine {
 
         while (PumpEvents()) {
 
-            // <<< ICI : input est à jour, tu peux lire KeyPressed
+            // Toggle ImGui
             if (m_input.KeyPressed(SDL_SCANCODE_F2)) {
                 DebugUI::ToggleEnabled();
             }
@@ -245,20 +245,25 @@ namespace KibakoEngine {
 
             const float dt = static_cast<float>(m_time.DeltaSeconds());
 
-            // Update layers
+            // --- Update layers ---
             for (Layer* layer : m_layers) {
                 if (layer)
                     layer->OnUpdate(dt);
             }
 
-            // New frame ImGui
+            // Infos VSync pour l'UI
+            DebugUI::SetVSyncEnabled(waitForVSync);
+
+            // --- NEW FRAME IMGUI ---
             DebugUI::NewFrame();
 
+            // --- Begin rendering ---
             BeginFrame(clearColor);
 
             SpriteBatch2D& batch = m_renderer.Batch();
             batch.Begin(m_renderer.Camera().GetViewProjectionT());
 
+            // Render layers
             for (Layer* layer : m_layers) {
                 if (layer)
                     layer->OnRender(batch);
@@ -266,7 +271,16 @@ namespace KibakoEngine {
 
             batch.End();
 
+            // Stats de rendu - DebugUI
+            const SpriteBatchStats& batchStats = batch.Stats();
+            DebugUI::RenderStats rs{};
+            rs.drawCalls = batchStats.drawCalls;
+            rs.spritesSubmitted = batchStats.spritesSubmitted;
+            DebugUI::SetRenderStats(rs);
+
+            // --- IMGUI RENDER ---
             DebugUI::Render();
+
             EndFrame(waitForVSync);
 
             if (ConsumeBreakpointRequest()) {

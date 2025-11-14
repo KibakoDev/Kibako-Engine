@@ -1,10 +1,13 @@
 #pragma once
 
+#include <array>
+#include <vector>
+
 #include "KibakoEngine/Core/Layer.h"
 #include "KibakoEngine/Renderer/SpriteTypes.h"
 #include "KibakoEngine/Renderer/Texture2D.h"
+#include "KibakoEngine/Renderer/SpriteBatch2D.h"
 #include "KibakoEngine/Scene/Scene2D.h"
-#include "KibakoEngine/Collision/Collision2D.h"
 
 namespace KibakoEngine {
     class Application;
@@ -20,23 +23,27 @@ public:
     void OnUpdate(float dt) override;
     void OnRender(KibakoEngine::SpriteBatch2D& batch) override;
 
+    // Accès pour le panel ImGui (Scene / Entities)
+    KibakoEngine::Scene2D& Scene() { return m_scene; }
+    const KibakoEngine::Scene2D& Scene() const { return m_scene; }
+
+    std::vector<KibakoEngine::Entity2D>& Entities() { return m_entities; }
+    const std::vector<KibakoEngine::Entity2D>& Entities() const { return m_entities; }
+
 private:
+    struct SampleSprite
+    {
+        KibakoEngine::RectF  baseRect;
+        KibakoEngine::Color4 color;
+        float                rotationSpeed = 0.0f;
+        int                  layer = 0;
+    };
+
     KibakoEngine::Application& m_app;
-
     KibakoEngine::Texture2D* m_starTexture = nullptr;
-    KibakoEngine::Texture2D  m_debugPixel;
-    KibakoEngine::Scene2D    m_scene;
+    std::array<SampleSprite, 3>         m_sprites{};
+    float                               m_time = 0.0f;
 
-    // Entity identifiers used during gameplay updates
-    KibakoEngine::EntityID m_entityLeft = 0;
-    KibakoEngine::EntityID m_entityCenter = 0;
-    KibakoEngine::EntityID m_entityRight = 0;
-
-    // Colliders owned by the layer (entities keep raw pointers)
-    KibakoEngine::CircleCollider2D m_centerCollider{};
-    KibakoEngine::CircleCollider2D m_rightCollider{};
-
-    float m_time = 0.0f;
-    bool  m_showCollisionDebug = false;
-    bool  m_lastCollision = false;
+    KibakoEngine::Scene2D               m_scene;
+    std::vector<KibakoEngine::Entity2D> m_entities;
 };
