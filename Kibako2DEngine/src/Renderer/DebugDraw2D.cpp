@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "KibakoEngine/Scene/Scene2D.h"
+
 namespace KibakoEngine::DebugDraw2D {
 
     namespace
@@ -112,6 +114,69 @@ namespace KibakoEngine::DebugDraw2D {
         DrawLine(batch, tr, br, color, thickness, layer);
         DrawLine(batch, br, bl, color, thickness, layer);
         DrawLine(batch, bl, tl, color, thickness, layer);
+    }
+
+    bool DrawCircleCollider(SpriteBatch2D& batch,
+        const Transform2D& transform,
+        const CircleCollider2D& collider,
+        const Color4& color,
+        float thickness,
+        int layer,
+        int segments)
+    {
+        if (!collider.active)
+            return false;
+
+        DrawCircleOutline(batch,
+            transform.position,
+            collider.radius,
+            color,
+            thickness,
+            layer,
+            segments);
+
+        return true;
+    }
+
+    bool DrawAABBCollider(SpriteBatch2D& batch,
+        const Transform2D& transform,
+        const AABBCollider2D& collider,
+        const Color4& color,
+        float thickness,
+        int layer)
+    {
+        if (!collider.active)
+            return false;
+
+        DrawAABBOutline(batch,
+            transform.position,
+            collider.halfW,
+            collider.halfH,
+            color,
+            thickness,
+            layer);
+
+        return true;
+    }
+
+    bool DrawCollisionComponent(SpriteBatch2D& batch,
+        const Transform2D& transform,
+        const CollisionComponent2D& component,
+        const Color4& circleColor,
+        const Color4& aabbColor,
+        float thickness,
+        int layer,
+        int circleSegments)
+    {
+        bool drewAny = false;
+
+        if (component.circle)
+            drewAny |= DrawCircleCollider(batch, transform, *component.circle, circleColor, thickness, layer, circleSegments);
+
+        if (component.aabb)
+            drewAny |= DrawAABBCollider(batch, transform, *component.aabb, aabbColor, thickness, layer);
+
+        return drewAny;
     }
 
 } // namespace KibakoEngine::DebugDraw2D

@@ -278,29 +278,16 @@ void GameLayer::OnRender(KibakoEngine::SpriteBatch2D& batch)
 
             const KibakoEngine::Transform2D& transform = entity.transform;
 
-            if (entity.collision.circle && entity.collision.circle->active) {
-                KibakoEngine::DebugDraw2D::DrawCircleOutline(batch,
-                    transform.position,
-                    entity.collision.circle->radius,
-                    circleColor,
-                    kColliderThickness,
-                    kDebugDrawLayer);
-                KibakoEngine::DebugDraw2D::DrawCross(batch,
-                    transform.position,
-                    10.0f,
-                    crossColor,
-                    kColliderThickness,
-                    kDebugDrawLayer);
-            }
+            const bool drewCollider = KibakoEngine::DebugDraw2D::DrawCollisionComponent(batch,
+                transform,
+                entity.collision,
+                circleColor,
+                aabbColor,
+                kColliderThickness,
+                kDebugDrawLayer,
+                48);
 
-            if (entity.collision.aabb && entity.collision.aabb->active) {
-                KibakoEngine::DebugDraw2D::DrawAABBOutline(batch,
-                    transform.position,
-                    entity.collision.aabb->halfW,
-                    entity.collision.aabb->halfH,
-                    aabbColor,
-                    kColliderThickness,
-                    kDebugDrawLayer);
+            if (drewCollider) {
                 KibakoEngine::DebugDraw2D::DrawCross(batch,
                     transform.position,
                     10.0f,
