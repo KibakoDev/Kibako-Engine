@@ -4,6 +4,8 @@
 #include <SDL2/SDL.h>
 #include <cstdint>
 
+#include "KibakoEngine/Core/Debug.h"
+
 struct ID3D11Device;
 struct ID3D11DeviceContext;
 
@@ -19,6 +21,7 @@ namespace KibakoEngine {
 
         using PanelCallback = void (*)(void* userData);
 
+#if KBK_DEBUG_BUILD
         void Init(SDL_Window* window, ID3D11Device* device, ID3D11DeviceContext* context);
         void Shutdown();
 
@@ -38,6 +41,63 @@ namespace KibakoEngine {
 
         // Registers an external scene inspector panel (implemented by the sandbox).
         void SetSceneInspector(void* userData, PanelCallback callback);
+#else
+        inline void Init(SDL_Window* window, ID3D11Device* device, ID3D11DeviceContext* context)
+        {
+            KBK_UNUSED(window);
+            KBK_UNUSED(device);
+            KBK_UNUSED(context);
+        }
+
+        inline void Shutdown() {}
+
+        inline void NewFrame() {}
+
+        inline void ProcessEvent(const SDL_Event& e)
+        {
+            KBK_UNUSED(e);
+        }
+
+        inline void Render() {}
+
+        inline void SetEnabled(bool enabled)
+        {
+            KBK_UNUSED(enabled);
+        }
+
+        [[nodiscard]] inline bool IsEnabled()
+        {
+            return false;
+        }
+
+        inline void ToggleEnabled() {}
+
+        inline void SetVSyncEnabled(bool enabled)
+        {
+            KBK_UNUSED(enabled);
+        }
+
+        [[nodiscard]] inline bool IsVSyncEnabled()
+        {
+            return false;
+        }
+
+        inline void SetRenderStats(const RenderStats& stats)
+        {
+            KBK_UNUSED(stats);
+        }
+
+        [[nodiscard]] inline RenderStats GetRenderStats()
+        {
+            return {};
+        }
+
+        inline void SetSceneInspector(void* userData, PanelCallback callback)
+        {
+            KBK_UNUSED(userData);
+            KBK_UNUSED(callback);
+        }
+#endif
     }
 
 } // namespace KibakoEngine
