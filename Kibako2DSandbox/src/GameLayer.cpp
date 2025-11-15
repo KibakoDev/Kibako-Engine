@@ -6,7 +6,6 @@
 #include "KibakoEngine/Core/DebugUI.h"
 #include "KibakoEngine/Core/Log.h"
 #include "KibakoEngine/Core/Profiler.h"
-#include "KibakoEngine/Fonts/TextRenderer.h"
 #include "KibakoEngine/Renderer/DebugDraw2D.h"
 
 #include <DirectXMath.h>
