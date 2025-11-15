@@ -13,6 +13,7 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_ERRORS_H
 
 namespace KibakoEngine {
 
@@ -96,7 +97,18 @@ namespace KibakoEngine {
         FT_Face face = nullptr;
         FT_Error err = FT_New_Face(m_impl->library, path.c_str(), 0, &face);
         if (err != 0) {
-            KbkError(kLogChannel, "FT_New_Face failed for '%s': %d", path.c_str(), static_cast<int>(err));
+            const bool resourceUnavailable = (err == FT_Err_Cannot_Open_Resource) ||
+                (err == FT_Err_Unknown_File_Format) ||
+                (err == FT_Err_Invalid_File_Format);
+            if (resourceUnavailable) {
+                KbkWarn(kLogChannel,
+                    "FT_New_Face failed for '%s' (resource unavailable): %d",
+                    path.c_str(),
+                    static_cast<int>(err));
+            }
+            else {
+                KbkError(kLogChannel, "FT_New_Face failed for '%s': %d", path.c_str(), static_cast<int>(err));
+            }
             return nullptr;
         }
 

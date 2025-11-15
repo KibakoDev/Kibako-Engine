@@ -100,7 +100,7 @@ namespace KibakoEngine {
 
         auto font = m_fontLibrary.LoadFontFromFile(m_device, path, pixelHeight);
         if (!font) {
-            KbkError(kLogChannel,
+            KbkWarn(kLogChannel,
                 "Failed to load font from '%s' (id='%s')",
                 path.c_str(), id.c_str());
             return nullptr;
