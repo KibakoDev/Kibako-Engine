@@ -199,8 +199,10 @@ void GameLayer::OnUpdate(float dt)
 
     auto& input = m_app.InputSys();
     if (input.KeyPressed(SDL_SCANCODE_F1)) {
-        m_showCollisionDebug = !m_showCollisionDebug;
-        KbkTrace(kLogChannel, "Collision debug %s", m_showCollisionDebug ? "ON" : "OFF");
+        #if KBK_DEBUG_BUILD
+            m_showCollisionDebug = !m_showCollisionDebug;
+            KbkTrace(kLogChannel, "Collision debug %s", m_showCollisionDebug ? "ON" : "OFF");
+        #endif
     }
 
     m_time += dt;
