@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "KibakoEngine/Fonts/Font.h"
 #include "KibakoEngine/Renderer/Texture2D.h"
 
 struct ID3D11Device;
@@ -25,6 +26,14 @@ public:
                                          const std::string& path,
                                          bool sRGB = true);
 
+    // Loads a TTF font at the requested pixel height if not already cached
+    [[nodiscard]] Font* LoadFontTTF(const std::string& id,
+                                    const std::string& path,
+                                    int pixelHeight);
+
+    [[nodiscard]] Font* GetFont(const std::string& id);
+    [[nodiscard]] const Font* GetFont(const std::string& id) const;
+
     // Returns nullptr when no texture has been loaded with this id
     [[nodiscard]] Texture2D* GetTexture(const std::string& id);
     [[nodiscard]] const Texture2D* GetTexture(const std::string& id) const;
@@ -35,7 +44,9 @@ public:
 private:
     ID3D11Device* m_device = nullptr;
 
+    FontLibrary m_fontLibrary;
     std::unordered_map<std::string, std::unique_ptr<Texture2D>> m_textures;
+    std::unordered_map<std::string, std::unique_ptr<Font>> m_fonts;
 };
 
 } // namespace KibakoEngine

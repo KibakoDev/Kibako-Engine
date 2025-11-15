@@ -12,6 +12,7 @@
 namespace KibakoEngine {
     class Application;
     class Texture2D;
+    class Font;
 }
 
 class GameLayer final : public KibakoEngine::Layer
@@ -33,6 +34,7 @@ public:
 private:
     KibakoEngine::Application& m_app;
     KibakoEngine::Texture2D* m_starTexture = nullptr;
+    KibakoEngine::Font*       m_uiFont = nullptr;
 
     KibakoEngine::EntityID m_entityCenter = 0;
     KibakoEngine::EntityID m_entityRight = 0;

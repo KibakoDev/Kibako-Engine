@@ -6,6 +6,7 @@
 #include "KibakoEngine/Core/DebugUI.h"
 #include "KibakoEngine/Core/Log.h"
 #include "KibakoEngine/Core/Profiler.h"
+#include "KibakoEngine/Fonts/TextRenderer.h"
 #include "KibakoEngine/Renderer/DebugDraw2D.h"
 
 #include <DirectXMath.h>
@@ -102,6 +103,11 @@ void GameLayer::OnAttach()
         return;
     }
 
+    m_uiFont = assets.LoadFontTTF("ui.default", "assets/fonts/RobotoMono-Regular.ttf", 32);
+    if (!m_uiFont) {
+        KbkWarn(kLogChannel, "Failed to load font: assets/fonts/RobotoMono-Regular.ttf");
+    }
+
     const float width = static_cast<float>(m_starTexture->Width());
     const float height = static_cast<float>(m_starTexture->Height());
     const KibakoEngine::RectF spriteRect = KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, width, height);
@@ -176,6 +182,7 @@ void GameLayer::OnDetach()
     KBK_PROFILE_SCOPE("GameLayerDetach");
 
     m_starTexture = nullptr;
+    m_uiFont = nullptr;
     m_scene.Clear();
 
     m_entityCenter = 0;
@@ -290,5 +297,15 @@ void GameLayer::OnRender(KibakoEngine::SpriteBatch2D& batch)
                     kDebugDrawLayer);
             }
         }
+    }
+
+    if (m_uiFont) {
+        const KibakoEngine::Color4 textColor{ 1.0f, 0.95f, 0.4f, 1.0f };
+        KibakoEngine::TextRenderer::DrawText(batch,
+            *m_uiFont,
+            "KIBAKO ENGINE",
+            { 18.0f, 18.0f },
+            textColor,
+            1.0f);
     }
 }

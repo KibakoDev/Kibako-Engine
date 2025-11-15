@@ -30,6 +30,7 @@
     <ClInclude Include="include\KibakoEngine\Core\Log.h" />
     <ClInclude Include="include\KibakoEngine\Core\Time.h" />
     <ClInclude Include="include\KibakoEngine\Gameplay\Timers.h" />
+    <ClInclude Include="include\KibakoEngine\Fonts\Font.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\Camera2D.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\DebugDraw2D.h" />
     <ClInclude Include="include\KibakoEngine\Renderer\RendererD3D11.h" />
@@ -60,6 +61,9 @@
     <ClCompile Include="src\Core\Log.cpp" />
     <ClCompile Include="src\Core\Time.cpp" />
     <ClCompile Include="src\Core\Profiler.cpp" />
+    <ClCompile Include="src\Fonts\Font.cpp" />
+    <ClCompile Include="src\Fonts\FontLibrary.cpp" />
+    <ClCompile Include="src\Fonts\TextRenderer.cpp" />
     <ClCompile Include="src\Renderer\Camera2D.cpp" />
     <ClCompile Include="src\Renderer\DebugDraw2D.cpp" />
     <ClCompile Include="src\Renderer\RendererD3D11.cpp" />
