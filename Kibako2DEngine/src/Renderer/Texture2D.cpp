@@ -76,6 +76,53 @@ namespace KibakoEngine {
         return true;
     }
 
+    bool Texture2D::CreateFromRGBA8(ID3D11Device* device,
+        int width,
+        int height,
+        const std::uint8_t* pixels)
+    {
+        KBK_PROFILE_SCOPE("TextureCreateFromMemory");
+
+        KBK_ASSERT(device != nullptr, "Texture2D::CreateFromRGBA8 requires a valid device");
+        KBK_ASSERT(pixels != nullptr, "Texture2D::CreateFromRGBA8 requires pixel data");
+
+        Reset();
+
+        D3D11_TEXTURE2D_DESC desc{};
+        desc.Width = static_cast<UINT>(width);
+        desc.Height = static_cast<UINT>(height);
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D11_USAGE_IMMUTABLE;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        D3D11_SUBRESOURCE_DATA data{};
+        data.pSysMem = pixels;
+        data.SysMemPitch = static_cast<UINT>(width * 4);
+
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+        HRESULT hr = device->CreateTexture2D(&desc, &data, texture.GetAddressOf());
+        if (FAILED(hr)) {
+            KbkError(kLogChannel, "CreateTexture2D (memory) failed: 0x%08X", static_cast<unsigned>(hr));
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
+        hr = device->CreateShaderResourceView(texture.Get(), nullptr, srv.GetAddressOf());
+        if (FAILED(hr)) {
+            KbkError(kLogChannel, "CreateShaderResourceView (memory) failed: 0x%08X", static_cast<unsigned>(hr));
+            return false;
+        }
+
+        m_texture = texture;
+        m_srv = srv;
+        m_width = width;
+        m_height = height;
+        return true;
+    }
+
     bool Texture2D::LoadFromFile(ID3D11Device* device, const std::string& path, bool srgb)
     {
         KBK_PROFILE_SCOPE("TextureLoad");

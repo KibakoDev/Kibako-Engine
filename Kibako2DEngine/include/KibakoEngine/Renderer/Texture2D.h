@@ -12,6 +12,10 @@ namespace KibakoEngine {
     class Texture2D {
     public:
         bool LoadFromFile(ID3D11Device* device, const std::string& path, bool srgb = false);
+        bool CreateFromRGBA8(ID3D11Device* device,
+                             int width,
+                             int height,
+                             const std::uint8_t* pixels);
         bool CreateSolidColor(ID3D11Device* device,
                               std::uint8_t r,
                               std::uint8_t g,
