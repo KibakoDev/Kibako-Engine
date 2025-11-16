@@ -28,7 +28,7 @@ int main()
     GameLayer gameLayer(app);
     app.PushLayer(&gameLayer);
 
-    const float clearColor[4] = { 0.05f, 0.05f, 0.08f, 1.0f };
+    const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
     app.Run(clearColor, true);
 
     app.Shutdown();

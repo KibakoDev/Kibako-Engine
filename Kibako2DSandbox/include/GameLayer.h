@@ -1,19 +1,19 @@
-// GameLayer.h - Declares the sandbox gameplay layer built on Kibako Engine.
+// GameLayer.h - Sandbox layer for Kibako 2D Engine (black & white demo)
 #pragma once
 
-#include <vector>
+#include <cstdint>
 
-#include "KibakoEngine/Collision/Collision2D.h"
 #include "KibakoEngine/Core/Layer.h"
 #include "KibakoEngine/Renderer/SpriteTypes.h"
-#include "KibakoEngine/Renderer/SpriteBatch2D.h"
+#include "KibakoEngine/Renderer/Texture2D.h"
 #include "KibakoEngine/Scene/Scene2D.h"
+#include "KibakoEngine/Collision/Collision2D.h"
+#include "KibakoEngine/Fonts/Font.h"
+#include "KibakoEngine/UI/UIElement.h"
 #include "KibakoEngine/UI/UIControls.h"
 
 namespace KibakoEngine {
     class Application;
-    class Texture2D;
-    class Font;
 }
 
 class GameLayer final : public KibakoEngine::Layer
@@ -26,36 +26,37 @@ public:
     void OnUpdate(float dt) override;
     void OnRender(KibakoEngine::SpriteBatch2D& batch) override;
 
-    [[nodiscard]] KibakoEngine::Scene2D& Scene() { return m_scene; }
-    [[nodiscard]] const KibakoEngine::Scene2D& Scene() const { return m_scene; }
-
-    [[nodiscard]] std::vector<KibakoEngine::Entity2D>& Entities() { return m_scene.Entities(); }
-    [[nodiscard]] const std::vector<KibakoEngine::Entity2D>& Entities() const { return m_scene.Entities(); }
-
 private:
+    // Internal helpers
     void BuildUI();
     void UpdateUI(float dt);
+    void UpdateScene(float dt);
+    void RenderCollisionDebug(KibakoEngine::SpriteBatch2D& batch);
 
+private:
     KibakoEngine::Application& m_app;
-    KibakoEngine::Texture2D* m_starTexture = nullptr;
-    KibakoEngine::Font*       m_uiFont = nullptr;
 
-    KibakoEngine::UILabel*  m_scoreLabel = nullptr;
-    KibakoEngine::UILabel*  m_hintLabel = nullptr;
-    KibakoEngine::UIScreen* m_hudScreen = nullptr;
-    KibakoEngine::UIScreen* m_menuScreen = nullptr;
-    KibakoEngine::UISystem  m_uiSystem;
-    bool m_menuVisible = true;
-
-    KibakoEngine::EntityID m_entityCenter = 0;
-    KibakoEngine::EntityID m_entityRight = 0;
+    // Gameplay / scene
+    KibakoEngine::Scene2D m_scene;
+    std::uint32_t m_entityCenter = 0;
+    std::uint32_t m_entityRight = 0;
 
     KibakoEngine::CircleCollider2D m_centerCollider{};
     KibakoEngine::CircleCollider2D m_rightCollider{};
 
+    KibakoEngine::Texture2D* m_starTexture = nullptr;
+    const KibakoEngine::Font* m_uiFont = nullptr;
+
+    // UI system
+    KibakoEngine::UISystem  m_uiSystem;
+    KibakoEngine::UILabel* m_timeLabel = nullptr;
+    KibakoEngine::UILabel* m_entitiesLabel = nullptr;
+    KibakoEngine::UILabel* m_hintLabel = nullptr;
+    KibakoEngine::UIScreen* m_hudScreen = nullptr;
+    KibakoEngine::UIScreen* m_menuScreen = nullptr;
+
+    bool  m_menuVisible = false;
     bool  m_showCollisionDebug = false;
     bool  m_lastCollision = false;
     float m_time = 0.0f;
-
-    KibakoEngine::Scene2D m_scene;
 };

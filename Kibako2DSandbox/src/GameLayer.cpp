@@ -1,4 +1,4 @@
-// GameLayer.cpp - Implements the sandbox gameplay layer and scene inspector UI.
+// GameLayer.cpp - Black & white sandbox demo for Kibako 2D Engine
 #include "GameLayer.h"
 
 #include "KibakoEngine/Core/Application.h"
@@ -13,22 +13,24 @@
 
 #include <cmath>
 #include <cstdio>
-#include <memory>
 
 #if KBK_DEBUG_BUILD
 #    include "imgui.h"
 #endif
 
+using namespace KibakoEngine;
+
 namespace
 {
     constexpr const char* kLogChannel = "Sandbox";
-    constexpr int   kDebugDrawLayer = 1000;
-    constexpr float kColliderThickness = 2.0f;
+    constexpr int         kDebugDrawLayer = 1000;
+    constexpr float       kColliderThickness = 2.0f;
 
 #if KBK_DEBUG_BUILD
+    // Simple ImGui scene inspector (debug only)
     void SceneInspectorPanel(void* userData)
     {
-        auto* scene = static_cast<KibakoEngine::Scene2D*>(userData);
+        auto* scene = static_cast<Scene2D*>(userData);
         if (!scene)
             return;
 
@@ -45,14 +47,14 @@ namespace
 
         if (ImGui::BeginListBox("Entities")) {
             for (int i = 0; i < static_cast<int>(entities.size()); ++i) {
-                const KibakoEngine::Entity2D& entity = entities[static_cast<std::size_t>(i)];
+                const Entity2D& e = entities[static_cast<std::size_t>(i)];
 
                 char label[64];
                 std::snprintf(label, sizeof(label), "ID %u%s",
-                    entity.id,
-                    entity.active ? "" : " (disabled)");
+                    e.id,
+                    e.active ? "" : " (disabled)");
 
-                const bool isSelected = (selectedIndex == i);
+                bool isSelected = (selectedIndex == i);
                 if (ImGui::Selectable(label, isSelected))
                     selectedIndex = i;
                 if (isSelected)
@@ -64,16 +66,16 @@ namespace
         ImGui::Separator();
 
         if (selectedIndex >= 0 && selectedIndex < static_cast<int>(entities.size())) {
-            KibakoEngine::Entity2D& entity = entities[static_cast<std::size_t>(selectedIndex)];
+            Entity2D& e = entities[static_cast<std::size_t>(selectedIndex)];
 
-            ImGui::Text("Selected ID: %u", entity.id);
-            ImGui::Checkbox("Active", &entity.active);
+            ImGui::Text("Selected ID: %u", e.id);
+            ImGui::Checkbox("Active", &e.active);
 
-            KibakoEngine::Transform2D& transform = entity.transform;
+            Transform2D& t = e.transform;
             ImGui::Text("Transform2D");
-            ImGui::DragFloat2("Position", &transform.position.x, 1.0f);
-            ImGui::DragFloat("Rotation (rad)", &transform.rotation, 0.01f);
-            ImGui::DragFloat2("Scale", &transform.scale.x, 0.01f, 0.01f, 10.0f);
+            ImGui::DragFloat2("Position", &t.position.x, 1.0f);
+            ImGui::DragFloat("Rotation (rad)", &t.rotation, 0.01f);
+            ImGui::DragFloat2("Scale", &t.scale.x, 0.01f, 0.01f, 10.0f);
         }
         else {
             ImGui::TextDisabled("No entity selected.");
@@ -85,7 +87,11 @@ namespace
 
 } // namespace
 
-GameLayer::GameLayer(KibakoEngine::Application& app)
+// --------------------------------------------------------
+// Construction / lifecycle
+// --------------------------------------------------------
+
+GameLayer::GameLayer(Application& app)
     : Layer("Sandbox.GameLayer")
     , m_app(app)
 {
@@ -97,77 +103,81 @@ void GameLayer::OnAttach()
 
     auto& assets = m_app.Assets();
 
+    // Monochrome star texture
     m_starTexture = assets.LoadTexture("star", "assets/star.png", true);
     if (!m_starTexture || !m_starTexture->IsValid()) {
         KbkError(kLogChannel, "Failed to load texture: assets/star.png");
         return;
     }
 
+    // UI font (monospace goes well with debug look)
     m_uiFont = assets.LoadFontTTF("ui.default", "assets/fonts/RobotoMono-Regular.ttf", 32);
-    if (!m_uiFont) {
+    if (!m_uiFont)
         KbkWarn(kLogChannel, "Failed to load font: assets/fonts/RobotoMono-Regular.ttf");
-    }
 
-    m_uiSystem.SetInput(&m_app.InputSys());
-    m_uiSystem.SetScreenSize(static_cast<float>(m_app.Width()), static_cast<float>(m_app.Height()));
-    BuildUI();
+    // ---------- Scene setup (3 stars, B&W) ----------
+    const float texW = static_cast<float>(m_starTexture->Width());
+    const float texH = static_cast<float>(m_starTexture->Height());
+    const RectF spriteRect = RectF::FromXYWH(0.0f, 0.0f, texW, texH);
+    const RectF uvRect = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
 
-    const float width = static_cast<float>(m_starTexture->Width());
-    const float height = static_cast<float>(m_starTexture->Height());
-    const KibakoEngine::RectF spriteRect = KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, width, height);
-    const KibakoEngine::RectF uvRect = KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
-
-    auto configureSprite = [&](KibakoEngine::Entity2D& entity,
-        const DirectX::XMFLOAT2& position,
+    auto configureSprite = [&](Entity2D& e,
+        const DirectX::XMFLOAT2& pos,
         const DirectX::XMFLOAT2& scale,
-        const KibakoEngine::Color4& color,
-        int layer) {
-            entity.transform.position = position;
-            entity.transform.rotation = 0.0f;
-            entity.transform.scale = scale;
+        const Color4& color,
+        int layer)
+        {
+            e.transform.position = pos;
+            e.transform.rotation = 0.0f;
+            e.transform.scale = scale;
 
-            entity.sprite.texture = m_starTexture;
-            entity.sprite.dst = spriteRect;
-            entity.sprite.src = uvRect;
-            entity.sprite.color = color;
-            entity.sprite.layer = layer;
+            e.sprite.texture = m_starTexture;
+            e.sprite.dst = spriteRect;
+            e.sprite.src = uvRect;
+            e.sprite.color = color;
+            e.sprite.layer = layer;
         };
 
+    // Left star – light grey
     {
-        KibakoEngine::Entity2D& entity = m_scene.CreateEntity();
-        configureSprite(entity,
+        Entity2D& e = m_scene.CreateEntity();
+        configureSprite(e,
             { 80.0f, 140.0f },
             { 1.0f, 1.0f },
-            KibakoEngine::Color4{ 0.25f, 0.8f, 1.0f, 1.0f },
+            Color4{ 0.7f, 0.7f, 0.7f, 1.0f },
             -1);
     }
 
+    // Center star – white, with circle collider
     {
-        KibakoEngine::Entity2D& entity = m_scene.CreateEntity();
-        m_entityCenter = entity.id;
-        configureSprite(entity,
-            { 200.0f, 150.0f },
+        Entity2D& e = m_scene.CreateEntity();
+        m_entityCenter = e.id;
+
+        configureSprite(e,
+            { 220.0f, 150.0f },
             { 1.2f, 1.2f },
-            KibakoEngine::Color4::White(),
+            Color4::White(),
             0);
 
-        m_centerCollider.radius = 0.5f * width * entity.transform.scale.x;
+        m_centerCollider.radius = 0.5f * texW * e.transform.scale.x;
         m_centerCollider.active = true;
-        entity.collision.circle = &m_centerCollider;
+        e.collision.circle = &m_centerCollider;
     }
 
+    // Right star – mid grey, with circle collider
     {
-        KibakoEngine::Entity2D& entity = m_scene.CreateEntity();
-        m_entityRight = entity.id;
-        configureSprite(entity,
-            { 340.0f, 160.0f },
+        Entity2D& e = m_scene.CreateEntity();
+        m_entityRight = e.id;
+
+        configureSprite(e,
+            { 360.0f, 160.0f },
             { 1.0f, 1.0f },
-            KibakoEngine::Color4{ 1.0f, 0.55f, 0.35f, 1.0f },
+            Color4{ 0.55f, 0.55f, 0.55f, 1.0f },
             1);
 
-        m_rightCollider.radius = 0.5f * width * entity.transform.scale.x;
+        m_rightCollider.radius = 0.5f * texW * e.transform.scale.x;
         m_rightCollider.active = true;
-        entity.collision.circle = &m_rightCollider;
+        e.collision.circle = &m_rightCollider;
     }
 
     KbkLog(kLogChannel,
@@ -176,8 +186,12 @@ void GameLayer::OnAttach()
         m_starTexture->Height(),
         m_scene.Entities().size());
 
+    // UI system setup
+    m_uiSystem.SetInput(&m_app.InputSys());
+    BuildUI();
+
 #if KBK_DEBUG_BUILD
-    KibakoEngine::DebugUI::SetSceneInspector(&m_scene, &SceneInspectorPanel);
+    DebugUI::SetSceneInspector(&m_scene, &SceneInspectorPanel);
 #endif
 }
 
@@ -187,12 +201,7 @@ void GameLayer::OnDetach()
 
     m_starTexture = nullptr;
     m_uiFont = nullptr;
-    m_scoreLabel = nullptr;
-    m_hintLabel = nullptr;
-    m_hudScreen = nullptr;
-    m_menuScreen = nullptr;
-    m_uiSystem.Clear();
-    m_menuVisible = true;
+
     m_scene.Clear();
 
     m_entityCenter = 0;
@@ -203,126 +212,125 @@ void GameLayer::OnDetach()
 
     m_showCollisionDebug = false;
     m_lastCollision = false;
+    m_menuVisible = false;
     m_time = 0.0f;
 
+    m_uiSystem.Clear();
+    m_timeLabel = nullptr;
+    m_entitiesLabel = nullptr;
+    m_hintLabel = nullptr;
+    m_hudScreen = nullptr;
+    m_menuScreen = nullptr;
+
 #if KBK_DEBUG_BUILD
-    KibakoEngine::DebugUI::SetSceneInspector(nullptr, nullptr);
+    DebugUI::SetSceneInspector(nullptr, nullptr);
 #endif
 }
+
+// --------------------------------------------------------
+// Update / Render
+// --------------------------------------------------------
 
 void GameLayer::OnUpdate(float dt)
 {
     KBK_PROFILE_SCOPE("GameLayerUpdate");
 
     auto& input = m_app.InputSys();
-    if (input.KeyPressed(SDL_SCANCODE_F1)) {
-        #if KBK_DEBUG_BUILD
-            m_showCollisionDebug = !m_showCollisionDebug;
-            KbkTrace(kLogChannel, "Collision debug %s", m_showCollisionDebug ? "ON" : "OFF");
-        #endif
-    }
 
-    if (input.KeyPressed(SDL_SCANCODE_F3)) {
+    if (input.KeyPressed(SDL_SCANCODE_F1))
+        m_showCollisionDebug = !m_showCollisionDebug;
+
+    if (input.KeyPressed(SDL_SCANCODE_F3))
         m_menuVisible = !m_menuVisible;
-    }
 
-    m_time += dt;
-
-    const float bobbing = std::sin(m_time * 2.0f) * 32.0f;
-    const float sway = std::sin(m_time * 0.2f) * 300.0f;
-
-    auto* centerEntity = m_scene.FindEntity(m_entityCenter);
-    auto* rightEntity = m_scene.FindEntity(m_entityRight);
-
-    if (centerEntity) {
-        centerEntity->transform.position.x = 200.0f + sway;
-        centerEntity->transform.position.y = 150.0f + bobbing;
-        centerEntity->transform.rotation = m_time * 0.8f;
-    }
-
-    if (rightEntity) {
-        rightEntity->transform.rotation = -m_time * 0.5f;
-    }
-
-    bool hit = false;
-    if (centerEntity && rightEntity &&
-        centerEntity->collision.circle && rightEntity->collision.circle) {
-
-        hit = KibakoEngine::Intersects(*centerEntity->collision.circle, centerEntity->transform,
-            *rightEntity->collision.circle, rightEntity->transform);
-    }
-
-    if (centerEntity) {
-        centerEntity->sprite.color = hit
-            ? KibakoEngine::Color4{ 1.0f, 0.2f, 0.2f, 1.0f }
-            : KibakoEngine::Color4::White();
-    }
-
-    if (rightEntity) {
-        rightEntity->sprite.color = hit
-            ? KibakoEngine::Color4{ 1.0f, 0.4f, 0.2f, 1.0f }
-            : KibakoEngine::Color4{ 1.0f, 0.55f, 0.35f, 1.0f };
-    }
-
-    if (hit)
-        KbkTrace(kLogChannel, "Center/Right COLLISION");
-
-    m_lastCollision = hit;
-
-    m_scene.Update(dt);
+    // Pause gameplay when menu is open
+    if (!m_menuVisible)
+        UpdateScene(dt);
 
     UpdateUI(dt);
 }
 
-void GameLayer::OnRender(KibakoEngine::SpriteBatch2D& batch)
+void GameLayer::OnRender(SpriteBatch2D& batch)
 {
     KBK_PROFILE_SCOPE("GameLayerRender");
 
     if (!m_starTexture || !m_starTexture->IsValid())
         return;
 
+    // Sprites
     m_scene.Render(batch);
 
-    if (m_showCollisionDebug) {
-        const KibakoEngine::Color4 circleColor = m_lastCollision
-            ? KibakoEngine::Color4{ 1.0f, 0.3f, 0.3f, 1.0f }
-            : KibakoEngine::Color4{ 0.2f, 0.9f, 0.9f, 1.0f };
+    // Collision overlay
+    if (m_showCollisionDebug)
+        RenderCollisionDebug(batch);
 
-        const KibakoEngine::Color4 crossColor = KibakoEngine::Color4{ 1.0f, 1.0f, 0.4f, 1.0f };
-        const KibakoEngine::Color4 aabbColor = KibakoEngine::Color4{ 0.9f, 0.9f, 0.2f, 1.0f };
-
-        for (const KibakoEngine::Entity2D& entity : m_scene.Entities()) {
-            if (!entity.active)
-                continue;
-
-            const KibakoEngine::Transform2D& transform = entity.transform;
-
-            const bool drewCollider = KibakoEngine::DebugDraw2D::DrawCollisionComponent(batch,
-                transform,
-                entity.collision,
-                circleColor,
-                aabbColor,
-                kColliderThickness,
-                kDebugDrawLayer,
-                48);
-
-            if (drewCollider) {
-                KibakoEngine::DebugDraw2D::DrawCross(batch,
-                    transform.position,
-                    10.0f,
-                    crossColor,
-                    kColliderThickness,
-                    kDebugDrawLayer);
-            }
-        }
-    }
-
+    // HUD + menu
     m_uiSystem.Render(batch);
 }
 
+// --------------------------------------------------------
+// Scene logic
+// --------------------------------------------------------
+
+void GameLayer::UpdateScene(float dt)
+{
+    m_time += dt;
+
+    const float bobbing = std::sin(m_time * 2.0f) * 32.0f;
+    const float sway = std::sin(m_time * 0.25f) * 260.0f;
+
+    Entity2D* center = m_scene.FindEntity(m_entityCenter);
+    Entity2D* right = m_scene.FindEntity(m_entityRight);
+
+    // Center star – movement + rotation
+    if (center) {
+        center->transform.position.x = 220.0f + sway;
+        center->transform.position.y = 150.0f + bobbing;
+        center->transform.rotation = m_time * 0.7f;
+    }
+
+    // Right star – counter rotation
+    if (right) {
+        right->transform.rotation = -m_time * 0.5f;
+    }
+
+    bool hit = false;
+    if (center && right &&
+        center->collision.circle && right->collision.circle) {
+
+        hit = Intersects(*center->collision.circle, center->transform,
+            *right->collision.circle, right->transform);
+    }
+
+    // Monochrome visual feedback
+    if (center) {
+        center->sprite.color = hit
+            ? Color4::White()
+            : Color4{ 0.9f, 0.9f, 0.9f, 1.0f };
+    }
+
+    if (right) {
+        right->sprite.color = hit
+            ? Color4{ 0.85f, 0.85f, 0.85f, 1.0f }
+        : Color4{ 0.55f, 0.55f, 0.55f, 1.0f };
+    }
+
+    if (hit)
+        KbkTrace(kLogChannel, "Center/Right collision");
+
+    m_lastCollision = hit;
+
+    m_scene.Update(dt);
+}
+
+// --------------------------------------------------------
+// UI setup / update
+// --------------------------------------------------------
+
 void GameLayer::BuildUI()
 {
-    m_scoreLabel = nullptr;
+    m_timeLabel = nullptr;
+    m_entitiesLabel = nullptr;
     m_hintLabel = nullptr;
     m_hudScreen = nullptr;
     m_menuScreen = nullptr;
@@ -331,66 +339,96 @@ void GameLayer::BuildUI()
     if (!m_uiFont)
         return;
 
-    auto hud = std::make_unique<KibakoEngine::UIScreen>();
+    // ---- Global monochrome style ----
+    UIStyle style{};
+    style.font = m_uiFont;
+    style.headingColor = Color4::White();
+    style.primaryTextColor = Color4::White();
+    style.mutedTextColor = Color4{ 0.6f, 0.6f, 0.6f, 1.0f };
+    style.panelColor = Color4{ 0.05f, 0.05f, 0.05f, 0.96f };
+    style.buttonNormal = Color4{ 0.10f, 0.10f, 0.10f, 1.0f };
+    style.buttonHover = Color4{ 0.25f, 0.25f, 0.25f, 1.0f };
+    style.buttonPressed = Color4{ 0.40f, 0.40f, 0.40f, 1.0f };
+    style.buttonSize = DirectX::XMFLOAT2{ 320.0f, 40.0f };
+    style.buttonPadding = DirectX::XMFLOAT2{ 18.0f, 8.0f };
+    style.headingScale = 0.95f;
+    style.bodyScale = 0.90f;
+    style.captionScale = 0.75f;
+    style.buttonTextScale = 0.90f;
+
+    // ---------- HUD (top-left) ----------
+    auto hud = std::make_unique<UIScreen>();
     auto& hudRoot = hud->Root();
 
-    KibakoEngine::UIStyle uiStyle{};
-    uiStyle.font = m_uiFont;
-    uiStyle.headingColor = { 1.0f, 0.96f, 0.7f, 1.0f };
-    uiStyle.primaryTextColor = { 1.0f, 0.95f, 0.4f, 1.0f };
-    uiStyle.mutedTextColor = { 0.8f, 0.9f, 1.0f, 1.0f };
-    uiStyle.panelColor = { 0.08f, 0.09f, 0.13f, 0.94f };
-    uiStyle.buttonNormal = { 0.14f, 0.17f, 0.22f, 0.92f };
-    uiStyle.buttonHover = { 0.2f, 0.23f, 0.28f, 0.96f };
-    uiStyle.buttonPressed = { 0.25f, 0.27f, 0.34f, 1.0f };
-    uiStyle.buttonSize = { 360.0f, 52.0f };
-    uiStyle.buttonPadding = { 16.0f, 12.0f };
-    uiStyle.buttonTextScale = 0.95f;
+    // TIME
+    auto& timeLabel = hudRoot.EmplaceChild<UILabel>("HUD.Time");
+    style.ApplyBody(timeLabel);
+    timeLabel.SetPosition({ 16.0f, 12.0f });
+    timeLabel.SetColor(style.primaryTextColor);
+    timeLabel.SetText("TIME  0.00 s");
 
-    auto& scoreLabel = hudRoot.EmplaceChild<KibakoEngine::UILabel>("HUD.Score");
-    uiStyle.ApplyBody(scoreLabel);
-    scoreLabel.SetPosition({ 20.0f, 20.0f });
-    scoreLabel.SetColor(uiStyle.primaryTextColor);
-    scoreLabel.SetScale(0.9f);
+    // ENTITIES
+    auto& entitiesLabel = hudRoot.EmplaceChild<UILabel>("HUD.Entities");
+    style.ApplyBody(entitiesLabel);
+    entitiesLabel.SetPosition({ 16.0f, 36.0f });
+    entitiesLabel.SetColor(style.primaryTextColor);
+    entitiesLabel.SetText("ENTITIES  0");
 
-    auto& hintLabel = hudRoot.EmplaceChild<KibakoEngine::UILabel>("HUD.Hint");
-    uiStyle.ApplyCaption(hintLabel);
-    hintLabel.SetPosition({ 20.0f, 56.0f });
-    hintLabel.SetText("Press F3 to toggle menu");
+    // HINT
+    auto& hintLabel = hudRoot.EmplaceChild<UILabel>("HUD.Hint");
+    style.ApplyCaption(hintLabel);
+    hintLabel.SetPosition({ 16.0f, 62.0f });
+    hintLabel.SetColor(style.mutedTextColor);
+    hintLabel.SetText("F1  collision debug    |    F3  sandbox menu");
 
-    m_scoreLabel = &scoreLabel;
+    m_timeLabel = &timeLabel;
+    m_entitiesLabel = &entitiesLabel;
     m_hintLabel = &hintLabel;
     m_hudScreen = hud.get();
+
     m_uiSystem.PushScreen(std::move(hud));
 
-    auto menu = std::make_unique<KibakoEngine::UIScreen>();
-    auto& menuRoot = menu->Root();
+    // ---------- Center menu (overlay) ----------
+    auto menu = std::make_unique<UIScreen>();
+    auto& root = menu->Root();
 
-    auto& menuPanel = menuRoot.EmplaceChild<KibakoEngine::UIPanel>("Menu.Panel");
-    menuPanel.SetSize({ 420.0f, 260.0f });
-    menuPanel.SetAnchor(KibakoEngine::UIAnchor::Center);
-    uiStyle.ApplyPanel(menuPanel);
+    auto& panel = root.EmplaceChild<UIPanel>("Menu.Panel");
+    panel.SetSize({ 420.0f, 210.0f });
+    panel.SetAnchor(UIAnchor::Center);
+    panel.SetColor(style.panelColor);
 
-    auto& titleLabel = menuPanel.EmplaceChild<KibakoEngine::UILabel>("Menu.Title");
-    uiStyle.ApplyHeading(titleLabel);
-    titleLabel.SetText("ASTRO VOID");
-    titleLabel.SetPosition({ 24.0f, 24.0f });
+    const float left = 24.0f;
 
-    auto& playButton = menuPanel.EmplaceChild<KibakoEngine::UIButton>("Menu.Play");
-    playButton.SetStyle(uiStyle);
-    playButton.SetText("Play");
-    playButton.SetPosition({ 30.0f, 100.0f });
-    playButton.SetOnClick([this]() {
+    // Title
+    auto& title = panel.EmplaceChild<UILabel>("Menu.Title");
+    style.ApplyHeading(title);
+    title.SetPosition({ left, 22.0f });
+    title.SetText("KIBAKO SANDBOX");
+    title.SetScale(0.95f);
+
+    // Subtitle
+    auto& subtitle = panel.EmplaceChild<UILabel>("Menu.Subtitle");
+    style.ApplyCaption(subtitle);
+    subtitle.SetPosition({ left, 48.0f });
+    subtitle.SetText("ENGINE  ·  BLACK & WHITE DEMO");
+
+    // Resume button
+    auto& resumeBtn = panel.EmplaceChild<UIButton>("Menu.Resume");
+    resumeBtn.SetStyle(style);
+    resumeBtn.SetPosition({ left, 92.0f });
+    resumeBtn.SetText("Resume sandbox");
+    resumeBtn.SetOnClick([this]() {
         m_menuVisible = false;
-    });
+        });
 
-    auto& quitButton = menuPanel.EmplaceChild<KibakoEngine::UIButton>("Menu.Quit");
-    quitButton.SetStyle(uiStyle);
-    quitButton.SetText("Quit");
-    quitButton.SetPosition({ 30.0f, 160.0f });
-    quitButton.SetOnClick([]() {
-        KbkLog(kLogChannel, "Quit clicked (hook your exit logic here)");
-    });
+    // Quit button (placeholder)
+    auto& quitBtn = panel.EmplaceChild<UIButton>("Menu.Quit");
+    quitBtn.SetStyle(style);
+    quitBtn.SetPosition({ left, 142.0f });
+    quitBtn.SetText("Quit sandbox (log only)");
+    quitBtn.SetOnClick([]() {
+        KbkLog(kLogChannel, "Quit Sandbox clicked (hook your exit logic here)");
+        });
 
     m_menuScreen = menu.get();
     m_uiSystem.PushScreen(std::move(menu));
@@ -398,14 +436,28 @@ void GameLayer::BuildUI()
 
 void GameLayer::UpdateUI(float dt)
 {
-    m_uiSystem.SetScreenSize(static_cast<float>(m_app.Width()), static_cast<float>(m_app.Height()));
+    // Screen size can change (window resize)
+    m_uiSystem.SetScreenSize(
+        static_cast<float>(m_app.Width()),
+        static_cast<float>(m_app.Height()));
 
-    if (m_scoreLabel) {
-        char buffer[64]{};
-        std::snprintf(buffer, sizeof(buffer), "Time: %.2f s", m_time);
-        m_scoreLabel->SetText(buffer);
+    // TIME label
+    if (m_timeLabel) {
+        char buf[64]{};
+        std::snprintf(buf, sizeof(buf), "TIME  %.2f s", m_time);
+        m_timeLabel->SetText(buf);
     }
 
+    // ENTITIES label
+    if (m_entitiesLabel) {
+        char buf[64]{};
+        const auto count = m_scene.Entities().size();
+        std::snprintf(buf, sizeof(buf), "ENTITIES  %zu",
+            static_cast<std::size_t>(count));
+        m_entitiesLabel->SetText(buf);
+    }
+
+    // Hint visible seulement hors menu
     if (m_hintLabel)
         m_hintLabel->SetVisible(!m_menuVisible);
 
@@ -416,4 +468,42 @@ void GameLayer::UpdateUI(float dt)
         m_menuScreen->SetVisible(m_menuVisible);
 
     m_uiSystem.Update(dt);
+}
+
+// --------------------------------------------------------
+// Collision debug rendering
+// --------------------------------------------------------
+
+void GameLayer::RenderCollisionDebug(SpriteBatch2D& batch)
+{
+    const Color4 circleColorHit = Color4::White();
+    const Color4 circleColorNormal = Color4{ 0.7f, 0.7f, 0.7f, 1.0f };
+    const Color4 crossColor = Color4{ 1.0f, 1.0f, 1.0f, 1.0f };
+
+    for (const Entity2D& e : m_scene.Entities()) {
+        if (!e.active)
+            continue;
+
+        const Transform2D& t = e.transform;
+
+        const Color4 circleColor = m_lastCollision ? circleColorHit : circleColorNormal;
+
+        const bool drew = DebugDraw2D::DrawCollisionComponent(batch,
+            t,
+            e.collision,
+            circleColor,
+            circleColor,
+            kColliderThickness,
+            kDebugDrawLayer,
+            48);
+
+        if (drew) {
+            DebugDraw2D::DrawCross(batch,
+                t.position,
+                10.0f,
+                crossColor,
+                kColliderThickness,
+                kDebugDrawLayer);
+        }
+    }
 }
