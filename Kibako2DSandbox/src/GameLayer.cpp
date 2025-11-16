@@ -366,7 +366,6 @@ void GameLayer::BuildUI()
     m_timeLabel = &makeHudLabel("HUD.Time", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "TIME  0.00 s");
     m_stateLabel = &makeHudLabel("HUD.State", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "COLLISION  IDLE");
     m_entitiesLabel = &makeHudLabel("HUD.Entities", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "ENTITIES  0");
-    m_hintLabel = &makeHudLabel("HUD.Hint", bodyHeight, [&](UILabel& lbl) { style.ApplyCaption(lbl); }, "F1  Collision overlay  ·  F3  Menu");
 
     m_hudScreen = &hud;
 
@@ -374,10 +373,10 @@ void GameLayer::BuildUI()
     UIScreen& menu = m_uiSystem.CreateScreen("Menu");
     auto& menuRoot = menu.Root();
 
-    const float paddingX = 32.0f;
-    const float paddingY = 28.0f;
-    const float headingSpacing = 16.0f;
-    const float buttonSpacing = 12.0f;
+    const float paddingX = 42.0f;
+    const float paddingY = 36.0f;
+    const float headingSpacing = 56.0f;
+    const float buttonSpacing = 20.0f;
 
     const float headingW = TextRenderer::MeasureText(*style.font, "SANDBOX MENU", style.headingScale).size.x;
     const float panelWidth = std::max(style.buttonSize.x, headingW) + paddingX * 2.0f;

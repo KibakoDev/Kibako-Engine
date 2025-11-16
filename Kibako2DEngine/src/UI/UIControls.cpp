@@ -224,11 +224,11 @@ namespace KibakoEngine {
         float scale = m_textScale;
 
         if (m_autoFitText && m_font && !m_text.empty()) {
-            const auto metrics = MeasureText();
+            const DirectX::XMFLOAT2 textSize = MeasureText();
             const float availableWidth = std::max(0.0f, m_size.x - (m_padding.x * 2.0f));
 
-            if (metrics.size.x > 0.0f && metrics.size.x > availableWidth) {
-                const float fitted = m_textScale * (availableWidth / metrics.size.x);
+            if (textSize.x > 0.0f && textSize.x > availableWidth) {
+                const float fitted = m_textScale * (availableWidth / textSize.x);
                 scale = std::max(m_minTextScale, fitted);
             }
         }

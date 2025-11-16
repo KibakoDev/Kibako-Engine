@@ -20,17 +20,17 @@ namespace KibakoEngine {
         Color4 primaryTextColor = Color4::White();
         Color4 mutedTextColor{ 0.8f, 0.88f, 1.0f, 1.0f };
         Color4 panelColor{ 0.08f, 0.09f, 0.13f, 0.94f };
-        Color4 buttonNormal{ 0.13f, 0.15f, 0.18f, 0.92f };
-        Color4 buttonHover{ 0.18f, 0.2f, 0.23f, 0.95f };
-        Color4 buttonPressed{ 0.2f, 0.22f, 0.3f, 1.0f };
+        Color4 buttonNormal{ 0.15f, 0.15f, 0.15f, 0.92f };
+        Color4 buttonHover{ 0.25f, 0.25f, 0.25f, 0.95f };
+        Color4 buttonPressed{ 0.3f, 0.3f, 0.3f, 1.0f };
 
-        DirectX::XMFLOAT2 buttonSize{ 360.0f, 48.0f };
-        DirectX::XMFLOAT2 buttonPadding{ 14.0f, 11.0f };
+        DirectX::XMFLOAT2 buttonSize{ 480.0f, 48.0f };
+        DirectX::XMFLOAT2 buttonPadding{ 100.0f, 11.0f };
 
         float headingScale = 1.05f;
         float bodyScale = 0.9f;
         float captionScale = 0.75f;
-        float buttonTextScale = 1.0f;
+        float buttonTextScale = 0.4f;
 
         void ApplyHeading(UILabel& label) const;
         void ApplyBody(UILabel& label) const;
