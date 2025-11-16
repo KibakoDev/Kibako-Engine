@@ -331,8 +331,8 @@ void GameLayer::BuildUI()
     style.primaryTextColor = Color4::White();
     style.mutedTextColor = Color4{ 0.65f, 0.65f, 0.65f, 1.0f };
     style.panelColor = Color4{ 0.05f, 0.05f, 0.05f, 0.9f };
-    style.headingScale = 0.5f;
-    style.bodyScale = 0.35f;
+    style.headingScale = 0.4f;
+    style.bodyScale = 0.3f;
 
     const float bodyHeight = TextRenderer::MeasureText(*style.font, "S", style.bodyScale).lineHeight;
     const float headingHeight = TextRenderer::MeasureText(*style.font, "S", style.headingScale).lineHeight;
@@ -355,7 +355,7 @@ void GameLayer::BuildUI()
         return lbl;
     };
 
-    m_titleLabel = &makeHudLabel("HUD.Title", headingHeight+10, [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "KIBAKO SANDBOX");
+    m_titleLabel = &makeHudLabel("HUD.Title", headingHeight+5, [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "KIBAKO 2D ENGINE - SANDBOX");
     m_timeLabel = &makeHudLabel("HUD.Time", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "TIME  0.00 s");
     m_stateLabel = &makeHudLabel("HUD.State", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "COLLISION  IDLE");
     m_entitiesLabel = &makeHudLabel("HUD.Entities", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "ENTITIES  0");
@@ -443,8 +443,8 @@ void GameLayer::UpdateUI(float dt)
     // Title hint when paused
     if (m_titleLabel) {
         m_titleLabel->SetText(m_menuVisible
-            ? "KIBAKO SANDBOX  ·  PAUSED"
-            : "KIBAKO SANDBOX");
+            ? "KIBAKO 2D ENGINE - SANDBOX  ·  PAUSED"
+            : "KIBAKO 2D ENGINE - SANDBOX");
     }
 
     // HUD always visible, hint hidden when menu open
