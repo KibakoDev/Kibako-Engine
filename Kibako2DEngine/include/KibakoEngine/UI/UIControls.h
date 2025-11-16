@@ -12,6 +12,7 @@
 #include "KibakoEngine/UI/UIStyle.h"
 
 namespace KibakoEngine {
+    class UILabel;
 
     class UILabel : public UIElement
     {
@@ -96,7 +97,13 @@ namespace KibakoEngine {
         void SetOnClick(std::function<void()> callback) { m_onClick = std::move(callback); }
         void SetCenterText(bool center) { m_centerText = center; }
         void SetPixelSnap(bool snap) { m_snapToPixel = snap; }
+        void SetAutoFitText(bool autoFit) { m_autoFitText = autoFit; }
+        void SetMinimumTextScale(float scale) { m_minTextScale = scale; }
+        void SetLabelOffset(const DirectX::XMFLOAT2& offset) { m_labelOffset = offset; }
         void SetStyle(const UIStyle& style);
+
+        [[nodiscard]] UILabel* TextLabel() { return m_textLabel; }
+        [[nodiscard]] const UILabel* TextLabel() const { return m_textLabel; }
 
         void OnUpdate(const UIContext& ctx) override;
         void OnRender(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle& style) const override;
@@ -104,14 +111,19 @@ namespace KibakoEngine {
     private:
         [[nodiscard]] bool HitTest(const UIContext& ctx) const;
         [[nodiscard]] Color4 CurrentColor() const;
-        [[nodiscard]] DirectX::XMFLOAT2 TextPosition(const UIContext& ctx) const;
         [[nodiscard]] DirectX::XMFLOAT2 MeasureText() const;
         void InvalidateTextMetrics() { m_textDirty = true; }
+        void RefreshTextLabel();
+        [[nodiscard]] float FittedTextScale() const;
 
         const Font* m_font = nullptr;
         std::string m_text;
         DirectX::XMFLOAT2 m_padding{ 12.0f, 10.0f };
-        float m_textScale = 1.0f;
+        DirectX::XMFLOAT2 m_labelOffset{ 0.0f, 0.0f };
+        UILabel* m_textLabel = nullptr;
+        float m_textScale = 0.85f;
+        float m_minTextScale = 0.5f;
+        bool m_autoFitText = true;
         bool m_centerText = true;
 
         Color4 m_textColor = Color4::White();
