@@ -9,10 +9,9 @@
 
 #include "KibakoEngine/Fonts/Font.h"
 #include "KibakoEngine/UI/UIElement.h"
+#include "KibakoEngine/UI/UIStyle.h"
 
 namespace KibakoEngine {
-
-    struct UIStyle;
 
     class UILabel : public UIElement
     {
@@ -27,10 +26,12 @@ namespace KibakoEngine {
         void SetColor(const Color4& color) { m_color = color; }
         void SetScale(float scale) { m_scale = scale; }
         void SetPixelSnap(bool snap) { m_snapToPixel = snap; }
+        void SetAutoSize(bool autoSize) { m_autoSize = autoSize; }
 
         [[nodiscard]] const std::string& Text() const { return m_text; }
 
-        void OnRender(SpriteBatch2D& batch, const UIContext& ctx) const override;
+        void OnUpdate(const UIContext& ctx) override;
+        void OnRender(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle& style) const override;
 
     private:
         const Font* m_font = nullptr;
@@ -38,6 +39,7 @@ namespace KibakoEngine {
         Color4 m_color = Color4::White();
         float m_scale = 1.0f;
         bool m_snapToPixel = true;
+        bool m_autoSize = true;
     };
 
     class UIImage : public UIElement
@@ -52,7 +54,7 @@ namespace KibakoEngine {
         void SetColor(const Color4& color) { m_color = color; }
         void SetPixelSnap(bool snap) { m_snapToPixel = snap; }
 
-        void OnRender(SpriteBatch2D& batch, const UIContext& ctx) const override;
+        void OnRender(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle& style) const override;
 
     private:
         const Texture2D* m_texture = nullptr;
@@ -71,7 +73,7 @@ namespace KibakoEngine {
         void SetColor(const Color4& color) { m_color = color; }
         void SetPixelSnap(bool snap) { m_snapToPixel = snap; }
 
-        void OnRender(SpriteBatch2D& batch, const UIContext& ctx) const override;
+        void OnRender(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle& style) const override;
 
     private:
         Color4 m_color = Color4{ 0.1f, 0.12f, 0.14f, 0.8f };
@@ -97,7 +99,7 @@ namespace KibakoEngine {
         void SetStyle(const UIStyle& style);
 
         void OnUpdate(const UIContext& ctx) override;
-        void OnRender(SpriteBatch2D& batch, const UIContext& ctx) const override;
+        void OnRender(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle& style) const override;
 
     private:
         [[nodiscard]] bool HitTest(const UIContext& ctx) const;
@@ -124,30 +126,6 @@ namespace KibakoEngine {
         mutable bool m_textDirty = true;
         mutable DirectX::XMFLOAT2 m_cachedTextSize{ 0.0f, 0.0f };
         std::function<void()> m_onClick;
-    };
-
-    struct UIStyle
-    {
-        const Font* font = nullptr;
-        Color4 headingColor{ 1.0f, 0.96f, 0.7f, 1.0f };
-        Color4 primaryTextColor = Color4::White();
-        Color4 mutedTextColor{ 0.8f, 0.88f, 1.0f, 1.0f };
-        Color4 panelColor{ 0.08f, 0.09f, 0.13f, 0.94f };
-        Color4 buttonNormal{ 0.13f, 0.15f, 0.18f, 0.92f };
-        Color4 buttonHover{ 0.18f, 0.2f, 0.23f, 0.95f };
-        Color4 buttonPressed{ 0.2f, 0.22f, 0.3f, 1.0f };
-        DirectX::XMFLOAT2 buttonSize{ 360.0f, 48.0f };
-        DirectX::XMFLOAT2 buttonPadding{ 14.0f, 11.0f };
-        float headingScale = 1.05f;
-        float bodyScale = 0.9f;
-        float captionScale = 0.75f;
-        float buttonTextScale = 1.0f;
-
-        void ApplyHeading(UILabel& label) const;
-        void ApplyBody(UILabel& label) const;
-        void ApplyCaption(UILabel& label) const;
-        void ApplyPanel(UIPanel& panel) const;
-        void ApplyButton(UIButton& button) const;
     };
 
 } // namespace KibakoEngine

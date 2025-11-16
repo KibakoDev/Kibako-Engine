@@ -122,6 +122,7 @@ namespace KibakoEngine {
             Color4 color = Color4::White();
             float scale = 1.0f;
             bool snapToPixel = true;
+            int layer = 0;
         };
 
         [[nodiscard]] static TextMetrics MeasureText(const Font& font,
@@ -133,7 +134,8 @@ namespace KibakoEngine {
                              std::string_view text,
                              const DirectX::XMFLOAT2& position,
                              const Color4& color,
-                             float scale = 1.0f);
+                             float scale = 1.0f,
+                             int layer = 0);
 
         static void DrawText(SpriteBatch2D& batch,
                              const Font& font,

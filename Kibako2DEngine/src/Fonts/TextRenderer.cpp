@@ -69,9 +69,10 @@ namespace KibakoEngine {
         std::string_view text,
         const DirectX::XMFLOAT2& position,
         const Color4& color,
-        float scale)
+        float scale,
+        int layer)
     {
-        DrawText(batch, font, text, position, TextRenderSettings{ color, scale, true });
+        DrawText(batch, font, text, position, TextRenderSettings{ color, scale, true, layer });
     }
 
     void TextRenderer::DrawText(SpriteBatch2D& batch,
@@ -123,7 +124,7 @@ namespace KibakoEngine {
                 }
 
                 const RectF dst = RectF::FromXYWH(gx, gy, gw, gh);
-                batch.Push(atlas, dst, glyph->uv, settings.color);
+                batch.Push(atlas, dst, glyph->uv, settings.color, 0.0f, settings.layer);
             }
 
             penX += glyph->advance * settings.scale;

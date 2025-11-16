@@ -26,9 +26,26 @@ namespace KibakoEngine {
         }
     }
 
-    void UILabel::OnRender(SpriteBatch2D& batch, const UIContext& ctx) const
+    void UILabel::OnUpdate(const UIContext& ctx)
     {
-        if (!m_font || m_text.empty())
+        (void)ctx;
+
+        const Font* font = m_font;
+        if (!font)
+            return;
+
+        if (m_autoSize && !m_text.empty()) {
+            const auto metrics = TextRenderer::MeasureText(*font, m_text, m_scale);
+            const DirectX::XMFLOAT2 newSize{ metrics.size.x, metrics.lineHeight };
+            if (newSize.x != m_size.x || newSize.y != m_size.y)
+                SetSize(newSize);
+        }
+    }
+
+    void UILabel::OnRender(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle& style) const
+    {
+        const Font* font = m_font ? m_font : style.font;
+        if (!font || m_text.empty())
             return;
 
         DirectX::XMFLOAT2 pos = WorldPosition(ctx);
@@ -37,12 +54,14 @@ namespace KibakoEngine {
             pos.y = SnapToPixel(pos.y);
         }
 
-        TextRenderer::DrawText(batch, *m_font, m_text, pos,
-            TextRenderer::TextRenderSettings{ m_color, m_scale, m_snapToPixel });
+        const Color4 finalColor = m_tint.value_or(m_color);
+
+        TextRenderer::DrawText(batch, *font, m_text, pos,
+            TextRenderer::TextRenderSettings{ finalColor, m_scale, m_snapToPixel, m_layer });
 
     }
 
-    void UIImage::OnRender(SpriteBatch2D& batch, const UIContext& ctx) const
+    void UIImage::OnRender(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle&) const
     {
         if (!m_texture || !m_texture->IsValid())
             return;
@@ -51,10 +70,11 @@ namespace KibakoEngine {
         if (m_snapToPixel)
             dst = SnapRect(dst);
         const RectF src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
-        batch.Push(*m_texture, dst, src, m_color, 0.0f, m_layer);
+        const Color4 color = m_tint.value_or(m_color);
+        batch.Push(*m_texture, dst, src, color, 0.0f, m_layer);
     }
 
-    void UIPanel::OnRender(SpriteBatch2D& batch, const UIContext& ctx) const
+    void UIPanel::OnRender(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle&) const
     {
         RectF dst = WorldRect(ctx);
         if (m_snapToPixel)
@@ -62,7 +82,7 @@ namespace KibakoEngine {
         const RectF src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
         const Texture2D* white = batch.DefaultWhiteTexture();
         if (white)
-            batch.Push(*white, dst, src, m_color, 0.0f, m_layer);
+            batch.Push(*white, dst, src, m_tint.value_or(m_color), 0.0f, m_layer);
     }
 
     UIButton::UIButton(std::string name)
@@ -155,24 +175,27 @@ namespace KibakoEngine {
 
     }
 
-    void UIButton::OnRender(SpriteBatch2D& batch, const UIContext& ctx) const
+    void UIButton::OnRender(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle& style) const
     {
         const RectF dst = WorldRect(ctx);
         const RectF snappedDst = m_snapToPixel ? SnapRect(dst) : dst;
         const RectF src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
         const Texture2D* white = batch.DefaultWhiteTexture();
         if (white)
-            batch.Push(*white, snappedDst, src, CurrentColor(), 0.0f, m_layer);
+            batch.Push(*white, snappedDst, src, m_tint.value_or(CurrentColor()), 0.0f, m_layer);
 
-        if (m_font && !m_text.empty()) {
+        const Font* font = m_font ? m_font : style.font;
+        if (font && !m_text.empty()) {
             DirectX::XMFLOAT2 textPos = TextPosition(ctx);
             if (m_snapToPixel) {
                 textPos.x = SnapToPixel(textPos.x);
                 textPos.y = SnapToPixel(textPos.y);
             }
 
-            TextRenderer::DrawText(batch, *m_font, m_text, textPos,
-                TextRenderer::TextRenderSettings{ m_textColor, m_textScale, m_snapToPixel });
+            const Color4 finalText = m_tint.value_or(m_textColor);
+
+            TextRenderer::DrawText(batch, *font, m_text, textPos,
+                TextRenderer::TextRenderSettings{ finalText, m_textScale, m_snapToPixel, m_layer + 1 });
         }
 
     }
@@ -215,6 +238,7 @@ namespace KibakoEngine {
     void UIStyle::ApplyPanel(UIPanel& panel) const
     {
         panel.SetColor(panelColor);
+        panel.SetLayer(9500);
     }
 
     void UIStyle::ApplyButton(UIButton& button) const

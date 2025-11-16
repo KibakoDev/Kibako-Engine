@@ -11,6 +11,7 @@
 #include <DirectXMath.h>
 #include <SDL2/SDL_scancode.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 
@@ -339,91 +340,94 @@ void GameLayer::BuildUI()
     if (!m_uiFont)
         return;
 
-    // -------- Global monochrome style --------
-    UIStyle style{};
+    auto& style = m_uiSystem.Style();
     style.font = m_uiFont;
     style.headingColor = Color4::White();
     style.primaryTextColor = Color4::White();
-    style.mutedTextColor = Color4{ 0.55f, 0.55f, 0.55f, 1.0f };
-    style.headingScale = 0.90f;
-    style.bodyScale = 0.85f;
-    style.captionScale = 0.70f;
+    style.mutedTextColor = Color4{ 0.65f, 0.65f, 0.65f, 1.0f };
+    style.panelColor = Color4{ 0.05f, 0.05f, 0.05f, 0.9f };
+    style.headingScale = 0.92f;
+    style.bodyScale = 0.86f;
+    style.captionScale = 0.72f;
 
-    // ===================================================
-    // HUD TOP-LEFT (texte uniquement)
-    // ===================================================
-    auto hud = std::make_unique<UIScreen>();
-    auto& hudRoot = hud->Root();
+    const float bodyHeight = TextRenderer::MeasureText(*style.font, "S", style.bodyScale).lineHeight;
+    const float captionHeight = TextRenderer::MeasureText(*style.font, "S", style.captionScale).lineHeight;
+    const float headingHeight = TextRenderer::MeasureText(*style.font, "S", style.headingScale).lineHeight;
+    const float lineSpacing = 6.0f;
 
-    auto& title = hudRoot.EmplaceChild<UILabel>("HUD.Title");
-    style.ApplyHeading(title);
-    title.SetPosition({ 16.0f, 16.0f });
-    title.SetText("KIBAKO SANDBOX");
+    // HUD container anchored to the top-left with simple vertical stacking.
+    UIScreen& hud = m_uiSystem.CreateScreen("HUD");
+    auto& hudRoot = hud.Root();
 
-    auto& timeLabel = hudRoot.EmplaceChild<UILabel>("HUD.Time");
-    style.ApplyBody(timeLabel);
-    timeLabel.SetPosition({ 16.0f, 40.0f });
-    timeLabel.SetText("TIME  0.00 s");
+    auto& hudGroup = hudRoot.EmplaceChild<UIElement>("HUD.Group");
+    hudGroup.SetPosition({ 16.0f, 16.0f });
 
-    auto& stateLabel = hudRoot.EmplaceChild<UILabel>("HUD.State");
-    style.ApplyBody(stateLabel);
-    stateLabel.SetPosition({ 16.0f, 62.0f });
-    stateLabel.SetText("COLLISION  IDLE");
+    float hudY = 0.0f;
+    auto makeHudLabel = [&](const char* name, float height, auto styler, const char* text) -> UILabel& {
+        auto& lbl = hudGroup.EmplaceChild<UILabel>(name);
+        styler(lbl);
+        lbl.SetPosition({ 0.0f, hudY });
+        lbl.SetText(text);
+        hudY += height + lineSpacing;
+        return lbl;
+    };
 
-    auto& entitiesLabel = hudRoot.EmplaceChild<UILabel>("HUD.Entities");
-    style.ApplyBody(entitiesLabel);
-    entitiesLabel.SetPosition({ 16.0f, 84.0f });
-    entitiesLabel.SetText("ENTITIES  0");
+    m_titleLabel = &makeHudLabel("HUD.Title", headingHeight, [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "KIBAKO SANDBOX");
+    m_timeLabel = &makeHudLabel("HUD.Time", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "TIME  0.00 s");
+    m_stateLabel = &makeHudLabel("HUD.State", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "COLLISION  IDLE");
+    m_entitiesLabel = &makeHudLabel("HUD.Entities", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "ENTITIES  0");
 
-    auto& hintLabel = hudRoot.EmplaceChild<UILabel>("HUD.Hint");
-    style.ApplyCaption(hintLabel);
-    hintLabel.SetPosition({ 16.0f, 108.0f });
-    hintLabel.SetColor(style.mutedTextColor);
-    hintLabel.SetText("F1  collision overlay    ·    F3  command palette");
+    // Small gap before the hint.
+    hudY += 2.0f;
+    m_hintLabel = &makeHudLabel("HUD.Hint", captionHeight, [&](UILabel& lbl) { style.ApplyCaption(lbl); },
+        "F1  collision overlay    ·    F3  command palette");
 
-    m_titleLabel = &title;
-    m_timeLabel = &timeLabel;
-    m_stateLabel = &stateLabel;
-    m_entitiesLabel = &entitiesLabel;
-    m_hintLabel = &hintLabel;
-    m_hudScreen = hud.get();
+    m_hudScreen = &hud;
 
-    m_uiSystem.PushScreen(std::move(hud));
+    // Centered command palette with a solid panel and centered labels.
+    UIScreen& menu = m_uiSystem.CreateScreen("Menu");
+    auto& menuRoot = menu.Root();
 
-    // ===================================================
-    // CENTER COMMAND PALETTE (TEXTE UNIQUEMENT, PAS DE PANEL)
-    // ===================================================
-    auto menu = std::make_unique<UIScreen>();
-    auto& root = menu->Root();
+    const float paddingX = 32.0f;
+    const float paddingY = 28.0f;
+    const float bodySpacing = 8.0f;
 
-    // On calcule un centre approximatif à partir de la fenêtre actuelle
-    const float cx = 0.5f * static_cast<float>(m_app.Width());
-    const float cy = 0.5f * static_cast<float>(m_app.Height());
-    const float lineH = 24.0f;
-    const float left = cx - 180.0f;    // léger offset vers la gauche
+    const float headingW = TextRenderer::MeasureText(*style.font, "COMMANDS", style.headingScale).size.x;
+    const float line1W = TextRenderer::MeasureText(*style.font, "F3  Resume sandbox", style.bodyScale).size.x;
+    const float line2W = TextRenderer::MeasureText(*style.font, "F1  Toggle collision overlay", style.bodyScale).size.x;
+    const float line3W = TextRenderer::MeasureText(*style.font, "ESC  Exit sandbox", style.bodyScale).size.x;
+    const float maxLineW = std::max({ headingW, line1W, line2W, line3W });
 
-    auto& menuTitle = root.EmplaceChild<UILabel>("Menu.Title");
-    style.ApplyHeading(menuTitle);
-    menuTitle.SetPosition({ left, cy - lineH * 2.0f });
-    menuTitle.SetText("COMMANDS");
+    const float panelWidth = maxLineW + paddingX * 2.0f;
+    const float panelHeight = headingHeight + (bodyHeight * 3.0f) + paddingY * 2.0f + bodySpacing * 2.0f;
 
-    auto& line1 = root.EmplaceChild<UILabel>("Menu.Line1");
-    style.ApplyBody(line1);
-    line1.SetPosition({ left, cy - lineH * 0.5f });
-    line1.SetText("F3  Resume sandbox");
+    auto& panel = menuRoot.EmplaceChild<UIPanel>("Menu.Panel");
+    style.ApplyPanel(panel);
+    panel.SetAnchor(UIAnchor::Center);
+    panel.SetSize({ panelWidth, panelHeight });
 
-    auto& line2 = root.EmplaceChild<UILabel>("Menu.Line2");
-    style.ApplyBody(line2);
-    line2.SetPosition({ left, cy + lineH * 0.5f });
-    line2.SetText("F1  Toggle collision overlay");
+    auto& content = panel.EmplaceChild<UIElement>("Menu.Content");
+    content.SetAnchor(UIAnchor::Center);
+    content.SetSize(panel.Size());
 
-    auto& line3 = root.EmplaceChild<UILabel>("Menu.Line3");
-    style.ApplyBody(line3);
-    line3.SetPosition({ left, cy + lineH * 1.5f });
-    line3.SetText("ESC  Exit sandbox");
+    float yOffset = -0.5f * panelHeight + paddingY;
+    auto makeCenteredLabel = [&](const char* name, float height, auto styler, const char* text) {
+        auto& lbl = content.EmplaceChild<UILabel>(name);
+        styler(lbl);
+        lbl.SetAnchor(UIAnchor::Center);
+        lbl.SetPosition({ 0.0f, yOffset });
+        lbl.SetText(text);
+        yOffset += height + bodySpacing;
+        return &lbl;
+    };
 
-    m_menuScreen = menu.get();
-    m_uiSystem.PushScreen(std::move(menu));
+    makeCenteredLabel("Menu.Title", headingHeight, [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "COMMANDS");
+    makeCenteredLabel("Menu.Line1", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "F3  Resume sandbox");
+    makeCenteredLabel("Menu.Line2", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "F1  Toggle collision overlay");
+    makeCenteredLabel("Menu.Line3", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "ESC  Exit sandbox");
+
+    menu.SetVisible(false);
+    m_menuScreen = &menu;
 }
 
 void GameLayer::UpdateUI(float dt)
