@@ -1,4 +1,4 @@
-// GameLayer.h - Sandbox layer for Kibako 2D Engine (black & white demo)
+// GameLayer.h - Minimal black & white sandbox layer for Kibako 2D Engine
 #pragma once
 
 #include <cstdint>
@@ -37,10 +37,9 @@ private:
     KibakoEngine::Application& m_app;
 
     // Gameplay / scene
-    KibakoEngine::Scene2D m_scene;
-    std::uint32_t m_entityCenter = 0;
-    std::uint32_t m_entityRight = 0;
-
+    KibakoEngine::Scene2D      m_scene;
+    std::uint32_t              m_entityCenter = 0;
+    std::uint32_t              m_entityRight = 0;
     KibakoEngine::CircleCollider2D m_centerCollider{};
     KibakoEngine::CircleCollider2D m_rightCollider{};
 
@@ -48,18 +47,14 @@ private:
     const KibakoEngine::Font* m_uiFont = nullptr;
 
     // UI system
-    KibakoEngine::UISystem  m_uiSystem;
+    KibakoEngine::UISystem   m_uiSystem;
+    KibakoEngine::UILabel* m_titleLabel = nullptr;
     KibakoEngine::UILabel* m_timeLabel = nullptr;
+    KibakoEngine::UILabel* m_stateLabel = nullptr;
     KibakoEngine::UILabel* m_entitiesLabel = nullptr;
     KibakoEngine::UILabel* m_hintLabel = nullptr;
-    KibakoEngine::UILabel* m_statusLabel = nullptr;
-    KibakoEngine::UILabel* m_collisionLabel = nullptr;
     KibakoEngine::UIScreen* m_hudScreen = nullptr;
     KibakoEngine::UIScreen* m_menuScreen = nullptr;
-
-    KibakoEngine::Color4 m_accentColor{ 0.05f, 0.05f, 0.05f, 1.0f };
-    KibakoEngine::Color4 m_warningColor{ 0.20f, 0.20f, 0.20f, 1.0f };
-    KibakoEngine::Color4 m_mutedColor{ 0.50f, 0.50f, 0.50f, 1.0f };
 
     bool  m_menuVisible = false;
     bool  m_showCollisionDebug = false;
