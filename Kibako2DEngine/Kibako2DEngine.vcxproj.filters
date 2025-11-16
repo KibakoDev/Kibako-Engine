@@ -110,6 +110,9 @@
     <ClInclude Include="include\KibakoEngine\UI\UIControls.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\KibakoEngine\UI\UIStyle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp">

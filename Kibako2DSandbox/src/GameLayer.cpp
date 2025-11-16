@@ -112,9 +112,9 @@ void GameLayer::OnAttach()
     }
 
     // UI font
-    m_uiFont = assets.LoadFontTTF("ui.default", "assets/fonts/RobotoMono-Regular.ttf", 32);
+    m_uiFont = assets.LoadFontTTF("ui.default", "assets/fonts/dogica.ttf", 32);
     if (!m_uiFont)
-        KbkWarn(kLogChannel, "Failed to load font: assets/fonts/RobotoMono-Regular.ttf");
+        KbkWarn(kLogChannel, "Failed to load font: assets/fonts/dogica.ttf");
 
     // ---------- Scene setup (3 stars, B&W) ----------
     const float texW = static_cast<float>(m_starTexture->Width());
@@ -139,30 +139,20 @@ void GameLayer::OnAttach()
             e.sprite.layer = layer;
         };
 
-    // Left star – light grey
+    // Left star – white, with circle collider
     {
         Entity2D& e = m_scene.CreateEntity();
-        configureSprite(e,
-            { 80.0f, 140.0f },
-            { 1.0f, 1.0f },
-            Color4{ 0.7f, 0.7f, 0.7f, 1.0f },
-            -1);
-    }
-
-    // Center star – white, with circle collider
-    {
-        Entity2D& e = m_scene.CreateEntity();
-        m_entityCenter = e.id;
+        m_entityLeft = e.id;
 
         configureSprite(e,
-            { 220.0f, 150.0f },
+            { 530.0f, 350.0f },
             { 1.2f, 1.2f },
             Color4::White(),
             0);
 
-        m_centerCollider.radius = 0.5f * texW * e.transform.scale.x;
-        m_centerCollider.active = true;
-        e.collision.circle = &m_centerCollider;
+        m_leftCollider.radius = 0.5f * texW * e.transform.scale.x;
+        m_leftCollider.active = true;
+        e.collision.circle = &m_leftCollider;
     }
 
     // Right star – mid grey, with circle collider
@@ -171,7 +161,7 @@ void GameLayer::OnAttach()
         m_entityRight = e.id;
 
         configureSprite(e,
-            { 360.0f, 160.0f },
+            { 700.0f, 350.0f },
             { 1.0f, 1.0f },
             Color4{ 0.55f, 0.55f, 0.55f, 1.0f },
             1);
@@ -205,10 +195,10 @@ void GameLayer::OnDetach()
 
     m_scene.Clear();
 
-    m_entityCenter = 0;
+    m_entityLeft = 0;
     m_entityRight = 0;
 
-    m_centerCollider = {};
+    m_leftCollider = {};
     m_rightCollider = {};
 
     m_showCollisionDebug = false;
@@ -279,17 +269,12 @@ void GameLayer::UpdateScene(float dt)
 {
     m_time += dt;
 
-    const float bobbing = std::sin(m_time * 2.0f) * 32.0f;
-    const float sway = std::sin(m_time * 0.25f) * 260.0f;
-
-    Entity2D* center = m_scene.FindEntity(m_entityCenter);
+    Entity2D* left = m_scene.FindEntity(m_entityLeft);
     Entity2D* right = m_scene.FindEntity(m_entityRight);
 
-    // Center star – movement + rotation
-    if (center) {
-        center->transform.position.x = 220.0f + sway;
-        center->transform.position.y = 150.0f + bobbing;
-        center->transform.rotation = m_time * 0.7f;
+    // Left star – movement + rotation
+    if (left) {
+        left->transform.rotation = m_time * 0.7f;
     }
 
     // Right star – counter rotation
@@ -298,16 +283,16 @@ void GameLayer::UpdateScene(float dt)
     }
 
     bool hit = false;
-    if (center && right &&
-        center->collision.circle && right->collision.circle) {
+    if (left && right &&
+        left->collision.circle && right->collision.circle) {
 
-        hit = Intersects(*center->collision.circle, center->transform,
+        hit = Intersects(*left->collision.circle, left->transform,
             *right->collision.circle, right->transform);
     }
 
     // Monochrome visual feedback
-    if (center) {
-        center->sprite.color = hit
+    if (left) {
+        left->sprite.color = hit
             ? Color4::White()
             : Color4{ 0.9f, 0.9f, 0.9f, 1.0f };
     }
@@ -346,9 +331,9 @@ void GameLayer::BuildUI()
     style.primaryTextColor = Color4::White();
     style.mutedTextColor = Color4{ 0.65f, 0.65f, 0.65f, 1.0f };
     style.panelColor = Color4{ 0.05f, 0.05f, 0.05f, 0.9f };
-    style.headingScale = 0.92f;
-    style.bodyScale = 0.86f;
-    style.captionScale = 0.72f;
+    style.headingScale = 0.5f;
+    style.bodyScale = 0.35f;
+    style.captionScale = 0.35f;
 
     const float bodyHeight = TextRenderer::MeasureText(*style.font, "S", style.bodyScale).lineHeight;
     const float captionHeight = TextRenderer::MeasureText(*style.font, "S", style.captionScale).lineHeight;
@@ -372,7 +357,7 @@ void GameLayer::BuildUI()
         return lbl;
     };
 
-    m_titleLabel = &makeHudLabel("HUD.Title", headingHeight, [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "KIBAKO SANDBOX");
+    m_titleLabel = &makeHudLabel("HUD.Title", headingHeight+10, [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "KIBAKO SANDBOX");
     m_timeLabel = &makeHudLabel("HUD.Time", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "TIME  0.00 s");
     m_stateLabel = &makeHudLabel("HUD.State", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "COLLISION  IDLE");
     m_entitiesLabel = &makeHudLabel("HUD.Entities", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "ENTITIES  0");
