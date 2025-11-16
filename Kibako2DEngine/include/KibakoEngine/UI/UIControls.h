@@ -30,7 +30,7 @@ namespace KibakoEngine {
 
         [[nodiscard]] const std::string& Text() const { return m_text; }
 
-        void Render(SpriteBatch2D& batch, const UIContext& ctx) const override;
+        void OnRender(SpriteBatch2D& batch, const UIContext& ctx) const override;
 
     private:
         const Font* m_font = nullptr;
@@ -52,7 +52,7 @@ namespace KibakoEngine {
         void SetColor(const Color4& color) { m_color = color; }
         void SetPixelSnap(bool snap) { m_snapToPixel = snap; }
 
-        void Render(SpriteBatch2D& batch, const UIContext& ctx) const override;
+        void OnRender(SpriteBatch2D& batch, const UIContext& ctx) const override;
 
     private:
         const Texture2D* m_texture = nullptr;
@@ -71,7 +71,7 @@ namespace KibakoEngine {
         void SetColor(const Color4& color) { m_color = color; }
         void SetPixelSnap(bool snap) { m_snapToPixel = snap; }
 
-        void Render(SpriteBatch2D& batch, const UIContext& ctx) const override;
+        void OnRender(SpriteBatch2D& batch, const UIContext& ctx) const override;
 
     private:
         Color4 m_color = Color4{ 0.1f, 0.12f, 0.14f, 0.8f };
@@ -83,10 +83,10 @@ namespace KibakoEngine {
     public:
         explicit UIButton(std::string name = "Button");
 
-        void SetFont(const Font* font) { m_font = font; }
-        void SetText(std::string text) { m_text = std::move(text); }
+        void SetFont(const Font* font) { m_font = font; InvalidateTextMetrics(); }
+        void SetText(std::string text) { m_text = std::move(text); InvalidateTextMetrics(); }
         void SetPadding(const DirectX::XMFLOAT2& padding) { m_padding = padding; }
-        void SetTextScale(float scale) { m_textScale = scale; }
+        void SetTextScale(float scale) { m_textScale = scale; InvalidateTextMetrics(); }
         void SetTextColor(const Color4& color) { m_textColor = color; }
         void SetNormalColor(const Color4& color) { m_colorNormal = color; }
         void SetHoverColor(const Color4& color) { m_colorHover = color; }
@@ -96,14 +96,15 @@ namespace KibakoEngine {
         void SetPixelSnap(bool snap) { m_snapToPixel = snap; }
         void SetStyle(const UIStyle& style);
 
-        void Update(const UIContext& ctx) override;
-        void Render(SpriteBatch2D& batch, const UIContext& ctx) const override;
+        void OnUpdate(const UIContext& ctx) override;
+        void OnRender(SpriteBatch2D& batch, const UIContext& ctx) const override;
 
     private:
         [[nodiscard]] bool HitTest(const UIContext& ctx) const;
         [[nodiscard]] Color4 CurrentColor() const;
         [[nodiscard]] DirectX::XMFLOAT2 TextPosition(const UIContext& ctx) const;
         [[nodiscard]] DirectX::XMFLOAT2 MeasureText() const;
+        void InvalidateTextMetrics() { m_textDirty = true; }
 
         const Font* m_font = nullptr;
         std::string m_text;
@@ -120,6 +121,8 @@ namespace KibakoEngine {
         bool m_pressed = false;
         bool m_trackingPress = false;
         bool m_snapToPixel = true;
+        mutable bool m_textDirty = true;
+        mutable DirectX::XMFLOAT2 m_cachedTextSize{ 0.0f, 0.0f };
         std::function<void()> m_onClick;
     };
 

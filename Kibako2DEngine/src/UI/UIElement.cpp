@@ -3,7 +3,8 @@
 
 #include "KibakoEngine/Renderer/SpriteBatch2D.h"
 
-namespace {
+namespace
+{
     DirectX::XMFLOAT2 Add(const DirectX::XMFLOAT2& a, const DirectX::XMFLOAT2& b)
     {
         return DirectX::XMFLOAT2{ a.x + b.x, a.y + b.y };
@@ -23,6 +24,13 @@ namespace KibakoEngine {
             return m_parent->Size();
 
         return ctx.screenSize;
+    }
+
+    void UIElement::InvalidateLayout()
+    {
+        m_layoutDirty = true;
+        for (auto& child : m_children)
+            child->InvalidateLayout();
     }
 
     DirectX::XMFLOAT2 UIElement::AnchorOffset(const UIContext& ctx) const
@@ -51,27 +59,42 @@ namespace KibakoEngine {
         return offset;
     }
 
-    DirectX::XMFLOAT2 UIElement::WorldPosition(const UIContext& ctx) const
+    void UIElement::UpdateLayout(const UIContext& ctx) const
     {
+        if (!m_layoutDirty && m_cachedScreenSize.x == ctx.screenSize.x && m_cachedScreenSize.y == ctx.screenSize.y)
+            return;
+
         DirectX::XMFLOAT2 pos = AnchorOffset(ctx);
         pos = Add(pos, m_position);
 
         if (m_parent)
             pos = Add(pos, m_parent->WorldPosition(ctx));
 
-        return pos;
+        m_cachedWorldPosition = pos;
+        m_cachedWorldRect = RectF::FromXYWH(pos.x, pos.y, m_size.x, m_size.y);
+        m_cachedScreenSize = ctx.screenSize;
+        m_layoutDirty = false;
     }
 
-    RectF UIElement::WorldRect(const UIContext& ctx) const
+    const DirectX::XMFLOAT2& UIElement::WorldPosition(const UIContext& ctx) const
     {
-        const DirectX::XMFLOAT2 pos = WorldPosition(ctx);
-        return RectF::FromXYWH(pos.x, pos.y, m_size.x, m_size.y);
+        UpdateLayout(ctx);
+        return m_cachedWorldPosition;
+    }
+
+    const RectF& UIElement::WorldRect(const UIContext& ctx) const
+    {
+        UpdateLayout(ctx);
+        return m_cachedWorldRect;
     }
 
     void UIElement::Update(const UIContext& ctx)
     {
         if (!m_visible)
             return;
+
+        UpdateLayout(ctx);
+        OnUpdate(ctx);
 
         for (auto& child : m_children)
             child->Update(ctx);
@@ -81,6 +104,9 @@ namespace KibakoEngine {
     {
         if (!m_visible)
             return;
+
+        UpdateLayout(ctx);
+        OnRender(batch, ctx);
 
         for (const auto& child : m_children)
             child->Render(batch, ctx);
@@ -92,6 +118,7 @@ namespace KibakoEngine {
             return;
 
         child->m_parent = this;
+        child->InvalidateLayout();
         m_children.push_back(std::move(child));
     }
 
