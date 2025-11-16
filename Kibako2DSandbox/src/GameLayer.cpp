@@ -138,7 +138,7 @@ void GameLayer::OnAttach()
             e.sprite.layer = layer;
         };
 
-    // Left star – light grey
+    // Left star â€“ light grey
     {
         Entity2D& e = m_scene.CreateEntity();
         configureSprite(e,
@@ -148,7 +148,7 @@ void GameLayer::OnAttach()
             -1);
     }
 
-    // Center star – white, with circle collider
+    // Center star â€“ white, with circle collider
     {
         Entity2D& e = m_scene.CreateEntity();
         m_entityCenter = e.id;
@@ -164,7 +164,7 @@ void GameLayer::OnAttach()
         e.collision.circle = &m_centerCollider;
     }
 
-    // Right star – mid grey, with circle collider
+    // Right star â€“ mid grey, with circle collider
     {
         Entity2D& e = m_scene.CreateEntity();
         m_entityRight = e.id;
@@ -219,6 +219,8 @@ void GameLayer::OnDetach()
     m_timeLabel = nullptr;
     m_entitiesLabel = nullptr;
     m_hintLabel = nullptr;
+    m_statusLabel = nullptr;
+    m_collisionLabel = nullptr;
     m_hudScreen = nullptr;
     m_menuScreen = nullptr;
 
@@ -282,14 +284,14 @@ void GameLayer::UpdateScene(float dt)
     Entity2D* center = m_scene.FindEntity(m_entityCenter);
     Entity2D* right = m_scene.FindEntity(m_entityRight);
 
-    // Center star – movement + rotation
+    // Center star â€“ movement + rotation
     if (center) {
         center->transform.position.x = 220.0f + sway;
         center->transform.position.y = 150.0f + bobbing;
         center->transform.rotation = m_time * 0.7f;
     }
 
-    // Right star – counter rotation
+    // Right star â€“ counter rotation
     if (right) {
         right->transform.rotation = -m_time * 0.5f;
     }
@@ -327,11 +329,14 @@ void GameLayer::UpdateScene(float dt)
 // UI setup / update
 // --------------------------------------------------------
 
+
 void GameLayer::BuildUI()
 {
     m_timeLabel = nullptr;
     m_entitiesLabel = nullptr;
     m_hintLabel = nullptr;
+    m_statusLabel = nullptr;
+    m_collisionLabel = nullptr;
     m_hudScreen = nullptr;
     m_menuScreen = nullptr;
     m_uiSystem.Clear();
@@ -339,49 +344,79 @@ void GameLayer::BuildUI()
     if (!m_uiFont)
         return;
 
-    // ---- Global monochrome style ----
+    // Polished dark style with a bright accent
+    m_accentColor = Color4{ 0.32f, 0.86f, 0.78f, 1.0f };
+    m_warningColor = Color4{ 0.95f, 0.58f, 0.46f, 1.0f };
+    m_mutedColor = Color4{ 0.72f, 0.78f, 0.86f, 1.0f };
+
     UIStyle style{};
     style.font = m_uiFont;
-    style.headingColor = Color4::White();
-    style.primaryTextColor = Color4::White();
-    style.mutedTextColor = Color4{ 0.6f, 0.6f, 0.6f, 1.0f };
-    style.panelColor = Color4{ 0.05f, 0.05f, 0.05f, 0.96f };
-    style.buttonNormal = Color4{ 0.10f, 0.10f, 0.10f, 1.0f };
-    style.buttonHover = Color4{ 0.25f, 0.25f, 0.25f, 1.0f };
-    style.buttonPressed = Color4{ 0.40f, 0.40f, 0.40f, 1.0f };
-    style.buttonSize = DirectX::XMFLOAT2{ 320.0f, 40.0f };
-    style.buttonPadding = DirectX::XMFLOAT2{ 18.0f, 8.0f };
-    style.headingScale = 0.95f;
-    style.bodyScale = 0.90f;
-    style.captionScale = 0.75f;
-    style.buttonTextScale = 0.90f;
+    style.headingColor = m_accentColor;
+    style.primaryTextColor = Color4{ 0.92f, 0.95f, 1.0f, 1.0f };
+    style.mutedTextColor = m_mutedColor;
+    style.panelColor = Color4{ 0.05f, 0.07f, 0.10f, 0.94f };
+    style.buttonNormal = Color4{ 0.12f, 0.14f, 0.18f, 0.95f };
+    style.buttonHover = Color4{ 0.20f, 0.23f, 0.28f, 0.98f };
+    style.buttonPressed = Color4{ 0.26f, 0.28f, 0.34f, 1.0f };
+    style.buttonSize = DirectX::XMFLOAT2{ 360.0f, 48.0f };
+    style.buttonPadding = DirectX::XMFLOAT2{ 18.0f, 12.0f };
+    style.headingScale = 1.05f;
+    style.bodyScale = 0.92f;
+    style.captionScale = 0.78f;
+    style.buttonTextScale = 0.96f;
 
-    // ---------- HUD (top-left) ----------
+    // ---------- HUD (top-left card) ----------
     auto hud = std::make_unique<UIScreen>();
     auto& hudRoot = hud->Root();
 
-    // TIME
-    auto& timeLabel = hudRoot.EmplaceChild<UILabel>("HUD.Time");
+    auto& hudCard = hudRoot.EmplaceChild<UIPanel>("HUD.Card");
+    hudCard.SetPosition({ 18.0f, 18.0f });
+    hudCard.SetSize({ 440.0f, 178.0f });
+    hudCard.SetColor(Color4{ 0.04f, 0.05f, 0.08f, 0.90f });
+
+    auto& hudTitle = hudCard.EmplaceChild<UILabel>("HUD.Title");
+    style.ApplyHeading(hudTitle);
+    hudTitle.SetPosition({ 20.0f, 18.0f });
+    hudTitle.SetScale(1.02f);
+    hudTitle.SetText("KIBAKO SANDBOX");
+
+    auto& hudSubtitle = hudCard.EmplaceChild<UILabel>("HUD.Subtitle");
+    style.ApplyCaption(hudSubtitle);
+    hudSubtitle.SetPosition({ 20.0f, 44.0f });
+    hudSubtitle.SetColor(style.mutedTextColor);
+    hudSubtitle.SetText("Polished playground for collisions and motion");
+
+    auto& statusLabel = hudCard.EmplaceChild<UILabel>("HUD.Status");
+    style.ApplyCaption(statusLabel);
+    statusLabel.SetPosition({ 20.0f, 70.0f });
+    statusLabel.SetColor(m_accentColor);
+    statusLabel.SetText("RUNNING â€¢ realtime simulation");
+
+    auto& timeLabel = hudCard.EmplaceChild<UILabel>("HUD.Time");
     style.ApplyBody(timeLabel);
-    timeLabel.SetPosition({ 16.0f, 12.0f });
-    timeLabel.SetColor(style.primaryTextColor);
-    timeLabel.SetText("TIME  0.00 s");
+    timeLabel.SetPosition({ 20.0f, 96.0f });
+    timeLabel.SetText("Time  0.00 s");
 
-    // ENTITIES
-    auto& entitiesLabel = hudRoot.EmplaceChild<UILabel>("HUD.Entities");
+    auto& collisionLabel = hudCard.EmplaceChild<UILabel>("HUD.Collision");
+    style.ApplyBody(collisionLabel);
+    collisionLabel.SetPosition({ 232.0f, 96.0f });
+    collisionLabel.SetColor(style.mutedTextColor);
+    collisionLabel.SetText("Collisions  none");
+
+    auto& entitiesLabel = hudCard.EmplaceChild<UILabel>("HUD.Entities");
     style.ApplyBody(entitiesLabel);
-    entitiesLabel.SetPosition({ 16.0f, 36.0f });
-    entitiesLabel.SetColor(style.primaryTextColor);
-    entitiesLabel.SetText("ENTITIES  0");
+    entitiesLabel.SetPosition({ 20.0f, 122.0f });
+    entitiesLabel.SetText("Entities  0");
 
-    // HINT
-    auto& hintLabel = hudRoot.EmplaceChild<UILabel>("HUD.Hint");
+    auto& hintLabel = hudCard.EmplaceChild<UILabel>("HUD.Hint");
     style.ApplyCaption(hintLabel);
-    hintLabel.SetPosition({ 16.0f, 62.0f });
+    hintLabel.SetPosition({ 20.0f, 148.0f });
     hintLabel.SetColor(style.mutedTextColor);
-    hintLabel.SetText("F1  collision debug    |    F3  sandbox menu");
+    hintLabel.SetText("F1 â€¢ Collision overlay      F3 â€¢ Command deck");
 
+    m_statusLabel = &statusLabel;
     m_timeLabel = &timeLabel;
+    m_collisionLabel = &collisionLabel;
     m_entitiesLabel = &entitiesLabel;
     m_hintLabel = &hintLabel;
     m_hudScreen = hud.get();
@@ -393,39 +428,57 @@ void GameLayer::BuildUI()
     auto& root = menu->Root();
 
     auto& panel = root.EmplaceChild<UIPanel>("Menu.Panel");
-    panel.SetSize({ 420.0f, 210.0f });
+    panel.SetSize({ 520.0f, 340.0f });
     panel.SetAnchor(UIAnchor::Center);
-    panel.SetColor(style.panelColor);
+    panel.SetColor(Color4{ 0.05f, 0.07f, 0.11f, 0.96f });
 
-    const float left = 24.0f;
+    auto& hero = panel.EmplaceChild<UIPanel>("Menu.Hero");
+    hero.SetSize({ 520.0f, 96.0f });
+    hero.SetColor(Color4{ m_accentColor.r, m_accentColor.g, m_accentColor.b, 0.18f });
 
-    // Title
-    auto& title = panel.EmplaceChild<UILabel>("Menu.Title");
+    auto& title = hero.EmplaceChild<UILabel>("Menu.Title");
     style.ApplyHeading(title);
-    title.SetPosition({ left, 22.0f });
-    title.SetText("KIBAKO SANDBOX");
-    title.SetScale(0.95f);
+    title.SetPosition({ 26.0f, 16.0f });
+    title.SetColor(Color4::White());
+    title.SetText("Sandbox command deck");
 
-    // Subtitle
-    auto& subtitle = panel.EmplaceChild<UILabel>("Menu.Subtitle");
+    auto& subtitle = hero.EmplaceChild<UILabel>("Menu.Subtitle");
     style.ApplyCaption(subtitle);
-    subtitle.SetPosition({ left, 48.0f });
-    subtitle.SetText("ENGINE  ·  BLACK & WHITE DEMO");
+    subtitle.SetPosition({ 26.0f, 48.0f });
+    subtitle.SetColor(Color4{ 0.90f, 0.94f, 1.0f, 1.0f });
+    subtitle.SetText("Clean controls for a professional demo feel");
 
-    // Resume button
+    auto& description = panel.EmplaceChild<UILabel>("Menu.Description");
+    style.ApplyBody(description);
+    description.SetPosition({ 26.0f, 116.0f });
+    description.SetText("Pause the sandbox, toggle overlays, and keep the session tidy.");
+
+    auto& notes = panel.EmplaceChild<UILabel>("Menu.Notes");
+    style.ApplyCaption(notes);
+    notes.SetPosition({ 26.0f, 140.0f });
+    notes.SetColor(style.mutedTextColor);
+    notes.SetText("This overlay keeps controls centered and legible on any resolution.");
+
     auto& resumeBtn = panel.EmplaceChild<UIButton>("Menu.Resume");
     resumeBtn.SetStyle(style);
-    resumeBtn.SetPosition({ left, 92.0f });
-    resumeBtn.SetText("Resume sandbox");
+    resumeBtn.SetPosition({ 26.0f, 188.0f });
+    resumeBtn.SetText("Resume simulation");
     resumeBtn.SetOnClick([this]() {
         m_menuVisible = false;
         });
 
-    // Quit button (placeholder)
+    auto& overlayBtn = panel.EmplaceChild<UIButton>("Menu.Overlay");
+    overlayBtn.SetStyle(style);
+    overlayBtn.SetPosition({ 26.0f, 240.0f });
+    overlayBtn.SetText("Toggle collision overlay");
+    overlayBtn.SetOnClick([this]() {
+        m_showCollisionDebug = !m_showCollisionDebug;
+        });
+
     auto& quitBtn = panel.EmplaceChild<UIButton>("Menu.Quit");
     quitBtn.SetStyle(style);
-    quitBtn.SetPosition({ left, 142.0f });
-    quitBtn.SetText("Quit sandbox (log only)");
+    quitBtn.SetPosition({ 26.0f, 292.0f });
+    quitBtn.SetText("Exit sandbox (log only)");
     quitBtn.SetOnClick([]() {
         KbkLog(kLogChannel, "Quit Sandbox clicked (hook your exit logic here)");
         });
@@ -444,7 +497,7 @@ void GameLayer::UpdateUI(float dt)
     // TIME label
     if (m_timeLabel) {
         char buf[64]{};
-        std::snprintf(buf, sizeof(buf), "TIME  %.2f s", m_time);
+        std::snprintf(buf, sizeof(buf), "Time   %.2f s", m_time);
         m_timeLabel->SetText(buf);
     }
 
@@ -452,12 +505,24 @@ void GameLayer::UpdateUI(float dt)
     if (m_entitiesLabel) {
         char buf[64]{};
         const auto count = m_scene.Entities().size();
-        std::snprintf(buf, sizeof(buf), "ENTITIES  %zu",
+        std::snprintf(buf, sizeof(buf), "Entities   %zu",
             static_cast<std::size_t>(count));
         m_entitiesLabel->SetText(buf);
     }
 
-    // Hint visible seulement hors menu
+    if (m_collisionLabel) {
+        const char* state = m_lastCollision ? "Collisions   active" : "Collisions   none";
+        m_collisionLabel->SetText(state);
+        m_collisionLabel->SetColor(m_lastCollision ? m_warningColor : m_mutedColor);
+    }
+
+    if (m_statusLabel) {
+        m_statusLabel->SetText(m_menuVisible
+            ? "PAUSED â€¢ command deck open"
+            : "RUNNING â€¢ realtime simulation");
+        m_statusLabel->SetColor(m_menuVisible ? m_warningColor : m_accentColor);
+    }
+
     if (m_hintLabel)
         m_hintLabel->SetVisible(!m_menuVisible);
 

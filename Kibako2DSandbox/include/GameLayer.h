@@ -52,8 +52,14 @@ private:
     KibakoEngine::UILabel* m_timeLabel = nullptr;
     KibakoEngine::UILabel* m_entitiesLabel = nullptr;
     KibakoEngine::UILabel* m_hintLabel = nullptr;
+    KibakoEngine::UILabel* m_statusLabel = nullptr;
+    KibakoEngine::UILabel* m_collisionLabel = nullptr;
     KibakoEngine::UIScreen* m_hudScreen = nullptr;
     KibakoEngine::UIScreen* m_menuScreen = nullptr;
+
+    KibakoEngine::Color4 m_accentColor{ 0.32f, 0.86f, 0.78f, 1.0f };
+    KibakoEngine::Color4 m_warningColor{ 0.95f, 0.58f, 0.46f, 1.0f };
+    KibakoEngine::Color4 m_mutedColor{ 0.72f, 0.78f, 0.86f, 1.0f };
 
     bool  m_menuVisible = false;
     bool  m_showCollisionDebug = false;
