@@ -13,6 +13,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <memory>
 
 #if KBK_DEBUG_BUILD
 #    include "imgui.h"
@@ -107,6 +108,10 @@ void GameLayer::OnAttach()
         KbkWarn(kLogChannel, "Failed to load font: assets/fonts/RobotoMono-Regular.ttf");
     }
 
+    m_uiSystem.SetInput(&m_app.InputSys());
+    m_uiSystem.SetScreenSize(static_cast<float>(m_app.Width()), static_cast<float>(m_app.Height()));
+    BuildUI();
+
     const float width = static_cast<float>(m_starTexture->Width());
     const float height = static_cast<float>(m_starTexture->Height());
     const KibakoEngine::RectF spriteRect = KibakoEngine::RectF::FromXYWH(0.0f, 0.0f, width, height);
@@ -182,6 +187,12 @@ void GameLayer::OnDetach()
 
     m_starTexture = nullptr;
     m_uiFont = nullptr;
+    m_scoreLabel = nullptr;
+    m_hintLabel = nullptr;
+    m_hudScreen = nullptr;
+    m_menuScreen = nullptr;
+    m_uiSystem.Clear();
+    m_menuVisible = true;
     m_scene.Clear();
 
     m_entityCenter = 0;
@@ -209,6 +220,10 @@ void GameLayer::OnUpdate(float dt)
             m_showCollisionDebug = !m_showCollisionDebug;
             KbkTrace(kLogChannel, "Collision debug %s", m_showCollisionDebug ? "ON" : "OFF");
         #endif
+    }
+
+    if (input.KeyPressed(SDL_SCANCODE_ESCAPE)) {
+        m_menuVisible = !m_menuVisible;
     }
 
     m_time += dt;
@@ -255,6 +270,8 @@ void GameLayer::OnUpdate(float dt)
     m_lastCollision = hit;
 
     m_scene.Update(dt);
+
+    UpdateUI(dt);
 }
 
 void GameLayer::OnRender(KibakoEngine::SpriteBatch2D& batch)
@@ -300,13 +317,96 @@ void GameLayer::OnRender(KibakoEngine::SpriteBatch2D& batch)
         }
     }
 
-    if (m_uiFont) {
-        const KibakoEngine::Color4 textColor{ 1.0f, 0.95f, 0.4f, 1.0f };
-        KibakoEngine::TextRenderer::DrawText(batch,
-            *m_uiFont,
-            "KIBAKO ENGINE",
-            { 18.0f, 18.0f },
-            textColor,
-            1.0f);
+    m_uiSystem.Render(batch);
+}
+
+void GameLayer::BuildUI()
+{
+    m_scoreLabel = nullptr;
+    m_hintLabel = nullptr;
+    m_hudScreen = nullptr;
+    m_menuScreen = nullptr;
+    m_uiSystem.Clear();
+
+    if (!m_uiFont)
+        return;
+
+    auto hud = std::make_unique<KibakoEngine::UIScreen>();
+    auto& hudRoot = hud->Root();
+
+    auto& scoreLabel = hudRoot.EmplaceChild<KibakoEngine::UILabel>("HUD.Score");
+    scoreLabel.SetFont(m_uiFont);
+    scoreLabel.SetPosition({ 20.0f, 20.0f });
+    scoreLabel.SetColor({ 1.0f, 0.95f, 0.4f, 1.0f });
+    scoreLabel.SetScale(0.9f);
+
+    auto& hintLabel = hudRoot.EmplaceChild<KibakoEngine::UILabel>("HUD.Hint");
+    hintLabel.SetFont(m_uiFont);
+    hintLabel.SetPosition({ 20.0f, 56.0f });
+    hintLabel.SetColor({ 0.8f, 0.9f, 1.0f, 1.0f });
+    hintLabel.SetScale(0.7f);
+    hintLabel.SetText("Press ESC to toggle menu");
+
+    m_scoreLabel = &scoreLabel;
+    m_hintLabel = &hintLabel;
+    m_hudScreen = hud.get();
+    m_uiSystem.PushScreen(std::move(hud));
+
+    auto menu = std::make_unique<KibakoEngine::UIScreen>();
+    auto& menuRoot = menu->Root();
+
+    auto& menuPanel = menuRoot.EmplaceChild<KibakoEngine::UIPanel>("Menu.Panel");
+    menuPanel.SetSize({ 420.0f, 260.0f });
+    menuPanel.SetAnchor(KibakoEngine::UIAnchor::Center);
+    menuPanel.SetColor({ 0.08f, 0.09f, 0.13f, 0.94f });
+
+    auto& titleLabel = menuPanel.EmplaceChild<KibakoEngine::UILabel>("Menu.Title");
+    titleLabel.SetFont(m_uiFont);
+    titleLabel.SetText("ASTRO VOID");
+    titleLabel.SetPosition({ 24.0f, 24.0f });
+    titleLabel.SetColor({ 1.0f, 0.96f, 0.65f, 1.0f });
+    titleLabel.SetScale(1.1f);
+
+    auto& playButton = menuPanel.EmplaceChild<KibakoEngine::UIButton>("Menu.Play");
+    playButton.SetFont(m_uiFont);
+    playButton.SetText("Play");
+    playButton.SetSize({ 360.0f, 48.0f });
+    playButton.SetPosition({ 30.0f, 100.0f });
+    playButton.SetOnClick([this]() {
+        m_menuVisible = false;
+    });
+
+    auto& quitButton = menuPanel.EmplaceChild<KibakoEngine::UIButton>("Menu.Quit");
+    quitButton.SetFont(m_uiFont);
+    quitButton.SetText("Quit");
+    quitButton.SetSize({ 360.0f, 48.0f });
+    quitButton.SetPosition({ 30.0f, 160.0f });
+    quitButton.SetOnClick([]() {
+        KbkLog(kLogChannel, "Quit clicked (hook your exit logic here)");
+    });
+
+    m_menuScreen = menu.get();
+    m_uiSystem.PushScreen(std::move(menu));
+}
+
+void GameLayer::UpdateUI(float dt)
+{
+    m_uiSystem.SetScreenSize(static_cast<float>(m_app.Width()), static_cast<float>(m_app.Height()));
+
+    if (m_scoreLabel) {
+        char buffer[64]{};
+        std::snprintf(buffer, sizeof(buffer), "Time: %.2f s", m_time);
+        m_scoreLabel->SetText(buffer);
     }
+
+    if (m_hintLabel)
+        m_hintLabel->SetVisible(!m_menuVisible);
+
+    if (m_hudScreen)
+        m_hudScreen->SetVisible(true);
+
+    if (m_menuScreen)
+        m_menuScreen->SetVisible(m_menuVisible);
+
+    m_uiSystem.Update(dt);
 }

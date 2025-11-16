@@ -40,6 +40,8 @@
     <ClInclude Include="include\KibakoEngine\Resources\AssetManager.h" />
     <ClInclude Include="include\KibakoEngine\Scene\Scene2D.h" />
     <ClInclude Include="include\KibakoEngine\Utils\Math.h" />
+    <ClInclude Include="include\KibakoEngine\UI\UIControls.h" />
+    <ClInclude Include="include\KibakoEngine\UI\UIElement.h" />
     <ClInclude Include="Ressources\AssetManager.h" />
     <ClInclude Include="third_party\imgui\backends\imgui_impl_dx11.h" />
     <ClInclude Include="third_party\imgui\backends\imgui_impl_sdl2.h" />
@@ -70,6 +72,8 @@
     <ClCompile Include="src\Renderer\SpriteBatch2D.cpp" />
     <ClCompile Include="src\Renderer\Texture2D.cpp" />
     <ClCompile Include="src\Resources\AssetManager.cpp" />
+    <ClCompile Include="src\UI\UIControls.cpp" />
+    <ClCompile Include="src\UI\UIElement.cpp" />
     <ClCompile Include="src\Scene\Scene2D.cpp" />
     <ClCompile Include="third_party\imgui\backends\imgui_impl_dx11.cpp" />
     <ClCompile Include="third_party\imgui\backends\imgui_impl_sdl2.cpp" />
