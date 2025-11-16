@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <cstdlib>
 #include <utility>
 #include <vector>
 
@@ -23,6 +24,8 @@ namespace KibakoEngine {
         constexpr char32_t kGlyphEnd = 126;
         constexpr int kAtlasPadding = 1;
 
+        constexpr FT_Int32 kLoadFlags = FT_LOAD_RENDER | FT_LOAD_TARGET_MONO | FT_LOAD_MONOCHROME;
+
         struct GlyphBitmap
         {
             char32_t code = 0;
@@ -33,6 +36,33 @@ namespace KibakoEngine {
             int advance = 0;
             std::vector<std::uint8_t> buffer;
         };
+
+        void CopyGlyphBitmap(const FT_Bitmap& bitmap, GlyphBitmap& entry)
+        {
+            if (entry.width == 0 || entry.height == 0)
+                return;
+
+            entry.buffer.assign(static_cast<std::size_t>(entry.width * entry.height), 0);
+
+            const int absPitch = std::abs(bitmap.pitch);
+            for (int y = 0; y < entry.height; ++y) {
+                const int srcRowIndex = bitmap.pitch >= 0 ? y : (entry.height - 1 - y);
+                const std::uint8_t* src = bitmap.buffer + srcRowIndex * absPitch;
+                std::uint8_t* dst = entry.buffer.data() + static_cast<std::size_t>(y * entry.width);
+
+                if (bitmap.pixel_mode == FT_PIXEL_MODE_MONO) {
+                    for (int x = 0; x < entry.width; ++x) {
+                        const int byteIndex = x / 8;
+                        const int bitIndex = 7 - (x % 8);
+                        const bool set = (src[byteIndex] >> bitIndex) & 0x1;
+                        dst[x] = set ? 255 : 0;
+                    }
+                }
+                else {
+                    std::memcpy(dst, src, static_cast<std::size_t>(entry.width));
+                }
+            }
+        }
     }
 
     struct FontLibrary::Impl
@@ -114,7 +144,7 @@ namespace KibakoEngine {
         int atlasHeight = 0;
 
         for (char32_t code = kGlyphStart; code <= kGlyphEnd; ++code) {
-            err = FT_Load_Char(face, static_cast<FT_ULong>(code), FT_LOAD_RENDER);
+            err = FT_Load_Char(face, static_cast<FT_ULong>(code), kLoadFlags);
             if (err != 0) {
                 KbkWarn(kLogChannel, "FT_Load_Char failed for code %u", static_cast<unsigned>(code));
                 continue;
@@ -132,15 +162,7 @@ namespace KibakoEngine {
             entry.advance = static_cast<int>(slot->advance.x >> 6);
 
             if (entry.width > 0 && entry.height > 0) {
-                entry.buffer.resize(static_cast<size_t>(entry.width * entry.height));
-                for (int y = 0; y < entry.height; ++y) {
-                    const int pitch = bitmap.pitch;
-                    const std::uint8_t* src = pitch >= 0
-                        ? bitmap.buffer + y * pitch
-                        : bitmap.buffer + (entry.height - 1 - y) * (-pitch);
-                    std::uint8_t* dst = entry.buffer.data() + y * entry.width;
-                    std::memcpy(dst, src, static_cast<size_t>(entry.width));
-                }
+                CopyGlyphBitmap(bitmap, entry);
 
                 atlasWidth += entry.width + kAtlasPadding;
                 atlasHeight = std::max(atlasHeight, entry.height + 2 * kAtlasPadding);
