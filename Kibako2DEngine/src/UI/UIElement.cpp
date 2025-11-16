@@ -100,16 +100,16 @@ namespace KibakoEngine {
             child->Update(ctx);
     }
 
-    void UIElement::Render(SpriteBatch2D& batch, const UIContext& ctx) const
+    void UIElement::Render(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle& style) const
     {
         if (!m_visible)
             return;
 
         UpdateLayout(ctx);
-        OnRender(batch, ctx);
+        OnRender(batch, ctx, style);
 
         for (const auto& child : m_children)
-            child->Render(batch, ctx);
+            child->Render(batch, ctx, style);
     }
 
     void UIElement::AddChild(std::unique_ptr<UIElement> child)
@@ -122,6 +122,11 @@ namespace KibakoEngine {
         m_children.push_back(std::move(child));
     }
 
+    UIScreen::UIScreen(std::string name)
+        : m_name(std::move(name))
+    {
+    }
+
     void UIScreen::OnUpdate(const UIContext& ctx)
     {
         if (!m_visible)
@@ -131,18 +136,28 @@ namespace KibakoEngine {
         m_root.Update(ctx);
     }
 
-    void UIScreen::OnRender(SpriteBatch2D& batch, const UIContext& ctx) const
+    void UIScreen::OnRender(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle& style) const
     {
         if (!m_visible)
             return;
 
-        m_root.Render(batch, ctx);
+        m_root.Render(batch, ctx, style);
     }
+
+    UISystem::UISystem() = default;
 
     void UISystem::PushScreen(std::unique_ptr<UIScreen> screen)
     {
         if (screen)
             m_screens.push_back(std::move(screen));
+    }
+
+    UIScreen& UISystem::CreateScreen(const std::string& name)
+    {
+        auto screen = std::make_unique<UIScreen>(name);
+        UIScreen& ref = *screen;
+        m_screens.push_back(std::move(screen));
+        return ref;
     }
 
     void UISystem::PopScreen()
@@ -169,7 +184,7 @@ namespace KibakoEngine {
     {
         const UIContext ctx{ m_screenSize, m_input, m_lastDeltaTime };
         for (const auto& screen : m_screens)
-            screen->OnRender(batch, ctx);
+            screen->OnRender(batch, ctx, m_style);
     }
 
 } // namespace KibakoEngine
