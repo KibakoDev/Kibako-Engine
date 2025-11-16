@@ -67,8 +67,8 @@ namespace KibakoEngine {
     protected:
         void InvalidateLayout();
         void UpdateLayout(const UIContext& ctx) const;
-        virtual void OnUpdate(const UIContext& ctx) { }
-        virtual void OnRender(SpriteBatch2D& batch, const UIContext& ctx) const { }
+        virtual void OnUpdate(const UIContext&) {}
+        virtual void OnRender(SpriteBatch2D&, const UIContext&) const {}
 
         [[nodiscard]] DirectX::XMFLOAT2 ParentSize(const UIContext& ctx) const;
         [[nodiscard]] DirectX::XMFLOAT2 AnchorOffset(const UIContext& ctx) const;
