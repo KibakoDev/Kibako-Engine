@@ -108,12 +108,38 @@ namespace KibakoEngine {
     class TextRenderer
     {
     public:
+        struct TextMetrics
+        {
+            DirectX::XMFLOAT2 size{ 0.0f, 0.0f };
+            float lineHeight = 0.0f;
+            float ascent = 0.0f;
+            float descent = 0.0f;
+            std::size_t lineCount = 0;
+        };
+
+        struct TextRenderSettings
+        {
+            Color4 color = Color4::White();
+            float scale = 1.0f;
+            bool snapToPixel = true;
+        };
+
+        [[nodiscard]] static TextMetrics MeasureText(const Font& font,
+                                                     std::string_view text,
+                                                     float scale = 1.0f);
+
         static void DrawText(SpriteBatch2D& batch,
                              const Font& font,
                              std::string_view text,
                              const DirectX::XMFLOAT2& position,
                              const Color4& color,
                              float scale = 1.0f);
+
+        static void DrawText(SpriteBatch2D& batch,
+                             const Font& font,
+                             std::string_view text,
+                             const DirectX::XMFLOAT2& position,
+                             const TextRenderSettings& settings);
     };
 
 } // namespace KibakoEngine
