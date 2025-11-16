@@ -336,27 +336,34 @@ void GameLayer::BuildUI()
 
     KibakoEngine::UIStyle uiStyle{};
     uiStyle.font = m_uiFont;
-    uiStyle.headingColor = { 1.0f, 0.96f, 0.7f, 1.0f };
-    uiStyle.primaryTextColor = { 1.0f, 0.95f, 0.4f, 1.0f };
-    uiStyle.mutedTextColor = { 0.8f, 0.9f, 1.0f, 1.0f };
-    uiStyle.panelColor = { 0.08f, 0.09f, 0.13f, 0.94f };
-    uiStyle.buttonNormal = { 0.14f, 0.17f, 0.22f, 0.92f };
-    uiStyle.buttonHover = { 0.2f, 0.23f, 0.28f, 0.96f };
-    uiStyle.buttonPressed = { 0.25f, 0.27f, 0.34f, 1.0f };
-    uiStyle.buttonSize = { 360.0f, 52.0f };
-    uiStyle.buttonPadding = { 16.0f, 12.0f };
-    uiStyle.buttonTextScale = 0.95f;
+    uiStyle.headingColor = { 0.96f, 0.98f, 1.0f, 1.0f };
+    uiStyle.primaryTextColor = { 0.9f, 0.94f, 0.98f, 1.0f };
+    uiStyle.mutedTextColor = { 0.73f, 0.8f, 0.9f, 1.0f };
+    uiStyle.panelColor = { 0.07f, 0.1f, 0.14f, 0.92f };
+    uiStyle.buttonNormal = { 0.11f, 0.18f, 0.22f, 0.94f };
+    uiStyle.buttonHover = { 0.16f, 0.24f, 0.28f, 0.98f };
+    uiStyle.buttonPressed = { 0.12f, 0.22f, 0.26f, 1.0f };
+    uiStyle.buttonSize = { 380.0f, 56.0f };
+    uiStyle.buttonPadding = { 18.0f, 14.0f };
+    uiStyle.buttonTextScale = 1.05f;
 
-    auto& scoreLabel = hudRoot.EmplaceChild<KibakoEngine::UILabel>("HUD.Score");
-    uiStyle.ApplyBody(scoreLabel);
-    scoreLabel.SetPosition({ 20.0f, 20.0f });
-    scoreLabel.SetColor(uiStyle.primaryTextColor);
+    auto& hudPanel = hudRoot.EmplaceChild<KibakoEngine::UIPanel>("HUD.Panel");
+    uiStyle.ApplyPanel(hudPanel);
+    hudPanel.SetSize({ 240.0f, 90.0f });
+    hudPanel.SetPosition({ 16.0f, 16.0f });
+    hudPanel.SetColor({ 0.05f, 0.07f, 0.1f, 0.85f });
+
+    auto& scoreLabel = hudPanel.EmplaceChild<KibakoEngine::UILabel>("HUD.Score");
+    uiStyle.ApplyHeading(scoreLabel);
+    scoreLabel.SetPosition({ 14.0f, 12.0f });
+    scoreLabel.SetColor(uiStyle.headingColor);
     scoreLabel.SetScale(0.9f);
 
-    auto& hintLabel = hudRoot.EmplaceChild<KibakoEngine::UILabel>("HUD.Hint");
+    auto& hintLabel = hudPanel.EmplaceChild<KibakoEngine::UILabel>("HUD.Hint");
     uiStyle.ApplyCaption(hintLabel);
-    hintLabel.SetPosition({ 20.0f, 56.0f });
-    hintLabel.SetText("Press F3 to toggle menu");
+    hintLabel.SetPosition({ 14.0f, 48.0f });
+    hintLabel.SetText("Press F3 to open the command deck");
+    hintLabel.SetColor(uiStyle.mutedTextColor);
 
     m_scoreLabel = &scoreLabel;
     m_hintLabel = &hintLabel;
@@ -367,19 +374,31 @@ void GameLayer::BuildUI()
     auto& menuRoot = menu->Root();
 
     auto& menuPanel = menuRoot.EmplaceChild<KibakoEngine::UIPanel>("Menu.Panel");
-    menuPanel.SetSize({ 420.0f, 260.0f });
+    menuPanel.SetSize({ 500.0f, 300.0f });
     menuPanel.SetAnchor(KibakoEngine::UIAnchor::Center);
     uiStyle.ApplyPanel(menuPanel);
+    menuPanel.SetColor({ 0.06f, 0.09f, 0.12f, 0.96f });
+
+    auto& accentBar = menuPanel.EmplaceChild<KibakoEngine::UIPanel>("Menu.Accent");
+    accentBar.SetSize({ 500.0f, 4.0f });
+    accentBar.SetColor({ 0.24f, 0.76f, 0.9f, 1.0f });
+    accentBar.SetPosition({ 0.0f, 0.0f });
 
     auto& titleLabel = menuPanel.EmplaceChild<KibakoEngine::UILabel>("Menu.Title");
     uiStyle.ApplyHeading(titleLabel);
     titleLabel.SetText("ASTRO VOID");
-    titleLabel.SetPosition({ 24.0f, 24.0f });
+    titleLabel.SetPosition({ 32.0f, 28.0f });
+
+    auto& subtitleLabel = menuPanel.EmplaceChild<KibakoEngine::UILabel>("Menu.Subtitle");
+    uiStyle.ApplyCaption(subtitleLabel);
+    subtitleLabel.SetText("Minimal controls, maximum focus");
+    subtitleLabel.SetColor(uiStyle.mutedTextColor);
+    subtitleLabel.SetPosition({ 32.0f, 72.0f });
 
     auto& playButton = menuPanel.EmplaceChild<KibakoEngine::UIButton>("Menu.Play");
     playButton.SetStyle(uiStyle);
     playButton.SetText("Play");
-    playButton.SetPosition({ 30.0f, 100.0f });
+    playButton.SetPosition({ 36.0f, 124.0f });
     playButton.SetOnClick([this]() {
         m_menuVisible = false;
     });
@@ -387,7 +406,7 @@ void GameLayer::BuildUI()
     auto& quitButton = menuPanel.EmplaceChild<KibakoEngine::UIButton>("Menu.Quit");
     quitButton.SetStyle(uiStyle);
     quitButton.SetText("Quit");
-    quitButton.SetPosition({ 30.0f, 160.0f });
+    quitButton.SetPosition({ 36.0f, 196.0f });
     quitButton.SetOnClick([]() {
         KbkLog(kLogChannel, "Quit clicked (hook your exit logic here)");
     });
