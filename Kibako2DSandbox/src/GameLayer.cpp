@@ -9,6 +9,7 @@
 #include "KibakoEngine/Renderer/DebugDraw2D.h"
 
 #include <DirectXMath.h>
+#include <SDL2/SDL_events.h>
 #include <SDL2/SDL_scancode.h>
 
 #include <algorithm>
@@ -212,6 +213,9 @@ void GameLayer::OnDetach()
     m_stateLabel = nullptr;
     m_entitiesLabel = nullptr;
     m_hintLabel = nullptr;
+    m_resumeButton = nullptr;
+    m_collisionButton = nullptr;
+    m_exitButton = nullptr;
     m_hudScreen = nullptr;
     m_menuScreen = nullptr;
 
@@ -318,6 +322,9 @@ void GameLayer::BuildUI()
     m_stateLabel = nullptr;
     m_entitiesLabel = nullptr;
     m_hintLabel = nullptr;
+    m_resumeButton = nullptr;
+    m_collisionButton = nullptr;
+    m_exitButton = nullptr;
     m_hudScreen = nullptr;
     m_menuScreen = nullptr;
     m_uiSystem.Clear();
@@ -368,16 +375,12 @@ void GameLayer::BuildUI()
 
     const float paddingX = 32.0f;
     const float paddingY = 28.0f;
-    const float bodySpacing = 8.0f;
+    const float headingSpacing = 16.0f;
+    const float buttonSpacing = 12.0f;
 
-    const float headingW = TextRenderer::MeasureText(*style.font, "COMMANDS", style.headingScale).size.x;
-    const float line1W = TextRenderer::MeasureText(*style.font, "F3  Resume sandbox", style.bodyScale).size.x;
-    const float line2W = TextRenderer::MeasureText(*style.font, "F1  Toggle collision overlay", style.bodyScale).size.x;
-    const float line3W = TextRenderer::MeasureText(*style.font, "ESC  Exit sandbox", style.bodyScale).size.x;
-    const float maxLineW = std::max({ headingW, line1W, line2W, line3W });
-
-    const float panelWidth = maxLineW + paddingX * 2.0f;
-    const float panelHeight = headingHeight + (bodyHeight * 3.0f) + paddingY * 2.0f + bodySpacing * 2.0f;
+    const float headingW = TextRenderer::MeasureText(*style.font, "SANDBOX MENU", style.headingScale).size.x;
+    const float panelWidth = std::max(style.buttonSize.x, headingW) + paddingX * 2.0f;
+    const float panelHeight = paddingY * 2.0f + headingHeight + headingSpacing + (style.buttonSize.y * 3.0f) + (buttonSpacing * 2.0f);
 
     auto& panel = menuRoot.EmplaceChild<UIPanel>("Menu.Panel");
     style.ApplyPanel(panel);
@@ -395,14 +398,36 @@ void GameLayer::BuildUI()
         lbl.SetAnchor(UIAnchor::Center);
         lbl.SetPosition({ 0.0f, yOffset });
         lbl.SetText(text);
-        yOffset += height + bodySpacing;
+        yOffset += height + headingSpacing;
         return &lbl;
     };
 
-    makeCenteredLabel("Menu.Title", headingHeight, [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "COMMANDS");
-    makeCenteredLabel("Menu.Line1", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "F3  Resume sandbox");
-    makeCenteredLabel("Menu.Line2", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "F1  Toggle collision overlay");
-    makeCenteredLabel("Menu.Line3", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "ESC  Exit sandbox");
+    makeCenteredLabel("Menu.Title", headingHeight, [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "SANDBOX MENU");
+
+    auto makeMenuButton = [&](const char* name, const char* text, auto onClick) -> UIButton& {
+        auto& btn = content.EmplaceChild<UIButton>(name);
+        style.ApplyButton(btn);
+        btn.SetAnchor(UIAnchor::Center);
+        btn.SetPosition({ 0.0f, yOffset });
+        btn.SetText(text);
+        btn.SetOnClick(onClick);
+        yOffset += style.buttonSize.y + buttonSpacing;
+        return btn;
+    };
+
+    m_resumeButton = &makeMenuButton("Menu.Resume", "Resume sandbox (F3)", [this]() {
+        m_menuVisible = false;
+    });
+
+    m_collisionButton = &makeMenuButton("Menu.Collision", "Toggle collision overlay (F1)", [this]() {
+        m_showCollisionDebug = !m_showCollisionDebug;
+    });
+
+    m_exitButton = &makeMenuButton("Menu.Exit", "Exit sandbox (ESC)", []() {
+        SDL_Event quit{};
+        quit.type = SDL_QUIT;
+        SDL_PushEvent(&quit);
+    });
 
     menu.SetVisible(false);
     m_menuScreen = &menu;
@@ -456,6 +481,12 @@ void GameLayer::UpdateUI(float dt)
 
     if (m_menuScreen)
         m_menuScreen->SetVisible(m_menuVisible);
+
+    if (m_collisionButton) {
+        m_collisionButton->SetText(m_showCollisionDebug
+            ? "Hide collision overlay (F1)"
+            : "Show collision overlay (F1)");
+    }
 
     m_uiSystem.Update(dt);
 }
