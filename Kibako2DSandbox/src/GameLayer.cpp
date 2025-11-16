@@ -362,10 +362,11 @@ void GameLayer::BuildUI()
         return lbl;
     };
 
-    m_titleLabel = &makeHudLabel("HUD.Title", headingHeight+5, [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "KIBAKO 2D ENGINE - SANDBOX");
+    m_titleLabel = &makeHudLabel("HUD.Title", headingHeight + 5, [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "KIBAKO 2D ENGINE - SANDBOX");
     m_timeLabel = &makeHudLabel("HUD.Time", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "TIME  0.00 s");
     m_stateLabel = &makeHudLabel("HUD.State", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "COLLISION  IDLE");
     m_entitiesLabel = &makeHudLabel("HUD.Entities", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "ENTITIES  0");
+    m_hintLabel = &makeHudLabel("HUD.Hint", bodyHeight, [&](UILabel& lbl) { style.ApplyCaption(lbl); }, "F1  Collision overlay  ·  F3  Menu");
 
     m_hudScreen = &hud;
 

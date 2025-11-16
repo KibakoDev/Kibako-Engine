@@ -137,7 +137,8 @@ namespace KibakoEngine {
 
     void UIButton::OnUpdate(const UIContext& ctx)
     {
-        RefreshTextLabel();
+        if (m_labelDirty || m_textDirty)
+            RefreshTextLabel();
 
         const bool inside = HitTest(ctx);
 
@@ -214,6 +215,8 @@ namespace KibakoEngine {
             m_textLabel->SetAnchor(UIAnchor::TopLeft);
             m_textLabel->SetPosition(m_padding);
         }
+
+        m_labelDirty = false;
     }
 
     float UIButton::FittedTextScale() const
@@ -221,7 +224,7 @@ namespace KibakoEngine {
         float scale = m_textScale;
 
         if (m_autoFitText && m_font && !m_text.empty()) {
-            const auto metrics = TextRenderer::MeasureText(*m_font, m_text, m_textScale);
+            const auto metrics = MeasureText();
             const float availableWidth = std::max(0.0f, m_size.x - (m_padding.x * 2.0f));
 
             if (metrics.size.x > 0.0f && metrics.size.x > availableWidth) {
