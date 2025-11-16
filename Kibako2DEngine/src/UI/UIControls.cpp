@@ -1,19 +1,44 @@
 // UIControls.cpp - Implements basic UI widgets for the HUD system.
 #include "KibakoEngine/UI/UIControls.h"
 
+#include <cmath>
+
 #include <SDL2/SDL_mouse.h>
 
 #include "KibakoEngine/Renderer/SpriteBatch2D.h"
 
 namespace KibakoEngine {
 
+    namespace
+    {
+        constexpr float SnapToPixel(float value)
+        {
+            return std::roundf(value);
+        }
+
+        RectF SnapRect(const RectF& rect)
+        {
+            const float x0 = SnapToPixel(rect.x);
+            const float y0 = SnapToPixel(rect.y);
+            const float x1 = SnapToPixel(rect.x + rect.w);
+            const float y1 = SnapToPixel(rect.y + rect.h);
+            return RectF::FromXYWH(x0, y0, x1 - x0, y1 - y0);
+        }
+    }
+
     void UILabel::Render(SpriteBatch2D& batch, const UIContext& ctx) const
     {
         if (!m_visible || !m_font || m_text.empty())
             return;
 
-        const DirectX::XMFLOAT2 pos = WorldPosition(ctx);
-        TextRenderer::DrawText(batch, *m_font, m_text, pos, m_color, m_scale);
+        DirectX::XMFLOAT2 pos = WorldPosition(ctx);
+        if (m_snapToPixel) {
+            pos.x = SnapToPixel(pos.x);
+            pos.y = SnapToPixel(pos.y);
+        }
+
+        TextRenderer::DrawText(batch, *m_font, m_text, pos,
+            TextRenderer::TextRenderSettings{ m_color, m_scale, m_snapToPixel });
 
         UIElement::Render(batch, ctx);
     }
@@ -23,7 +48,9 @@ namespace KibakoEngine {
         if (!m_visible || !m_texture || !m_texture->IsValid())
             return;
 
-        const RectF dst = WorldRect(ctx);
+        RectF dst = WorldRect(ctx);
+        if (m_snapToPixel)
+            dst = SnapRect(dst);
         const RectF src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
         batch.Push(*m_texture, dst, src, m_color, 0.0f, m_layer);
 
@@ -35,7 +62,9 @@ namespace KibakoEngine {
         if (!m_visible)
             return;
 
-        const RectF dst = WorldRect(ctx);
+        RectF dst = WorldRect(ctx);
+        if (m_snapToPixel)
+            dst = SnapRect(dst);
         const RectF src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
         const Texture2D* white = batch.DefaultWhiteTexture();
         if (white)
@@ -77,16 +106,8 @@ namespace KibakoEngine {
         if (!m_font)
             return DirectX::XMFLOAT2{ 0.0f, 0.0f };
 
-        float width = 0.0f;
-        for (char c : m_text) {
-            const Glyph* glyph = m_font->GetGlyph(static_cast<char32_t>(c));
-            if (!glyph)
-                continue;
-            width += glyph->advance;
-        }
-
-        const float height = m_font->LineHeight();
-        return DirectX::XMFLOAT2{ width * m_textScale, height * m_textScale };
+        const auto metrics = TextRenderer::MeasureText(*m_font, m_text, m_textScale);
+        return metrics.size;
     }
 
     DirectX::XMFLOAT2 UIButton::TextPosition(const UIContext& ctx) const
@@ -147,17 +168,78 @@ namespace KibakoEngine {
             return;
 
         const RectF dst = WorldRect(ctx);
+        const RectF snappedDst = m_snapToPixel ? SnapRect(dst) : dst;
         const RectF src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
         const Texture2D* white = batch.DefaultWhiteTexture();
         if (white)
-            batch.Push(*white, dst, src, CurrentColor(), 0.0f, m_layer);
+            batch.Push(*white, snappedDst, src, CurrentColor(), 0.0f, m_layer);
 
         if (m_font && !m_text.empty()) {
-            const DirectX::XMFLOAT2 textPos = TextPosition(ctx);
-            TextRenderer::DrawText(batch, *m_font, m_text, textPos, m_textColor, m_textScale);
+            DirectX::XMFLOAT2 textPos = TextPosition(ctx);
+            if (m_snapToPixel) {
+                textPos.x = SnapToPixel(textPos.x);
+                textPos.y = SnapToPixel(textPos.y);
+            }
+
+            TextRenderer::DrawText(batch, *m_font, m_text, textPos,
+                TextRenderer::TextRenderSettings{ m_textColor, m_textScale, m_snapToPixel });
         }
 
         UIElement::Render(batch, ctx);
+    }
+
+    void UIButton::SetStyle(const UIStyle& style)
+    {
+        if (style.font)
+            SetFont(style.font);
+
+        SetTextScale(style.buttonTextScale);
+        SetPadding(style.buttonPadding);
+        SetSize(style.buttonSize);
+        SetTextColor(style.primaryTextColor);
+        SetNormalColor(style.buttonNormal);
+        SetHoverColor(style.buttonHover);
+        SetPressedColor(style.buttonPressed);
+    }
+
+    void UIStyle::ApplyHeading(UILabel& label) const
+    {
+        label.SetFont(font);
+        label.SetColor(headingColor);
+        label.SetScale(headingScale);
+    }
+
+    void UIStyle::ApplyBody(UILabel& label) const
+    {
+        label.SetFont(font);
+        label.SetColor(primaryTextColor);
+        label.SetScale(bodyScale);
+    }
+
+    void UIStyle::ApplyCaption(UILabel& label) const
+    {
+        label.SetFont(font);
+        label.SetColor(mutedTextColor);
+        label.SetScale(captionScale);
+    }
+
+    void UIStyle::ApplyPanel(UIPanel& panel) const
+    {
+        panel.SetColor(panelColor);
+    }
+
+    void UIStyle::ApplyButton(UIButton& button) const
+    {
+        if (font)
+            button.SetFont(font);
+
+        button.SetSize(buttonSize);
+        button.SetPadding(buttonPadding);
+        button.SetTextScale(buttonTextScale);
+        button.SetTextColor(primaryTextColor);
+        button.SetNormalColor(buttonNormal);
+        button.SetHoverColor(buttonHover);
+        button.SetPressedColor(buttonPressed);
     }
 
 } // namespace KibakoEngine
