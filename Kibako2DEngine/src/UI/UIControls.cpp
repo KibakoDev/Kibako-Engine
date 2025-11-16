@@ -1,6 +1,7 @@
 // UIControls.cpp - Implements basic UI widgets for the HUD system.
 #include "KibakoEngine/UI/UIControls.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include <SDL2/SDL_mouse.h>
@@ -89,6 +90,13 @@ namespace KibakoEngine {
         : UIElement(std::move(name))
     {
         m_size = DirectX::XMFLOAT2{ 160.0f, 42.0f };
+        m_text = m_name.empty() ? "Button" : m_name;
+
+        m_textLabel = &EmplaceChild<UILabel>(m_name + ".Text");
+        m_textLabel->SetAnchor(UIAnchor::Center);
+        m_textLabel->SetPixelSnap(true);
+        m_textLabel->SetText(m_text);
+        m_textLabel->SetScale(m_textScale);
     }
 
     bool UIButton::HitTest(const UIContext& ctx) const
@@ -127,26 +135,10 @@ namespace KibakoEngine {
         return m_cachedTextSize;
     }
 
-    DirectX::XMFLOAT2 UIButton::TextPosition(const UIContext& ctx) const
-    {
-        const DirectX::XMFLOAT2 pos = WorldPosition(ctx);
-
-        if (!m_font)
-            return pos;
-
-        const DirectX::XMFLOAT2 textSize = MeasureText();
-
-        if (!m_centerText)
-            return DirectX::XMFLOAT2{ pos.x + m_padding.x, pos.y + m_padding.y };
-
-        return DirectX::XMFLOAT2{
-            pos.x + 0.5f * (m_size.x - textSize.x),
-            pos.y + 0.5f * (m_size.y - textSize.y)
-        };
-    }
-
     void UIButton::OnUpdate(const UIContext& ctx)
     {
+        RefreshTextLabel();
+
         const bool inside = HitTest(ctx);
 
         m_hovered = inside;
@@ -177,27 +169,14 @@ namespace KibakoEngine {
 
     void UIButton::OnRender(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle& style) const
     {
+        (void)style;
+
         const RectF dst = WorldRect(ctx);
         const RectF snappedDst = m_snapToPixel ? SnapRect(dst) : dst;
         const RectF src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
         const Texture2D* white = batch.DefaultWhiteTexture();
         if (white)
             batch.Push(*white, snappedDst, src, m_tint.value_or(CurrentColor()), 0.0f, m_layer);
-
-        const Font* font = m_font ? m_font : style.font;
-        if (font && !m_text.empty()) {
-            DirectX::XMFLOAT2 textPos = TextPosition(ctx);
-            if (m_snapToPixel) {
-                textPos.x = SnapToPixel(textPos.x);
-                textPos.y = SnapToPixel(textPos.y);
-            }
-
-            const Color4 finalText = m_tint.value_or(m_textColor);
-
-            TextRenderer::DrawText(batch, *font, m_text, textPos,
-                TextRenderer::TextRenderSettings{ finalText, m_textScale, m_snapToPixel, m_layer + 1 });
-        }
-
     }
 
     void UIButton::SetStyle(const UIStyle& style)
@@ -212,6 +191,46 @@ namespace KibakoEngine {
         SetNormalColor(style.buttonNormal);
         SetHoverColor(style.buttonHover);
         SetPressedColor(style.buttonPressed);
+    }
+
+    void UIButton::RefreshTextLabel()
+    {
+        if (!m_textLabel)
+            return;
+
+        m_textLabel->SetText(m_text);
+        m_textLabel->SetColor(m_tint.value_or(m_textColor));
+        m_textLabel->SetScale(FittedTextScale());
+        m_textLabel->SetPixelSnap(m_snapToPixel);
+
+        if (m_font)
+            m_textLabel->SetFont(m_font);
+
+        if (m_centerText) {
+            m_textLabel->SetAnchor(UIAnchor::Center);
+            m_textLabel->SetPosition(m_labelOffset);
+        }
+        else {
+            m_textLabel->SetAnchor(UIAnchor::TopLeft);
+            m_textLabel->SetPosition(m_padding);
+        }
+    }
+
+    float UIButton::FittedTextScale() const
+    {
+        float scale = m_textScale;
+
+        if (m_autoFitText && m_font && !m_text.empty()) {
+            const auto metrics = TextRenderer::MeasureText(*m_font, m_text, m_textScale);
+            const float availableWidth = std::max(0.0f, m_size.x - (m_padding.x * 2.0f));
+
+            if (metrics.size.x > 0.0f && metrics.size.x > availableWidth) {
+                const float fitted = m_textScale * (availableWidth / metrics.size.x);
+                scale = std::max(m_minTextScale, fitted);
+            }
+        }
+
+        return scale;
     }
 
     void UIStyle::ApplyHeading(UILabel& label) const
