@@ -35,9 +35,9 @@ namespace KibakoEngine {
         explicit UIElement(std::string name = "");
         virtual ~UIElement() = default;
 
-        void SetPosition(const DirectX::XMFLOAT2& position) { m_position = position; }
-        void SetSize(const DirectX::XMFLOAT2& size) { m_size = size; }
-        void SetAnchor(UIAnchor anchor) { m_anchor = anchor; }
+        void SetPosition(const DirectX::XMFLOAT2& position) { m_position = position; InvalidateLayout(); }
+        void SetSize(const DirectX::XMFLOAT2& size) { m_size = size; InvalidateLayout(); }
+        void SetAnchor(UIAnchor anchor) { m_anchor = anchor; InvalidateLayout(); }
         void SetVisible(bool visible) { m_visible = visible; }
         void SetLayer(int layer) { m_layer = layer; }
 
@@ -47,8 +47,8 @@ namespace KibakoEngine {
         [[nodiscard]] bool Visible() const { return m_visible; }
         [[nodiscard]] int Layer() const { return m_layer; }
 
-        [[nodiscard]] DirectX::XMFLOAT2 WorldPosition(const UIContext& ctx) const;
-        [[nodiscard]] RectF WorldRect(const UIContext& ctx) const;
+        [[nodiscard]] const DirectX::XMFLOAT2& WorldPosition(const UIContext& ctx) const;
+        [[nodiscard]] const RectF& WorldRect(const UIContext& ctx) const;
 
         virtual void Update(const UIContext& ctx);
         virtual void Render(SpriteBatch2D& batch, const UIContext& ctx) const;
@@ -65,6 +65,11 @@ namespace KibakoEngine {
         }
 
     protected:
+        void InvalidateLayout();
+        void UpdateLayout(const UIContext& ctx) const;
+        virtual void OnUpdate(const UIContext& ctx) { }
+        virtual void OnRender(SpriteBatch2D& batch, const UIContext& ctx) const { }
+
         [[nodiscard]] DirectX::XMFLOAT2 ParentSize(const UIContext& ctx) const;
         [[nodiscard]] DirectX::XMFLOAT2 AnchorOffset(const UIContext& ctx) const;
 
@@ -74,6 +79,11 @@ namespace KibakoEngine {
         UIAnchor m_anchor = UIAnchor::TopLeft;
         bool m_visible = true;
         int m_layer = 10000;
+
+        mutable bool m_layoutDirty = true;
+        mutable DirectX::XMFLOAT2 m_cachedWorldPosition{ 0.0f, 0.0f };
+        mutable RectF m_cachedWorldRect;
+        mutable DirectX::XMFLOAT2 m_cachedScreenSize{ 0.0f, 0.0f };
 
         UIElement* m_parent = nullptr;
         std::vector<std::unique_ptr<UIElement>> m_children;

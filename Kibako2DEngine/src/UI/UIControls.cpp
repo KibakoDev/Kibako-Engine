@@ -26,9 +26,9 @@ namespace KibakoEngine {
         }
     }
 
-    void UILabel::Render(SpriteBatch2D& batch, const UIContext& ctx) const
+    void UILabel::OnRender(SpriteBatch2D& batch, const UIContext& ctx) const
     {
-        if (!m_visible || !m_font || m_text.empty())
+        if (!m_font || m_text.empty())
             return;
 
         DirectX::XMFLOAT2 pos = WorldPosition(ctx);
@@ -40,12 +40,11 @@ namespace KibakoEngine {
         TextRenderer::DrawText(batch, *m_font, m_text, pos,
             TextRenderer::TextRenderSettings{ m_color, m_scale, m_snapToPixel });
 
-        UIElement::Render(batch, ctx);
     }
 
-    void UIImage::Render(SpriteBatch2D& batch, const UIContext& ctx) const
+    void UIImage::OnRender(SpriteBatch2D& batch, const UIContext& ctx) const
     {
-        if (!m_visible || !m_texture || !m_texture->IsValid())
+        if (!m_texture || !m_texture->IsValid())
             return;
 
         RectF dst = WorldRect(ctx);
@@ -53,15 +52,10 @@ namespace KibakoEngine {
             dst = SnapRect(dst);
         const RectF src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
         batch.Push(*m_texture, dst, src, m_color, 0.0f, m_layer);
-
-        UIElement::Render(batch, ctx);
     }
 
-    void UIPanel::Render(SpriteBatch2D& batch, const UIContext& ctx) const
+    void UIPanel::OnRender(SpriteBatch2D& batch, const UIContext& ctx) const
     {
-        if (!m_visible)
-            return;
-
         RectF dst = WorldRect(ctx);
         if (m_snapToPixel)
             dst = SnapRect(dst);
@@ -69,8 +63,6 @@ namespace KibakoEngine {
         const Texture2D* white = batch.DefaultWhiteTexture();
         if (white)
             batch.Push(*white, dst, src, m_color, 0.0f, m_layer);
-
-        UIElement::Render(batch, ctx);
     }
 
     UIButton::UIButton(std::string name)
@@ -106,8 +98,13 @@ namespace KibakoEngine {
         if (!m_font)
             return DirectX::XMFLOAT2{ 0.0f, 0.0f };
 
-        const auto metrics = TextRenderer::MeasureText(*m_font, m_text, m_textScale);
-        return metrics.size;
+        if (m_textDirty) {
+            const auto metrics = TextRenderer::MeasureText(*m_font, m_text, m_textScale);
+            m_cachedTextSize = metrics.size;
+            m_textDirty = false;
+        }
+
+        return m_cachedTextSize;
     }
 
     DirectX::XMFLOAT2 UIButton::TextPosition(const UIContext& ctx) const
@@ -128,11 +125,8 @@ namespace KibakoEngine {
         };
     }
 
-    void UIButton::Update(const UIContext& ctx)
+    void UIButton::OnUpdate(const UIContext& ctx)
     {
-        if (!m_visible)
-            return;
-
         const bool inside = HitTest(ctx);
 
         m_hovered = inside;
@@ -159,14 +153,10 @@ namespace KibakoEngine {
             }
         }
 
-        UIElement::Update(ctx);
     }
 
-    void UIButton::Render(SpriteBatch2D& batch, const UIContext& ctx) const
+    void UIButton::OnRender(SpriteBatch2D& batch, const UIContext& ctx) const
     {
-        if (!m_visible)
-            return;
-
         const RectF dst = WorldRect(ctx);
         const RectF snappedDst = m_snapToPixel ? SnapRect(dst) : dst;
         const RectF src = RectF::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f);
@@ -185,7 +175,6 @@ namespace KibakoEngine {
                 TextRenderer::TextRenderSettings{ m_textColor, m_textScale, m_snapToPixel });
         }
 
-        UIElement::Render(batch, ctx);
     }
 
     void UIButton::SetStyle(const UIStyle& style)
