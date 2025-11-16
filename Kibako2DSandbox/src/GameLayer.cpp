@@ -344,25 +344,29 @@ void GameLayer::BuildUI()
     if (!m_uiFont)
         return;
 
-    // Minimal black-and-white style for crisp readability
-    m_accentColor = Color4{ 0.05f, 0.05f, 0.05f, 1.0f };
-    m_warningColor = Color4{ 0.20f, 0.20f, 0.20f, 1.0f };
-    m_mutedColor = Color4{ 0.50f, 0.50f, 0.50f, 1.0f };
+    // Simple, minimal palette and explicit layering to keep text readable
+    const int panelLayer = -200;
+    const int accentLayer = -190;
+    const int buttonLayer = -180;
+
+    m_accentColor = Color4{ 0.08f, 0.11f, 0.16f, 1.0f };
+    m_warningColor = Color4{ 0.70f, 0.18f, 0.18f, 1.0f };
+    m_mutedColor = Color4{ 0.32f, 0.35f, 0.39f, 1.0f };
 
     UIStyle style{};
     style.font = m_uiFont;
     style.headingColor = m_accentColor;
-    style.primaryTextColor = Color4::Black();
+    style.primaryTextColor = Color4{ 0.07f, 0.08f, 0.12f, 1.0f };
     style.mutedTextColor = m_mutedColor;
-    style.panelColor = Color4{ 1.0f, 1.0f, 1.0f, 0.92f };
-    style.buttonNormal = Color4{ 1.0f, 1.0f, 1.0f, 0.95f };
-    style.buttonHover = Color4{ 0.92f, 0.92f, 0.92f, 1.0f };
-    style.buttonPressed = Color4{ 0.15f, 0.15f, 0.15f, 1.0f };
-    style.buttonSize = DirectX::XMFLOAT2{ 320.0f, 44.0f };
-    style.buttonPadding = DirectX::XMFLOAT2{ 16.0f, 10.0f };
-    style.headingScale = 1.0f;
+    style.panelColor = Color4{ 1.0f, 1.0f, 1.0f, 0.9f };
+    style.buttonNormal = Color4{ 0.96f, 0.96f, 0.96f, 0.92f };
+    style.buttonHover = Color4{ 0.92f, 0.94f, 0.96f, 0.95f };
+    style.buttonPressed = Color4{ 0.14f, 0.16f, 0.2f, 1.0f };
+    style.buttonSize = DirectX::XMFLOAT2{ 320.0f, 40.0f };
+    style.buttonPadding = DirectX::XMFLOAT2{ 14.0f, 12.0f };
+    style.headingScale = 0.98f;
     style.bodyScale = 0.90f;
-    style.captionScale = 0.82f;
+    style.captionScale = 0.78f;
     style.buttonTextScale = 0.90f;
 
     // ---------- HUD (top-left card) ----------
@@ -370,42 +374,49 @@ void GameLayer::BuildUI()
     auto& hudRoot = hud->Root();
 
     auto& hudCard = hudRoot.EmplaceChild<UIPanel>("HUD.Card");
-    hudCard.SetPosition({ 12.0f, 12.0f });
-    hudCard.SetSize({ 360.0f, 138.0f });
+    hudCard.SetPosition({ 18.0f, 18.0f });
+    hudCard.SetSize({ 360.0f, 130.0f });
     hudCard.SetColor(style.panelColor);
+    hudCard.SetLayer(panelLayer);
+
+    auto& hudAccent = hudCard.EmplaceChild<UIPanel>("HUD.Accent");
+    hudAccent.SetPosition({ 0.0f, 0.0f });
+    hudAccent.SetSize({ 4.0f, 130.0f });
+    hudAccent.SetColor(m_accentColor);
+    hudAccent.SetLayer(accentLayer);
 
     auto& hudTitle = hudCard.EmplaceChild<UILabel>("HUD.Title");
     style.ApplyHeading(hudTitle);
     hudTitle.SetPosition({ 14.0f, 14.0f });
-    hudTitle.SetText("Sandbox");
+    hudTitle.SetText("Kibako sandbox");
 
     auto& statusLabel = hudCard.EmplaceChild<UILabel>("HUD.Status");
     style.ApplyCaption(statusLabel);
-    statusLabel.SetPosition({ 14.0f, 40.0f });
+    statusLabel.SetPosition({ 248.0f, 14.0f });
     statusLabel.SetColor(m_accentColor);
-    statusLabel.SetText("RUNNING");
+    statusLabel.SetText("live");
 
     auto& timeLabel = hudCard.EmplaceChild<UILabel>("HUD.Time");
     style.ApplyBody(timeLabel);
-    timeLabel.SetPosition({ 14.0f, 68.0f });
-    timeLabel.SetText("Time  0.00 s");
+    timeLabel.SetPosition({ 14.0f, 46.0f });
+    timeLabel.SetText("t 0.00 s");
 
     auto& collisionLabel = hudCard.EmplaceChild<UILabel>("HUD.Collision");
     style.ApplyBody(collisionLabel);
-    collisionLabel.SetPosition({ 180.0f, 68.0f });
+    collisionLabel.SetPosition({ 14.0f, 74.0f });
     collisionLabel.SetColor(style.mutedTextColor);
-    collisionLabel.SetText("Collisions  none");
+    collisionLabel.SetText("collision idle");
 
     auto& entitiesLabel = hudCard.EmplaceChild<UILabel>("HUD.Entities");
     style.ApplyBody(entitiesLabel);
-    entitiesLabel.SetPosition({ 14.0f, 94.0f });
-    entitiesLabel.SetText("Entities  0");
+    entitiesLabel.SetPosition({ 14.0f, 102.0f });
+    entitiesLabel.SetText("entities 0");
 
     auto& hintLabel = hudCard.EmplaceChild<UILabel>("HUD.Hint");
     style.ApplyCaption(hintLabel);
-    hintLabel.SetPosition({ 14.0f, 118.0f });
+    hintLabel.SetPosition({ 180.0f, 102.0f });
     hintLabel.SetColor(style.mutedTextColor);
-    hintLabel.SetText("F1 Collision overlay   •   F3 Menu");
+    hintLabel.SetText("F1 overlay  •  F3 menu");
 
     m_statusLabel = &statusLabel;
     m_timeLabel = &timeLabel;
@@ -421,30 +432,38 @@ void GameLayer::BuildUI()
     auto& root = menu->Root();
 
     auto& panel = root.EmplaceChild<UIPanel>("Menu.Panel");
-    panel.SetSize({ 420.0f, 240.0f });
+    panel.SetSize({ 420.0f, 230.0f });
     panel.SetAnchor(UIAnchor::Center);
     panel.SetColor(style.panelColor);
+    panel.SetLayer(panelLayer);
+
+    auto& panelAccent = panel.EmplaceChild<UIPanel>("Menu.Accent");
+    panelAccent.SetPosition({ 0.0f, 0.0f });
+    panelAccent.SetSize({ 6.0f, 230.0f });
+    panelAccent.SetColor(m_accentColor);
+    panelAccent.SetLayer(accentLayer);
 
     auto& title = panel.EmplaceChild<UILabel>("Menu.Title");
     style.ApplyHeading(title);
     title.SetPosition({ 20.0f, 20.0f });
-    title.SetText("Command Deck");
+    title.SetText("Command palette");
 
     auto& description = panel.EmplaceChild<UILabel>("Menu.Description");
     style.ApplyBody(description);
     description.SetPosition({ 20.0f, 52.0f });
-    description.SetText("Pause, toggle collision lines, or exit.");
+    description.SetText("A minimal overlay for quick actions.");
 
     auto& notes = panel.EmplaceChild<UILabel>("Menu.Notes");
     style.ApplyCaption(notes);
     notes.SetPosition({ 20.0f, 78.0f });
     notes.SetColor(style.mutedTextColor);
-    notes.SetText("Everything is black and white for maximum clarity.");
+    notes.SetText("Everything is legible and layered above the frame.");
 
     auto& resumeBtn = panel.EmplaceChild<UIButton>("Menu.Resume");
     resumeBtn.SetStyle(style);
     resumeBtn.SetPosition({ 20.0f, 110.0f });
     resumeBtn.SetText("Resume simulation");
+    resumeBtn.SetLayer(buttonLayer);
     resumeBtn.SetOnClick([this]() {
         m_menuVisible = false;
         });
@@ -453,6 +472,7 @@ void GameLayer::BuildUI()
     overlayBtn.SetStyle(style);
     overlayBtn.SetPosition({ 20.0f, 162.0f });
     overlayBtn.SetText("Toggle collision overlay");
+    overlayBtn.SetLayer(buttonLayer);
     overlayBtn.SetOnClick([this]() {
         m_showCollisionDebug = !m_showCollisionDebug;
         });
@@ -461,6 +481,7 @@ void GameLayer::BuildUI()
     quitBtn.SetStyle(style);
     quitBtn.SetPosition({ 20.0f, 214.0f });
     quitBtn.SetText("Exit sandbox (log only)");
+    quitBtn.SetLayer(buttonLayer);
     quitBtn.SetOnClick([]() {
         KbkLog(kLogChannel, "Quit Sandbox clicked (hook your exit logic here)");
         });
@@ -479,7 +500,7 @@ void GameLayer::UpdateUI(float dt)
     // TIME label
     if (m_timeLabel) {
         char buf[64]{};
-        std::snprintf(buf, sizeof(buf), "Time   %.2f s", m_time);
+        std::snprintf(buf, sizeof(buf), "t %.2f s", m_time);
         m_timeLabel->SetText(buf);
     }
 
@@ -487,21 +508,21 @@ void GameLayer::UpdateUI(float dt)
     if (m_entitiesLabel) {
         char buf[64]{};
         const auto count = m_scene.Entities().size();
-        std::snprintf(buf, sizeof(buf), "Entities   %zu",
+        std::snprintf(buf, sizeof(buf), "entities %zu",
             static_cast<std::size_t>(count));
         m_entitiesLabel->SetText(buf);
     }
 
     if (m_collisionLabel) {
-        const char* state = m_lastCollision ? "Collisions   active" : "Collisions   none";
+        const char* state = m_lastCollision ? "collision active" : "collision idle";
         m_collisionLabel->SetText(state);
         m_collisionLabel->SetColor(m_lastCollision ? m_warningColor : m_mutedColor);
     }
 
     if (m_statusLabel) {
         m_statusLabel->SetText(m_menuVisible
-            ? "PAUSED • command deck open"
-            : "RUNNING • realtime simulation");
+            ? "paused • palette"
+            : "live • realtime");
         m_statusLabel->SetColor(m_menuVisible ? m_warningColor : m_accentColor);
     }
 
