@@ -88,18 +88,19 @@ namespace KibakoEngine {
 
         void SetFont(const Font* font) { m_font = font; InvalidateTextMetrics(); }
         void SetText(std::string text) { m_text = std::move(text); InvalidateTextMetrics(); }
-        void SetPadding(const DirectX::XMFLOAT2& padding) { m_padding = padding; }
+        void SetPadding(const DirectX::XMFLOAT2& padding) { m_padding = padding; MarkLabelDirty(); }
         void SetTextScale(float scale) { m_textScale = scale; InvalidateTextMetrics(); }
-        void SetTextColor(const Color4& color) { m_textColor = color; }
+        void SetTextColor(const Color4& color) { m_textColor = color; MarkLabelDirty(); }
         void SetNormalColor(const Color4& color) { m_colorNormal = color; }
         void SetHoverColor(const Color4& color) { m_colorHover = color; }
         void SetPressedColor(const Color4& color) { m_colorPressed = color; }
         void SetOnClick(std::function<void()> callback) { m_onClick = std::move(callback); }
-        void SetCenterText(bool center) { m_centerText = center; }
-        void SetPixelSnap(bool snap) { m_snapToPixel = snap; }
-        void SetAutoFitText(bool autoFit) { m_autoFitText = autoFit; }
-        void SetMinimumTextScale(float scale) { m_minTextScale = scale; }
-        void SetLabelOffset(const DirectX::XMFLOAT2& offset) { m_labelOffset = offset; }
+        void SetCenterText(bool center) { m_centerText = center; MarkLabelDirty(); }
+        void SetPixelSnap(bool snap) { m_snapToPixel = snap; MarkLabelDirty(); }
+        void SetAutoFitText(bool autoFit) { m_autoFitText = autoFit; MarkLabelDirty(); }
+        void SetMinimumTextScale(float scale) { m_minTextScale = scale; MarkLabelDirty(); }
+        void SetLabelOffset(const DirectX::XMFLOAT2& offset) { m_labelOffset = offset; MarkLabelDirty(); }
+        void SetSize(const DirectX::XMFLOAT2& size) { UIElement::SetSize(size); MarkLabelDirty(); }
         void SetStyle(const UIStyle& style);
 
         [[nodiscard]] UILabel* TextLabel() { return m_textLabel; }
@@ -112,9 +113,10 @@ namespace KibakoEngine {
         [[nodiscard]] bool HitTest(const UIContext& ctx) const;
         [[nodiscard]] Color4 CurrentColor() const;
         [[nodiscard]] DirectX::XMFLOAT2 MeasureText() const;
-        void InvalidateTextMetrics() { m_textDirty = true; }
+        void InvalidateTextMetrics() { m_textDirty = true; MarkLabelDirty(); }
         void RefreshTextLabel();
         [[nodiscard]] float FittedTextScale() const;
+        void MarkLabelDirty() { m_labelDirty = true; }
 
         const Font* m_font = nullptr;
         std::string m_text;
@@ -136,6 +138,7 @@ namespace KibakoEngine {
         bool m_trackingPress = false;
         bool m_snapToPixel = true;
         mutable bool m_textDirty = true;
+        mutable bool m_labelDirty = true;
         mutable DirectX::XMFLOAT2 m_cachedTextSize{ 0.0f, 0.0f };
         std::function<void()> m_onClick;
     };
