@@ -57,9 +57,9 @@ private:
     KibakoEngine::UIScreen* m_hudScreen = nullptr;
     KibakoEngine::UIScreen* m_menuScreen = nullptr;
 
-    KibakoEngine::Color4 m_accentColor{ 0.32f, 0.86f, 0.78f, 1.0f };
-    KibakoEngine::Color4 m_warningColor{ 0.95f, 0.58f, 0.46f, 1.0f };
-    KibakoEngine::Color4 m_mutedColor{ 0.72f, 0.78f, 0.86f, 1.0f };
+    KibakoEngine::Color4 m_accentColor{ 0.05f, 0.05f, 0.05f, 1.0f };
+    KibakoEngine::Color4 m_warningColor{ 0.20f, 0.20f, 0.20f, 1.0f };
+    KibakoEngine::Color4 m_mutedColor{ 0.50f, 0.50f, 0.50f, 1.0f };
 
     bool  m_menuVisible = false;
     bool  m_showCollisionDebug = false;
