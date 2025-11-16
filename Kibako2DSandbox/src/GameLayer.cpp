@@ -333,10 +333,8 @@ void GameLayer::BuildUI()
     style.panelColor = Color4{ 0.05f, 0.05f, 0.05f, 0.9f };
     style.headingScale = 0.5f;
     style.bodyScale = 0.35f;
-    style.captionScale = 0.35f;
 
     const float bodyHeight = TextRenderer::MeasureText(*style.font, "S", style.bodyScale).lineHeight;
-    const float captionHeight = TextRenderer::MeasureText(*style.font, "S", style.captionScale).lineHeight;
     const float headingHeight = TextRenderer::MeasureText(*style.font, "S", style.headingScale).lineHeight;
     const float lineSpacing = 6.0f;
 
@@ -361,11 +359,6 @@ void GameLayer::BuildUI()
     m_timeLabel = &makeHudLabel("HUD.Time", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "TIME  0.00 s");
     m_stateLabel = &makeHudLabel("HUD.State", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "COLLISION  IDLE");
     m_entitiesLabel = &makeHudLabel("HUD.Entities", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "ENTITIES  0");
-
-    // Small gap before the hint.
-    hudY += 2.0f;
-    m_hintLabel = &makeHudLabel("HUD.Hint", captionHeight, [&](UILabel& lbl) { style.ApplyCaption(lbl); },
-        "F1  collision overlay    ·    F3  command palette");
 
     m_hudScreen = &hud;
 
