@@ -222,7 +222,7 @@ void GameLayer::OnUpdate(float dt)
         #endif
     }
 
-    if (input.KeyPressed(SDL_SCANCODE_ESCAPE)) {
+    if (input.KeyPressed(SDL_SCANCODE_F3)) {
         m_menuVisible = !m_menuVisible;
     }
 
@@ -356,7 +356,7 @@ void GameLayer::BuildUI()
     auto& hintLabel = hudRoot.EmplaceChild<KibakoEngine::UILabel>("HUD.Hint");
     uiStyle.ApplyCaption(hintLabel);
     hintLabel.SetPosition({ 20.0f, 56.0f });
-    hintLabel.SetText("Press ESC to toggle menu");
+    hintLabel.SetText("Press F3 to toggle menu");
 
     m_scoreLabel = &scoreLabel;
     m_hintLabel = &hintLabel;
