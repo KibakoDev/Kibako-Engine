@@ -11,7 +11,7 @@ namespace KibakoEngine {
 
     namespace
     {
-        constexpr float SnapToPixel(float value)
+        inline float SnapToPixel(float value)
         {
             return std::roundf(value);
         }
