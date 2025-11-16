@@ -8,6 +8,7 @@
 #include "KibakoEngine/Renderer/SpriteTypes.h"
 #include "KibakoEngine/Renderer/SpriteBatch2D.h"
 #include "KibakoEngine/Scene/Scene2D.h"
+#include "KibakoEngine/UI/UIControls.h"
 
 namespace KibakoEngine {
     class Application;
@@ -32,9 +33,19 @@ public:
     [[nodiscard]] const std::vector<KibakoEngine::Entity2D>& Entities() const { return m_scene.Entities(); }
 
 private:
+    void BuildUI();
+    void UpdateUI(float dt);
+
     KibakoEngine::Application& m_app;
     KibakoEngine::Texture2D* m_starTexture = nullptr;
     KibakoEngine::Font*       m_uiFont = nullptr;
+
+    KibakoEngine::UILabel*  m_scoreLabel = nullptr;
+    KibakoEngine::UILabel*  m_hintLabel = nullptr;
+    KibakoEngine::UIScreen* m_hudScreen = nullptr;
+    KibakoEngine::UIScreen* m_menuScreen = nullptr;
+    KibakoEngine::UISystem  m_uiSystem;
+    bool m_menuVisible = true;
 
     KibakoEngine::EntityID m_entityCenter = 0;
     KibakoEngine::EntityID m_entityRight = 0;

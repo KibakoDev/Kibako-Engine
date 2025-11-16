@@ -104,6 +104,12 @@
     <ClInclude Include="include\KibakoEngine\Fonts\Font.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\KibakoEngine\UI\UIElement.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\KibakoEngine\UI\UIControls.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp">
@@ -182,6 +188,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Fonts\TextRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\UI\UIElement.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\UI\UIControls.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
