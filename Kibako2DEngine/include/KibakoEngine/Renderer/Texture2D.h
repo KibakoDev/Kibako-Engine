@@ -1,4 +1,4 @@
-// Texture2D.h - Declares a minimal Direct3D 11 texture wrapper.
+// Direct3D 11 texture wrapper
 #pragma once
 
 #include <d3d11.h>

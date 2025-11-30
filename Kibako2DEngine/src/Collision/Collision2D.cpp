@@ -1,4 +1,4 @@
-// Collision2D.cpp - Implements primitive collider intersection helpers.
+// Collider intersection helpers
 #include "KibakoEngine/Collision/Collision2D.h"
 #include "KibakoEngine/Scene/Scene2D.h"
 

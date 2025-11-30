@@ -1,4 +1,4 @@
-// GameLayer.h - Minimal black & white sandbox layer for Kibako 2D Engine
+// Sandbox layer for Kibako 2D Engine
 #pragma once
 
 #include <cstdint>
@@ -36,7 +36,7 @@ private:
 private:
     KibakoEngine::Application& m_app;
 
-    // Gameplay / scene
+    // Gameplay
     KibakoEngine::Scene2D      m_scene;
     std::uint32_t              m_entityLeft = 0;
     std::uint32_t              m_entityRight = 0;

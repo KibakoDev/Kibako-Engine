@@ -1,4 +1,4 @@
-// DebugUI.cpp - Implements the Dear ImGui debug overlay and shared panels.
+// Debug UI overlay
 #include "KibakoEngine/Core/DebugUI.h"
 
 #if KBK_DEBUG_BUILD

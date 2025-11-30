@@ -1,4 +1,4 @@
-// UIElement.h - Declares the minimal UI element hierarchy and screen manager.
+// Minimal UI hierarchy and screen manager
 #pragma once
 
 #include <memory>

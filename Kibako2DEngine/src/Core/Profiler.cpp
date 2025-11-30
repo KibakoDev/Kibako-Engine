@@ -1,4 +1,4 @@
-// Profiler.cpp - Implements the optional scoped profiler and logging sink.
+// Scoped profiler and logging sink
 #include "KibakoEngine/Core/Profiler.h"
 
 #if KBK_ENABLE_PROFILING

@@ -1,9 +1,9 @@
-// Collision2D.h - Declares collider types and intersection helpers.
+// Collider types and helpers
 #pragma once
 
 namespace KibakoEngine {
 
-    // Forward declaration for Transform2D defined in Scene2D.h
+    // Transform2D forward declare
     struct Transform2D;
 
     struct CircleCollider2D

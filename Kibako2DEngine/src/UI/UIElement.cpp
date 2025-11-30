@@ -1,4 +1,4 @@
-// UIElement.cpp - Implements basic UI containers and screen management.
+// UI containers and screen management
 #include "KibakoEngine/UI/UIElement.h"
 
 #include "KibakoEngine/Renderer/SpriteBatch2D.h"

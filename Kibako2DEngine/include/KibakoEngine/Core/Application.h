@@ -1,4 +1,4 @@
-// Application.h - Declares the main engine application managing windowing, rendering, and layers.
+// Engine application managing windowing, rendering, and layers
 #pragma once
 
 #include <cstdint>

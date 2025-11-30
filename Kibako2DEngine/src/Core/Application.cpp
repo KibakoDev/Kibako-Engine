@@ -1,4 +1,4 @@
-// Application.cpp - Implements the engine application loop and system integration.
+// Engine application loop
 #include "KibakoEngine/Core/Application.h"
 
 #include "KibakoEngine/Core/Debug.h"

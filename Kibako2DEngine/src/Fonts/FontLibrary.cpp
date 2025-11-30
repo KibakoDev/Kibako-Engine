@@ -1,4 +1,4 @@
-// FontLibrary.cpp - Implements FreeType font loading into GPU atlases.
+// FreeType font loading
 #include "KibakoEngine/Fonts/Font.h"
 
 #include "KibakoEngine/Core/Debug.h"

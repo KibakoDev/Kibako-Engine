@@ -1,4 +1,4 @@
-// DebugUI.h - Declares the Dear ImGui-based debug overlay utilities.
+// Debug UI utilities
 #pragma once
 
 #include <SDL2/SDL.h>
@@ -39,7 +39,7 @@ namespace KibakoEngine {
         void SetRenderStats(const RenderStats& stats);
         [[nodiscard]] RenderStats GetRenderStats();
 
-        // Registers an external scene inspector panel (implemented by the sandbox).
+        // Register an external scene inspector panel
         void SetSceneInspector(void* userData, PanelCallback callback);
 #else
         inline void Init(SDL_Window* window, ID3D11Device* device, ID3D11DeviceContext* context)

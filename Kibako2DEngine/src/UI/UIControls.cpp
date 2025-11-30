@@ -1,4 +1,4 @@
-// UIControls.cpp - Implements basic UI widgets for the HUD system.
+// Basic UI widgets
 #include "KibakoEngine/UI/UIControls.h"
 
 #include <algorithm>

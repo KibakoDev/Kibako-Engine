@@ -1,4 +1,4 @@
-// SpriteBatch2D.h - Declares the batched sprite renderer built on Direct3D 11.
+// Batched sprite renderer for Direct3D 11
 #pragma once
 
 #include <d3d11.h>

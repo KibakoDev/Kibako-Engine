@@ -1,4 +1,4 @@
-// SpriteBatch2D.cpp - Implements the batched Direct3D 11 sprite renderer.
+// Batched Direct3D 11 sprite renderer
 #include "KibakoEngine/Renderer/SpriteBatch2D.h"
 
 #include "KibakoEngine/Core/Debug.h"
