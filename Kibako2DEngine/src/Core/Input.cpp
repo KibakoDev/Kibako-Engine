@@ -1,4 +1,4 @@
-// Input.cpp - Implements keyboard and mouse state tracking across frames.
+// Input state tracking
 #include "KibakoEngine/Core/Input.h"
 
 #include <algorithm>

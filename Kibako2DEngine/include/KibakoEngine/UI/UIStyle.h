@@ -1,4 +1,4 @@
-// UIStyle.h - Centralized styling for Kibako UI controls.
+// Centralized styling for UI controls
 #pragma once
 
 #include <DirectXMath.h>

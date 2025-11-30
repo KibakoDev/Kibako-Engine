@@ -1,4 +1,4 @@
-// SpriteTypes.h - Declares basic sprite data structures shared by the renderer.
+// Sprite data structures
 #pragma once
 
 #include <DirectXMath.h>

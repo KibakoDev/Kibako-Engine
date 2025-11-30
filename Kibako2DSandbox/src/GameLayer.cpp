@@ -1,4 +1,4 @@
-// GameLayer.cpp - Minimal black & white sandbox demo for Kibako 2D Engine
+// Sandbox gameplay layer
 #include "GameLayer.h"
 
 #include "KibakoEngine/Core/Application.h"
@@ -29,7 +29,7 @@ namespace
     constexpr float       kColliderThickness = 2.0f;
 
 #if KBK_DEBUG_BUILD
-    // Simple ImGui scene inspector (debug only)
+    // Basic ImGui scene inspector
     void SceneInspectorPanel(void* userData)
     {
         auto* scene = static_cast<Scene2D*>(userData);
@@ -89,10 +89,6 @@ namespace
 
 } // namespace
 
-// --------------------------------------------------------
-// Construction / lifecycle
-// --------------------------------------------------------
-
 GameLayer::GameLayer(Application& app)
     : Layer("Sandbox.GameLayer")
     , m_app(app)
@@ -105,19 +101,19 @@ void GameLayer::OnAttach()
 
     auto& assets = m_app.Assets();
 
-    // Star texture (already monochrome in your asset)
+    // Load texture
     m_starTexture = assets.LoadTexture("star", "assets/star.png", true);
     if (!m_starTexture || !m_starTexture->IsValid()) {
         KbkError(kLogChannel, "Failed to load texture: assets/star.png");
         return;
     }
 
-    // UI font
+    // Load font
     m_uiFont = assets.LoadFontTTF("ui.default", "assets/fonts/dogica.ttf", 32);
     if (!m_uiFont)
         KbkWarn(kLogChannel, "Failed to load font: assets/fonts/dogica.ttf");
 
-    // ---------- Scene setup (3 stars, B&W) ----------
+    // Scene setup
     const float texW = static_cast<float>(m_starTexture->Width());
     const float texH = static_cast<float>(m_starTexture->Height());
     const RectF spriteRect = RectF::FromXYWH(0.0f, 0.0f, texW, texH);
@@ -140,7 +136,7 @@ void GameLayer::OnAttach()
             e.sprite.layer = layer;
         };
 
-    // Left star – white, with circle collider
+    // Left star
     {
         Entity2D& e = m_scene.CreateEntity();
         m_entityLeft = e.id;
@@ -156,7 +152,7 @@ void GameLayer::OnAttach()
         e.collision.circle = &m_leftCollider;
     }
 
-    // Right star – mid grey, with circle collider
+    // Right star
     {
         Entity2D& e = m_scene.CreateEntity();
         m_entityRight = e.id;
@@ -178,7 +174,7 @@ void GameLayer::OnAttach()
         m_starTexture->Height(),
         m_scene.Entities().size());
 
-    // UI system setup
+    // UI system
     m_uiSystem.SetInput(&m_app.InputSys());
     BuildUI();
 
@@ -224,10 +220,6 @@ void GameLayer::OnDetach()
 #endif
 }
 
-// --------------------------------------------------------
-// Update / Render
-// --------------------------------------------------------
-
 void GameLayer::OnUpdate(float dt)
 {
     KBK_PROFILE_SCOPE("GameLayerUpdate");
@@ -240,7 +232,7 @@ void GameLayer::OnUpdate(float dt)
     if (input.KeyPressed(SDL_SCANCODE_F3))
         m_menuVisible = !m_menuVisible;
 
-    // Pause gameplay when menu is open
+    // Pause when menu is open
     if (!m_menuVisible)
         UpdateScene(dt);
 
@@ -254,20 +246,13 @@ void GameLayer::OnRender(SpriteBatch2D& batch)
     if (!m_starTexture || !m_starTexture->IsValid())
         return;
 
-    // Sprites
     m_scene.Render(batch);
 
-    // Collision overlay
     if (m_showCollisionDebug)
         RenderCollisionDebug(batch);
 
-    // HUD + menu
     m_uiSystem.Render(batch);
 }
-
-// --------------------------------------------------------
-// Scene logic
-// --------------------------------------------------------
 
 void GameLayer::UpdateScene(float dt)
 {
@@ -276,12 +261,12 @@ void GameLayer::UpdateScene(float dt)
     Entity2D* left = m_scene.FindEntity(m_entityLeft);
     Entity2D* right = m_scene.FindEntity(m_entityRight);
 
-    // Left star – movement + rotation
+    // Left star motion
     if (left) {
         left->transform.rotation = m_time * 0.7f;
     }
 
-    // Right star – counter rotation
+    // Right star motion
     if (right) {
         right->transform.rotation = -m_time * 0.5f;
     }
@@ -294,7 +279,7 @@ void GameLayer::UpdateScene(float dt)
             *right->collision.circle, right->transform);
     }
 
-    // Monochrome visual feedback
+    // Collision feedback
     if (left) {
         left->sprite.color = hit
             ? Color4::White()
@@ -310,10 +295,6 @@ void GameLayer::UpdateScene(float dt)
     m_lastCollision = hit;
     m_scene.Update(dt);
 }
-
-// --------------------------------------------------------
-// UI setup / update
-// --------------------------------------------------------
 
 void GameLayer::BuildUI()
 {
@@ -345,7 +326,7 @@ void GameLayer::BuildUI()
     const float headingHeight = TextRenderer::MeasureText(*style.font, "S", style.headingScale).lineHeight;
     const float lineSpacing = 6.0f;
 
-    // HUD container anchored to the top-left with simple vertical stacking.
+    // HUD layout
     UIScreen& hud = m_uiSystem.CreateScreen("HUD");
     auto& hudRoot = hud.Root();
 
@@ -369,7 +350,7 @@ void GameLayer::BuildUI()
 
     m_hudScreen = &hud;
 
-    // Centered command palette with a solid panel and centered labels.
+    // Menu layout
     UIScreen& menu = m_uiSystem.CreateScreen("Menu");
     auto& menuRoot = menu.Root();
 
@@ -465,14 +446,14 @@ void GameLayer::UpdateUI(float dt)
             : "COLLISION  IDLE");
     }
 
-    // Title hint when paused
+    // Title text
     if (m_titleLabel) {
         m_titleLabel->SetText(m_menuVisible
             ? "KIBAKO 2D ENGINE - SANDBOX  ·  PAUSED"
             : "KIBAKO 2D ENGINE - SANDBOX");
     }
 
-    // HUD always visible, hint hidden when menu open
+    // HUD visibility
     if (m_hintLabel)
         m_hintLabel->SetVisible(!m_menuVisible);
 
@@ -490,10 +471,6 @@ void GameLayer::UpdateUI(float dt)
 
     m_uiSystem.Update(dt);
 }
-
-// --------------------------------------------------------
-// Collision debug rendering
-// --------------------------------------------------------
 
 void GameLayer::RenderCollisionDebug(SpriteBatch2D& batch)
 {

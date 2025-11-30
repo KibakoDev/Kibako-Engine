@@ -1,4 +1,4 @@
-// TextRenderer.cpp - Implements batched text rendering helpers.
+// Batched text rendering
 #include "KibakoEngine/Fonts/Font.h"
 
 #include "KibakoEngine/Core/Debug.h"

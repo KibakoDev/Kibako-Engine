@@ -1,4 +1,4 @@
-// AssetManager.cpp - Implements texture loading and caching utilities.
+// Asset loading and caching
 #include "KibakoEngine/Resources/AssetManager.h"
 
 #include "KibakoEngine/Core/Debug.h"

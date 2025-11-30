@@ -1,4 +1,4 @@
-// Input.h - Declares the frame-based input device state tracker.
+// Frame-based input tracker
 #pragma once
 
 #include <SDL2/SDL.h>

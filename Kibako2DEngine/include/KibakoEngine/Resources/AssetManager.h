@@ -1,4 +1,4 @@
-// AssetManager.h - Declares the texture asset cache for the engine.
+// Texture and font cache
 #pragma once
 
 #include <memory>
@@ -20,13 +20,12 @@ public:
     void Init(ID3D11Device* device);
     void Shutdown();
 
-    // Loads a texture if it does not already exist for the provided id
-    // Always returns the stored pointer (newly created or cached)
+    // Load or fetch a texture
     [[nodiscard]] Texture2D* LoadTexture(const std::string& id,
                                          const std::string& path,
                                          bool sRGB = true);
 
-    // Loads a TTF font at the requested pixel height if not already cached
+    // Load or fetch a TTF font
     [[nodiscard]] Font* LoadFontTTF(const std::string& id,
                                     const std::string& path,
                                     int pixelHeight);
@@ -34,11 +33,11 @@ public:
     [[nodiscard]] Font* GetFont(const std::string& id);
     [[nodiscard]] const Font* GetFont(const std::string& id) const;
 
-    // Returns nullptr when no texture has been loaded with this id
+    // Returns nullptr if missing
     [[nodiscard]] Texture2D* GetTexture(const std::string& id);
     [[nodiscard]] const Texture2D* GetTexture(const std::string& id) const;
 
-    // Removes all cached textures (invoked by Shutdown)
+    // Clear cached assets
     void Clear();
 
 private:

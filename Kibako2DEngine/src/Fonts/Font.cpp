@@ -1,4 +1,4 @@
-// Font.cpp - Implements font atlas utilities and glyph lookups.
+// Font atlas utilities
 #include "KibakoEngine/Fonts/Font.h"
 
 #include "KibakoEngine/Core/Debug.h"

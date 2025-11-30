@@ -1,4 +1,4 @@
-// UIControls.h - Declares basic UI controls built on top of UIElement.
+// Basic UI controls
 #pragma once
 
 #include <functional>

@@ -1,4 +1,4 @@
-// Scene2D.cpp - Implements entity storage and sprite rendering helpers.
+// 2D scene storage and rendering
 #include "KibakoEngine/Scene/Scene2D.h"
 
 #include "KibakoEngine/Core/Debug.h"
@@ -65,7 +65,7 @@ namespace KibakoEngine {
     void Scene2D::Update(float dt)
     {
         KBK_UNUSED(dt);
-        // The scene leaves gameplay logic to higher-level systems.
+        // Gameplay runs elsewhere
     }
 
     void Scene2D::Render(SpriteBatch2D& batch) const
@@ -81,11 +81,11 @@ namespace KibakoEngine {
             const RectF& local = entity.sprite.dst;
             const Transform2D& transform = entity.transform;
 
-            // Compute scaled size (retain local dimensions)
+            // Scale sprite size
             const float scaledWidth = local.w * transform.scale.x;
             const float scaledHeight = local.h * transform.scale.y;
 
-            // Local offsets are expressed relative to the entity center
+            // Apply local offsets
             const float offsetX = local.x * transform.scale.x;
             const float offsetY = local.y * transform.scale.y;
 

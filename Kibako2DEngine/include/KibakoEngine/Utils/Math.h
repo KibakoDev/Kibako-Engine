@@ -1,4 +1,4 @@
-// Math.h - Declares common math helpers and lightweight random utilities.
+// Math helpers and random utilities
 #pragma once
 
 #include <cmath>

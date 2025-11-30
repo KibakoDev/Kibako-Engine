@@ -1,4 +1,4 @@
-// GameServices.h - Declares global services such as the gameplay time system.
+// Global services like game time
 #pragma once
 
 #include <cstdint>

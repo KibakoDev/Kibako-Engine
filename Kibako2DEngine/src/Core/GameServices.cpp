@@ -1,4 +1,4 @@
-// GameServices.cpp - Implements lightweight global services such as the time system.
+// Lightweight global services
 #include "KibakoEngine/Core/GameServices.h"
 
 #include "KibakoEngine/Core/Debug.h"

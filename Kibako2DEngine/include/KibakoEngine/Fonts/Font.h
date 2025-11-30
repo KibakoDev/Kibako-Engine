@@ -1,4 +1,4 @@
-// Font.h - Declares glyph information and font atlas types for text rendering.
+// Glyph info and font atlas types
 #pragma once
 
 #include <cstdint>
@@ -21,10 +21,10 @@ namespace KibakoEngine {
 
     struct Glyph
     {
-        RectF               uv{};            // Normalized UV rectangle within the atlas
-        DirectX::XMFLOAT2   size{ 0.0f, 0.0f };     // Width/height in pixels
-        DirectX::XMFLOAT2   bearing{ 0.0f, 0.0f };  // Offset from pen position to top-left
-        float               advance = 0.0f;         // Horizontal advance in pixels
+        RectF               uv{};            // UVs in atlas
+        DirectX::XMFLOAT2   size{ 0.0f, 0.0f };     // Size in pixels
+        DirectX::XMFLOAT2   bearing{ 0.0f, 0.0f };  // Offset from pen
+        float               advance = 0.0f;         // Advance in pixels
     };
 
     class FontAtlas

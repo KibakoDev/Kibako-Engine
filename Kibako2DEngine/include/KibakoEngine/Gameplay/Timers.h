@@ -1,11 +1,11 @@
-// Timers.h - Declares reusable gameplay timers and countdown helpers.
+// Gameplay timers
 #pragma once
 
 #include <algorithm>
 
 namespace KibakoEngine::Gameplay {
 
-    // Stopwatch: accumulates elapsed time while running
+    // Stopwatch that accumulates while running
     class Stopwatch
     {
     public:
@@ -55,7 +55,7 @@ namespace KibakoEngine::Gameplay {
         bool  m_running = false;
     };
 
-    // CountdownTimer: counts down from a duration towards zero
+    // Countdown timer
     class CountdownTimer
     {
     public:

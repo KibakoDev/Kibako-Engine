@@ -1,4 +1,4 @@
-// Scene2D.h - Declares basic 2D entities, sprites, and scene management.
+// Basic 2D entities and scene management
 #pragma once
 
 #include <cstdint>
