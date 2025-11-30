@@ -212,7 +212,6 @@ void GameLayer::OnDetach()
     m_timeLabel = nullptr;
     m_stateLabel = nullptr;
     m_entitiesLabel = nullptr;
-    m_hintLabel = nullptr;
     m_resumeButton = nullptr;
     m_collisionButton = nullptr;
     m_exitButton = nullptr;
@@ -321,7 +320,6 @@ void GameLayer::BuildUI()
     m_timeLabel = nullptr;
     m_stateLabel = nullptr;
     m_entitiesLabel = nullptr;
-    m_hintLabel = nullptr;
     m_resumeButton = nullptr;
     m_collisionButton = nullptr;
     m_exitButton = nullptr;
@@ -472,9 +470,7 @@ void GameLayer::UpdateUI(float dt)
             : "KIBAKO 2D ENGINE - SANDBOX");
     }
 
-    // HUD always visible, hint hidden when menu open
-    if (m_hintLabel)
-        m_hintLabel->SetVisible(!m_menuVisible);
+    // HUD always visible
 
     if (m_hudScreen)
         m_hudScreen->SetVisible(true);
