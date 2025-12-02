@@ -11,6 +11,7 @@ namespace KibakoEngine {
     class UILabel;
     class UIPanel;
     class UIButton;
+    class UISlider;
 
     struct UIStyle
     {
@@ -24,8 +25,17 @@ namespace KibakoEngine {
         Color4 buttonHover{ 0.25f, 0.25f, 0.25f, 0.95f };
         Color4 buttonPressed{ 0.3f, 0.3f, 0.3f, 1.0f };
 
+        Color4 sliderTrack{ 0.12f, 0.13f, 0.16f, 0.9f };
+        Color4 sliderFill{ 0.27f, 0.6f, 1.0f, 0.95f };
+        Color4 sliderHandle{ 0.9f, 0.9f, 0.9f, 1.0f };
+        Color4 sliderHandleHover{ 1.0f, 1.0f, 1.0f, 1.0f };
+
         DirectX::XMFLOAT2 buttonSize{ 480.0f, 48.0f };
         DirectX::XMFLOAT2 buttonPadding{ 100.0f, 11.0f };
+
+        float sliderHeight = 32.0f;
+        float sliderTrackHeight = 12.0f;
+        float sliderHandleWidth = 18.0f;
 
         float headingScale = 1.05f;
         float bodyScale = 0.9f;
@@ -37,6 +47,7 @@ namespace KibakoEngine {
         void ApplyCaption(UILabel& label) const;
         void ApplyPanel(UIPanel& panel) const;
         void ApplyButton(UIButton& button) const;
+        void ApplySlider(UISlider& slider) const;
     };
 
 } // namespace KibakoEngine

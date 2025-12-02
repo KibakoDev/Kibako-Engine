@@ -14,6 +14,12 @@
 namespace KibakoEngine {
     class UILabel;
 
+    enum class UILayoutDirection
+    {
+        Vertical,
+        Horizontal,
+    };
+
     class UILabel : public UIElement
     {
     public:
@@ -41,6 +47,25 @@ namespace KibakoEngine {
         float m_scale = 1.0f;
         bool m_snapToPixel = true;
         bool m_autoSize = true;
+    };
+
+    class UIStack : public UIElement
+    {
+    public:
+        explicit UIStack(std::string name = "Stack");
+
+        void SetDirection(UILayoutDirection direction) { m_direction = direction; InvalidateLayout(); }
+        void SetSpacing(float spacing) { m_spacing = spacing; InvalidateLayout(); }
+        void SetPadding(const DirectX::XMFLOAT2& padding) { m_padding = padding; InvalidateLayout(); }
+        void SetFitToChildren(bool fit) { m_fitToChildren = fit; }
+
+        void OnUpdate(const UIContext& ctx) override;
+
+    private:
+        UILayoutDirection m_direction = UILayoutDirection::Vertical;
+        float m_spacing = 6.0f;
+        DirectX::XMFLOAT2 m_padding{ 0.0f, 0.0f };
+        bool m_fitToChildren = true;
     };
 
     class UIImage : public UIElement
@@ -141,6 +166,49 @@ namespace KibakoEngine {
         mutable bool m_labelDirty = true;
         mutable DirectX::XMFLOAT2 m_cachedTextSize{ 0.0f, 0.0f };
         std::function<void()> m_onClick;
+    };
+
+    class UISlider : public UIElement
+    {
+    public:
+        explicit UISlider(std::string name = "Slider");
+
+        void SetRange(float min, float max);
+        void SetValue(float value);
+        void SetStep(float step) { m_step = step; }
+        void SetOnValueChanged(std::function<void(float)> callback) { m_onValueChanged = std::move(callback); }
+        void SetHandleWidth(float width) { m_handleWidth = width; }
+        void SetTrackHeight(float height) { m_trackHeight = height; }
+        void SetTrackColor(const Color4& color) { m_trackColor = color; }
+        void SetFillColor(const Color4& color) { m_fillColor = color; }
+        void SetHandleColor(const Color4& color) { m_handleColor = color; }
+        void SetHandleHoverColor(const Color4& color) { m_handleHoverColor = color; }
+        void SetSnapToPixel(bool snap) { m_snapToPixel = snap; }
+
+        [[nodiscard]] float Value() const { return m_value; }
+
+        void OnUpdate(const UIContext& ctx) override;
+        void OnRender(SpriteBatch2D& batch, const UIContext& ctx, const UIStyle& style) const override;
+
+    private:
+        [[nodiscard]] RectF TrackRect(const RectF& bounds) const;
+        [[nodiscard]] RectF HandleRect(const RectF& track) const;
+        void UpdateValueFromMouse(const UIContext& ctx, const RectF& track);
+
+        float m_min = 0.0f;
+        float m_max = 1.0f;
+        float m_value = 0.5f;
+        float m_step = 0.0f;
+        float m_handleWidth = 16.0f;
+        float m_trackHeight = 12.0f;
+        Color4 m_trackColor{ 0.12f, 0.13f, 0.16f, 0.85f };
+        Color4 m_fillColor{ 0.22f, 0.65f, 0.9f, 0.95f };
+        Color4 m_handleColor{ 0.9f, 0.9f, 0.9f, 1.0f };
+        Color4 m_handleHoverColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+        bool m_snapToPixel = true;
+        bool m_dragging = false;
+        bool m_hovering = false;
+        std::function<void(float)> m_onValueChanged;
     };
 
 } // namespace KibakoEngine
