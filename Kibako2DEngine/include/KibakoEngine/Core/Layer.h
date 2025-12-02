@@ -3,42 +3,31 @@
 
 #include <string>
 
-#include "KibakoEngine/Core/Debug.h"
+namespace KibakoEngine
+{
+    class Application;
 
-namespace KibakoEngine {
-    class SpriteBatch2D;
-}
-
-namespace KibakoEngine {
-
+    // Base layer interface used by the application loop.
     class Layer
     {
     public:
-        explicit Layer(const char* name)
-            : m_name(name ? name : "Layer")
-        {
-        }
-
+        explicit Layer(std::string name) : m_name(std::move(name)) {}
         virtual ~Layer() = default;
 
         virtual void OnAttach() {}
         virtual void OnDetach() {}
+        virtual void OnUpdate(float /*dt*/) {}
 
-        virtual void OnUpdate(float dt)
-        {
-            KBK_UNUSED(dt);
-        }
+        // Rendering is delegated to the concrete layer.
+        virtual void OnRender(class SpriteBatch2D& /*batch*/) {}
 
-        virtual void OnRender(SpriteBatch2D& batch)
-        {
-            KBK_UNUSED(batch);
-        }
-
-        const std::string& GetName() const { return m_name; }
+        const std::string& Name() const { return m_name; }
 
     protected:
+        Application* m_appPtr = nullptr;
+
+    private:
         std::string m_name;
     };
-
 } // namespace KibakoEngine
 
