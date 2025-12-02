@@ -111,6 +111,7 @@ namespace KibakoEngine {
             else
                 StoreBreakpointMessage("");
 
+
             if (config.breakIntoDebugger)
                 KBK_BREAK();
         }
