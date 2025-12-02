@@ -79,6 +79,9 @@ namespace KibakoEngine {
         [[nodiscard]] DirectX::XMFLOAT2 ParentSize(const UIContext& ctx) const;
         [[nodiscard]] DirectX::XMFLOAT2 AnchorOffset(const UIContext& ctx) const;
 
+        [[nodiscard]] const std::vector<std::unique_ptr<UIElement>>& Children() const { return m_children; }
+        [[nodiscard]] std::vector<std::unique_ptr<UIElement>>& Children() { return m_children; }
+
         std::string m_name;
         DirectX::XMFLOAT2 m_position{ 0.0f, 0.0f };
         DirectX::XMFLOAT2 m_size{ 0.0f, 0.0f };
