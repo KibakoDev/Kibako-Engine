@@ -32,6 +32,7 @@ private:
     void UpdateUI(float dt);
     void UpdateScene(float dt);
     void RenderCollisionDebug(KibakoEngine::SpriteBatch2D& batch);
+    [[nodiscard]] float ComputeUiScale(float screenWidth, float screenHeight) const;
 
 private:
     KibakoEngine::Application& m_app;
@@ -62,4 +63,7 @@ private:
     bool  m_showCollisionDebug = false;
     bool  m_lastCollision = false;
     float m_time = 0.0f;
+    float m_uiScale = 1.0f;
+    float m_lastUiWidth = 0.0f;
+    float m_lastUiHeight = 0.0f;
 };
