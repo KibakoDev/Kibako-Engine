@@ -50,6 +50,11 @@ namespace
 
     const SandboxMenuTheme kMenuTheme{};
 
+    DirectX::XMFLOAT2 ScaleVec(const DirectX::XMFLOAT2& v, float scale)
+    {
+        return DirectX::XMFLOAT2{ v.x * scale, v.y * scale };
+    }
+
 #if KBK_DEBUG_BUILD
     // Basic ImGui scene inspector
     void SceneInspectorPanel(void* userData)
@@ -198,6 +203,11 @@ void GameLayer::OnAttach()
 
     // UI system
     m_uiSystem.SetInput(&m_app.InputSys());
+    const float screenW = static_cast<float>(m_app.Width());
+    const float screenH = static_cast<float>(m_app.Height());
+    m_uiScale = ComputeUiScale(screenW, screenH);
+    m_lastUiWidth = screenW;
+    m_lastUiHeight = screenH;
     BuildUI();
 
 #if KBK_DEBUG_BUILD
@@ -224,6 +234,9 @@ void GameLayer::OnDetach()
     m_lastCollision = false;
     m_menuVisible = true;
     m_time = 0.0f;
+    m_uiScale = 1.0f;
+    m_lastUiWidth = 0.0f;
+    m_lastUiHeight = 0.0f;
 
     m_uiSystem.Clear();
     m_titleLabel = nullptr;
@@ -338,6 +351,28 @@ void GameLayer::BuildUI()
     if (!m_uiFont)
         return;
 
+    const float screenW = static_cast<float>(m_app.Width());
+    const float screenH = static_cast<float>(m_app.Height());
+
+    const SandboxMenuTheme scaledTheme{
+        kMenuTheme.background,
+        kMenuTheme.panelColor,
+        kMenuTheme.buttonNormal,
+        kMenuTheme.buttonHover,
+        kMenuTheme.buttonPressed,
+        kMenuTheme.muted,
+        ScaleVec(kMenuTheme.buttonSize, m_uiScale),
+        ScaleVec(kMenuTheme.buttonPadding, m_uiScale),
+        kMenuTheme.titleScale * m_uiScale,
+        kMenuTheme.bodyScale * m_uiScale,
+        kMenuTheme.buttonTextScale * m_uiScale,
+        kMenuTheme.verticalSpacing * m_uiScale,
+        kMenuTheme.titleSpacing * m_uiScale,
+        kMenuTheme.infoPanelHeight * m_uiScale,
+    };
+
+    const auto scaledCaption = scaledTheme.bodyScale * 0.85f;
+
     auto& style = m_uiSystem.Style();
     style.font = m_uiFont;
     style.headingColor = Color4::White();
@@ -347,22 +382,23 @@ void GameLayer::BuildUI()
     style.buttonNormal = kMenuTheme.buttonNormal;
     style.buttonHover = kMenuTheme.buttonHover;
     style.buttonPressed = kMenuTheme.buttonPressed;
-    style.buttonSize = kMenuTheme.buttonSize;
-    style.buttonPadding = kMenuTheme.buttonPadding;
-    style.headingScale = kMenuTheme.titleScale;
-    style.bodyScale = kMenuTheme.bodyScale;
-    style.buttonTextScale = kMenuTheme.buttonTextScale;
+    style.buttonSize = scaledTheme.buttonSize;
+    style.buttonPadding = scaledTheme.buttonPadding;
+    style.headingScale = scaledTheme.titleScale;
+    style.bodyScale = scaledTheme.bodyScale;
+    style.captionScale = scaledCaption;
+    style.buttonTextScale = scaledTheme.buttonTextScale;
 
     const float headingHeight = TextRenderer::MeasureText(*style.font, "S", style.headingScale).lineHeight;
     const float bodyHeight = TextRenderer::MeasureText(*style.font, "S", style.bodyScale).lineHeight;
-    const float lineSpacing = 6.0f;
+    const float lineSpacing = 6.0f * m_uiScale;
 
     // HUD layout
     UIScreen& hud = m_uiSystem.CreateScreen("HUD");
     auto& hudRoot = hud.Root();
 
     auto& hudGroup = hudRoot.EmplaceChild<UIElement>("HUD.Group");
-    hudGroup.SetPosition({ 16.0f, 16.0f });
+    hudGroup.SetPosition({ 16.0f * m_uiScale, 16.0f * m_uiScale });
 
     float hudY = 0.0f;
     auto makeHudLabel = [&](const char* name, float height, auto styler, const char* text) -> UILabel& {
@@ -374,7 +410,7 @@ void GameLayer::BuildUI()
         return lbl;
     };
 
-    m_titleLabel = &makeHudLabel("HUD.Title", headingHeight + 5, [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "KIBAKO 2D ENGINE - SANDBOX");
+    m_titleLabel = &makeHudLabel("HUD.Title", headingHeight + (5.0f * m_uiScale), [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "KIBAKO 2D ENGINE - SANDBOX");
     m_timeLabel = &makeHudLabel("HUD.Time", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "TIME  0.00 s");
     m_stateLabel = &makeHudLabel("HUD.State", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "COLLISION  IDLE");
     m_entitiesLabel = &makeHudLabel("HUD.Entities", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "ENTITIES  0");
@@ -393,21 +429,21 @@ void GameLayer::BuildUI()
     auto& dim = menuRoot.EmplaceChild<UIPanel>("Menu.Backdrop");
     dim.SetColor(kMenuTheme.background);
     dim.SetAnchor(UIAnchor::TopLeft);
-    dim.SetSize({ static_cast<float>(m_app.Width()), static_cast<float>(m_app.Height()) });
+    dim.SetSize({ screenW, screenH });
     m_menuBackdrop = &dim;
 
     auto& stack = menuRoot.EmplaceChild<UIElement>("Menu.Stack");
     stack.SetAnchor(UIAnchor::Center);
 
-    float yOffset = -kMenuTheme.titleSpacing;
+    float yOffset = -scaledTheme.titleSpacing;
 
     auto& title = stack.EmplaceChild<UILabel>("Menu.Title");
     style.ApplyHeading(title);
     title.SetAnchor(UIAnchor::Center);
-    title.SetScale(kMenuTheme.titleScale + 0.25f);
+    title.SetScale(scaledTheme.titleScale + (0.25f * m_uiScale));
     title.SetText("SANDBOX");
     title.SetPosition({ 0.0f, yOffset });
-    yOffset += kMenuTheme.titleSpacing;
+    yOffset += scaledTheme.titleSpacing;
 
     auto makeMenuButton = [&](const char* name, const char* text, auto onClick) -> UIButton& {
         auto& btn = stack.EmplaceChild<UIButton>(name);
@@ -416,7 +452,7 @@ void GameLayer::BuildUI()
         btn.SetPosition({ 0.0f, yOffset });
         btn.SetText(text);
         btn.SetOnClick(onClick);
-        yOffset += kMenuTheme.buttonSize.y + kMenuTheme.verticalSpacing;
+        yOffset += scaledTheme.buttonSize.y + scaledTheme.verticalSpacing;
         return btn;
     };
 
@@ -442,6 +478,15 @@ void GameLayer::UpdateUI(float dt)
     // Resize-aware
     const float screenW = static_cast<float>(m_app.Width());
     const float screenH = static_cast<float>(m_app.Height());
+
+    const float targetScale = ComputeUiScale(screenW, screenH);
+    const bool sizeChanged = (screenW != m_lastUiWidth) || (screenH != m_lastUiHeight);
+    if (sizeChanged || std::fabs(targetScale - m_uiScale) > 0.01f) {
+        m_uiScale = targetScale;
+        m_lastUiWidth = screenW;
+        m_lastUiHeight = screenH;
+        BuildUI();
+    }
 
     m_uiSystem.SetScreenSize(screenW, screenH);
 
@@ -491,6 +536,18 @@ void GameLayer::UpdateUI(float dt)
     }
 
     m_uiSystem.Update(dt);
+}
+
+float GameLayer::ComputeUiScale(float screenWidth, float screenHeight) const
+{
+    constexpr float kReferenceWidth = 1600.0f;
+    constexpr float kReferenceHeight = 900.0f;
+
+    const float widthScale = screenWidth / kReferenceWidth;
+    const float heightScale = screenHeight / kReferenceHeight;
+    const float rawScale = std::min(widthScale, heightScale);
+
+    return std::clamp(rawScale, 0.6f, 1.5f);
 }
 
 void GameLayer::RenderCollisionDebug(SpriteBatch2D& batch)
