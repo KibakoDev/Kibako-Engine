@@ -53,13 +53,15 @@ private:
     KibakoEngine::UILabel* m_stateLabel = nullptr;
     KibakoEngine::UILabel* m_entitiesLabel = nullptr;
     KibakoEngine::UIButton* m_resumeButton = nullptr;
-    KibakoEngine::UIButton* m_collisionButton = nullptr;
-    KibakoEngine::UIButton* m_exitButton = nullptr;
-    KibakoEngine::UIScreen* m_hudScreen = nullptr;
-    KibakoEngine::UIScreen* m_menuScreen = nullptr;
+    KibakoEngine::UIButton* m_controlsButton = nullptr;
+    KibakoEngine::UIPanel*   m_controlsPanel = nullptr;
+    KibakoEngine::UILabel*   m_controlsText = nullptr;
+    KibakoEngine::UIScreen*  m_hudScreen = nullptr;
+    KibakoEngine::UIScreen*  m_menuScreen = nullptr;
 
-    bool  m_menuVisible = false;
+    bool  m_menuVisible = true;
     bool  m_showCollisionDebug = false;
     bool  m_lastCollision = false;
+    bool  m_showControlsHelp = false;
     float m_time = 0.0f;
 };
