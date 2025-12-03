@@ -223,7 +223,6 @@ void GameLayer::OnDetach()
     m_showCollisionDebug = false;
     m_lastCollision = false;
     m_menuVisible = true;
-    m_showControlsHelp = false;
     m_time = 0.0f;
 
     m_uiSystem.Clear();
@@ -232,9 +231,7 @@ void GameLayer::OnDetach()
     m_stateLabel = nullptr;
     m_entitiesLabel = nullptr;
     m_resumeButton = nullptr;
-    m_controlsButton = nullptr;
-    m_controlsPanel = nullptr;
-    m_controlsText = nullptr;
+    m_exitButton = nullptr;
     m_hudScreen = nullptr;
     m_menuScreen = nullptr;
 
@@ -332,9 +329,7 @@ void GameLayer::BuildUI()
     m_stateLabel = nullptr;
     m_entitiesLabel = nullptr;
     m_resumeButton = nullptr;
-    m_controlsButton = nullptr;
-    m_controlsPanel = nullptr;
-    m_controlsText = nullptr;
+    m_exitButton = nullptr;
     m_hudScreen = nullptr;
     m_menuScreen = nullptr;
     m_uiSystem.Clear();
@@ -386,7 +381,7 @@ void GameLayer::BuildUI()
     auto& hintLabel = hudGroup.EmplaceChild<UILabel>("HUD.Hint");
     style.ApplyCaption(hintLabel);
     hintLabel.SetPosition({ 0.0f, hudY });
-    hintLabel.SetText("F3 : menu  ·  F1 : collisions  ·  ESC : quitter");
+    hintLabel.SetText("F3: Menu  ·  F1: Toggle collisions  ·  ESC: Quit");
 
     m_hudScreen = &hud;
 
@@ -423,31 +418,16 @@ void GameLayer::BuildUI()
         return btn;
     };
 
-    m_resumeButton = &makeMenuButton("Menu.Resume", "NOUVELLE PARTIE", [this]() {
+    m_resumeButton = &makeMenuButton("Menu.Resume", "NEW GAME", [this]() {
         m_time = 0.0f;
         m_menuVisible = false;
     });
 
-    m_controlsButton = &makeMenuButton("Menu.Controls", "TOUCHES", [this]() {
-        m_showControlsHelp = !m_showControlsHelp;
+    m_exitButton = &makeMenuButton("Menu.Exit", "EXIT", []() {
+        SDL_Event quit{};
+        quit.type = SDL_QUIT;
+        SDL_PushEvent(&quit);
     });
-
-    auto& controlsPanel = stack.EmplaceChild<UIPanel>("Menu.ControlsPanel");
-    style.ApplyPanel(controlsPanel);
-    controlsPanel.SetAnchor(UIAnchor::Center);
-    controlsPanel.SetPosition({ 0.0f, yOffset + 12.0f });
-    controlsPanel.SetSize({ style.buttonSize.x + (kMenuTheme.buttonPadding.x * 2.0f), kMenuTheme.infoPanelHeight });
-    controlsPanel.SetColor(kMenuTheme.panelColor);
-    controlsPanel.SetVisible(false);
-
-    auto& controlsBody = controlsPanel.EmplaceChild<UILabel>("Menu.ControlsText");
-    style.ApplyBody(controlsBody);
-    controlsBody.SetAnchor(UIAnchor::Center);
-    controlsBody.SetScale(style.bodyScale * 0.9f);
-    controlsBody.SetText("F3 : Ouvrir / fermer le menu\nF1 : Basculer la collision\nESC : Quitter l'application");
-
-    m_controlsPanel = &controlsPanel;
-    m_controlsText = &controlsBody;
 
     menu.SetVisible(true);
     m_menuScreen = &menu;
@@ -500,18 +480,9 @@ void GameLayer::UpdateUI(float dt)
     if (m_menuScreen)
         m_menuScreen->SetVisible(m_menuVisible);
 
-    if (m_controlsButton) {
-        m_controlsButton->SetText(m_showControlsHelp
-            ? "MASQUER LES TOUCHES"
-            : "TOUCHES");
-    }
-
     if (m_resumeButton) {
-        m_resumeButton->SetText(m_time > 0.01f ? "REPRENDRE" : "NOUVELLE PARTIE");
+        m_resumeButton->SetText(m_time > 0.01f ? "RESUME" : "NEW GAME");
     }
-
-    if (m_controlsPanel)
-        m_controlsPanel->SetVisible(m_menuVisible && m_showControlsHelp);
 
     m_uiSystem.Update(dt);
 }
