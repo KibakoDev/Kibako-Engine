@@ -54,6 +54,7 @@ private:
     KibakoEngine::UILabel* m_entitiesLabel = nullptr;
     KibakoEngine::UIButton* m_resumeButton = nullptr;
     KibakoEngine::UIButton* m_exitButton = nullptr;
+    KibakoEngine::UIPanel*  m_menuBackdrop = nullptr;
     KibakoEngine::UIScreen*  m_hudScreen = nullptr;
     KibakoEngine::UIScreen*  m_menuScreen = nullptr;
 
