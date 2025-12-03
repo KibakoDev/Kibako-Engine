@@ -28,6 +28,28 @@ namespace
     constexpr int         kDebugDrawLayer = 1000;
     constexpr float       kColliderThickness = 2.0f;
 
+    struct SandboxMenuTheme
+    {
+        Color4 background{ 0.0f, 0.0f, 0.0f, 0.78f };
+        Color4 panelColor{ 0.05f, 0.05f, 0.05f, 0.88f };
+        Color4 buttonNormal{ 1.0f, 1.0f, 1.0f, 1.0f };
+        Color4 buttonHover{ 0.88f, 0.88f, 0.88f, 1.0f };
+        Color4 buttonPressed{ 0.78f, 0.78f, 0.78f, 1.0f };
+        Color4 muted{ 0.75f, 0.75f, 0.75f, 1.0f };
+
+        DirectX::XMFLOAT2 buttonSize{ 440.0f, 64.0f };
+        DirectX::XMFLOAT2 buttonPadding{ 48.0f, 14.0f };
+
+        float titleScale = 0.95f;
+        float bodyScale = 0.42f;
+        float buttonTextScale = 0.46f;
+        float verticalSpacing = 28.0f;
+        float titleSpacing = 54.0f;
+        float infoPanelHeight = 124.0f;
+    };
+
+    const SandboxMenuTheme kMenuTheme{};
+
 #if KBK_DEBUG_BUILD
     // Basic ImGui scene inspector
     void SceneInspectorPanel(void* userData)
@@ -200,7 +222,8 @@ void GameLayer::OnDetach()
 
     m_showCollisionDebug = false;
     m_lastCollision = false;
-    m_menuVisible = false;
+    m_menuVisible = true;
+    m_showControlsHelp = false;
     m_time = 0.0f;
 
     m_uiSystem.Clear();
@@ -209,8 +232,9 @@ void GameLayer::OnDetach()
     m_stateLabel = nullptr;
     m_entitiesLabel = nullptr;
     m_resumeButton = nullptr;
-    m_collisionButton = nullptr;
-    m_exitButton = nullptr;
+    m_controlsButton = nullptr;
+    m_controlsPanel = nullptr;
+    m_controlsText = nullptr;
     m_hudScreen = nullptr;
     m_menuScreen = nullptr;
 
@@ -230,6 +254,12 @@ void GameLayer::OnUpdate(float dt)
 
     if (input.KeyPressed(SDL_SCANCODE_F3))
         m_menuVisible = !m_menuVisible;
+
+    if (input.KeyPressed(SDL_SCANCODE_ESCAPE)) {
+        SDL_Event quit{};
+        quit.type = SDL_QUIT;
+        SDL_PushEvent(&quit);
+    }
 
     // Pause when menu is open
     if (!m_menuVisible)
@@ -302,8 +332,9 @@ void GameLayer::BuildUI()
     m_stateLabel = nullptr;
     m_entitiesLabel = nullptr;
     m_resumeButton = nullptr;
-    m_collisionButton = nullptr;
-    m_exitButton = nullptr;
+    m_controlsButton = nullptr;
+    m_controlsPanel = nullptr;
+    m_controlsText = nullptr;
     m_hudScreen = nullptr;
     m_menuScreen = nullptr;
     m_uiSystem.Clear();
@@ -314,14 +345,20 @@ void GameLayer::BuildUI()
     auto& style = m_uiSystem.Style();
     style.font = m_uiFont;
     style.headingColor = Color4::White();
-    style.primaryTextColor = Color4::White();
-    style.mutedTextColor = Color4{ 0.65f, 0.65f, 0.65f, 1.0f };
-    style.panelColor = Color4{ 0.05f, 0.05f, 0.05f, 0.9f };
-    style.headingScale = 0.4f;
-    style.bodyScale = 0.3f;
+    style.primaryTextColor = Color4::Black();
+    style.mutedTextColor = kMenuTheme.muted;
+    style.panelColor = kMenuTheme.panelColor;
+    style.buttonNormal = kMenuTheme.buttonNormal;
+    style.buttonHover = kMenuTheme.buttonHover;
+    style.buttonPressed = kMenuTheme.buttonPressed;
+    style.buttonSize = kMenuTheme.buttonSize;
+    style.buttonPadding = kMenuTheme.buttonPadding;
+    style.headingScale = kMenuTheme.titleScale;
+    style.bodyScale = kMenuTheme.bodyScale;
+    style.buttonTextScale = kMenuTheme.buttonTextScale;
 
-    const float bodyHeight = TextRenderer::MeasureText(*style.font, "S", style.bodyScale).lineHeight;
     const float headingHeight = TextRenderer::MeasureText(*style.font, "S", style.headingScale).lineHeight;
+    const float bodyHeight = TextRenderer::MeasureText(*style.font, "S", style.bodyScale).lineHeight;
     const float lineSpacing = 6.0f;
 
     // HUD layout
@@ -346,69 +383,73 @@ void GameLayer::BuildUI()
     m_stateLabel = &makeHudLabel("HUD.State", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "COLLISION  IDLE");
     m_entitiesLabel = &makeHudLabel("HUD.Entities", bodyHeight, [&](UILabel& lbl) { style.ApplyBody(lbl); }, "ENTITIES  0");
 
+    auto& hintLabel = hudGroup.EmplaceChild<UILabel>("HUD.Hint");
+    style.ApplyCaption(hintLabel);
+    hintLabel.SetPosition({ 0.0f, hudY });
+    hintLabel.SetText("F3 : menu  ·  F1 : collisions  ·  ESC : quitter");
+
     m_hudScreen = &hud;
 
     // Menu layout
     UIScreen& menu = m_uiSystem.CreateScreen("Menu");
     auto& menuRoot = menu.Root();
 
-    const float paddingX = 42.0f;
-    const float paddingY = 36.0f;
-    const float headingSpacing = 56.0f;
-    const float buttonSpacing = 20.0f;
+    auto& dim = menuRoot.EmplaceChild<UIPanel>("Menu.Backdrop");
+    dim.SetColor(kMenuTheme.background);
+    dim.SetAnchor(UIAnchor::Stretch);
+    dim.SetSize({ 0.0f, 0.0f });
 
-    const float headingW = TextRenderer::MeasureText(*style.font, "SANDBOX MENU", style.headingScale).size.x;
-    const float panelWidth = std::max(style.buttonSize.x, headingW) + paddingX * 2.0f;
-    const float panelHeight = paddingY * 2.0f + headingHeight + headingSpacing + (style.buttonSize.y * 3.0f) + (buttonSpacing * 2.0f);
+    auto& stack = menuRoot.EmplaceChild<UIElement>("Menu.Stack");
+    stack.SetAnchor(UIAnchor::Center);
 
-    auto& panel = menuRoot.EmplaceChild<UIPanel>("Menu.Panel");
-    style.ApplyPanel(panel);
-    panel.SetAnchor(UIAnchor::Center);
-    panel.SetSize({ panelWidth, panelHeight });
+    float yOffset = -kMenuTheme.titleSpacing;
 
-    auto& content = panel.EmplaceChild<UIElement>("Menu.Content");
-    content.SetAnchor(UIAnchor::Center);
-    content.SetSize(panel.Size());
-
-    float yOffset = -0.5f * panelHeight + paddingY;
-    auto makeCenteredLabel = [&](const char* name, float height, auto styler, const char* text) {
-        auto& lbl = content.EmplaceChild<UILabel>(name);
-        styler(lbl);
-        lbl.SetAnchor(UIAnchor::Center);
-        lbl.SetPosition({ 0.0f, yOffset });
-        lbl.SetText(text);
-        yOffset += height + headingSpacing;
-        return &lbl;
-    };
-
-    makeCenteredLabel("Menu.Title", headingHeight, [&](UILabel& lbl) { style.ApplyHeading(lbl); }, "SANDBOX MENU");
+    auto& title = stack.EmplaceChild<UILabel>("Menu.Title");
+    style.ApplyHeading(title);
+    title.SetAnchor(UIAnchor::Center);
+    title.SetScale(kMenuTheme.titleScale + 0.25f);
+    title.SetText("ASTRO VOID");
+    title.SetPosition({ 0.0f, yOffset });
+    yOffset += kMenuTheme.titleSpacing;
 
     auto makeMenuButton = [&](const char* name, const char* text, auto onClick) -> UIButton& {
-        auto& btn = content.EmplaceChild<UIButton>(name);
+        auto& btn = stack.EmplaceChild<UIButton>(name);
         style.ApplyButton(btn);
         btn.SetAnchor(UIAnchor::Center);
         btn.SetPosition({ 0.0f, yOffset });
         btn.SetText(text);
         btn.SetOnClick(onClick);
-        yOffset += style.buttonSize.y + buttonSpacing;
+        yOffset += kMenuTheme.buttonSize.y + kMenuTheme.verticalSpacing;
         return btn;
     };
 
-    m_resumeButton = &makeMenuButton("Menu.Resume", "Resume sandbox (F3)", [this]() {
+    m_resumeButton = &makeMenuButton("Menu.Resume", "NOUVELLE PARTIE", [this]() {
+        m_time = 0.0f;
         m_menuVisible = false;
     });
 
-    m_collisionButton = &makeMenuButton("Menu.Collision", "Toggle collision overlay (F1)", [this]() {
-        m_showCollisionDebug = !m_showCollisionDebug;
+    m_controlsButton = &makeMenuButton("Menu.Controls", "TOUCHES", [this]() {
+        m_showControlsHelp = !m_showControlsHelp;
     });
 
-    m_exitButton = &makeMenuButton("Menu.Exit", "Exit sandbox (ESC)", []() {
-        SDL_Event quit{};
-        quit.type = SDL_QUIT;
-        SDL_PushEvent(&quit);
-    });
+    auto& controlsPanel = stack.EmplaceChild<UIPanel>("Menu.ControlsPanel");
+    style.ApplyPanel(controlsPanel);
+    controlsPanel.SetAnchor(UIAnchor::Center);
+    controlsPanel.SetPosition({ 0.0f, yOffset + 12.0f });
+    controlsPanel.SetSize({ style.buttonSize.x + (kMenuTheme.buttonPadding.x * 2.0f), kMenuTheme.infoPanelHeight });
+    controlsPanel.SetColor(kMenuTheme.panelColor);
+    controlsPanel.SetVisible(false);
 
-    menu.SetVisible(false);
+    auto& controlsBody = controlsPanel.EmplaceChild<UILabel>("Menu.ControlsText");
+    style.ApplyBody(controlsBody);
+    controlsBody.SetAnchor(UIAnchor::Center);
+    controlsBody.SetScale(style.bodyScale * 0.9f);
+    controlsBody.SetText("F3 : Ouvrir / fermer le menu\nF1 : Basculer la collision\nESC : Quitter l'application");
+
+    m_controlsPanel = &controlsPanel;
+    m_controlsText = &controlsBody;
+
+    menu.SetVisible(true);
     m_menuScreen = &menu;
 }
 
@@ -459,11 +500,18 @@ void GameLayer::UpdateUI(float dt)
     if (m_menuScreen)
         m_menuScreen->SetVisible(m_menuVisible);
 
-    if (m_collisionButton) {
-        m_collisionButton->SetText(m_showCollisionDebug
-            ? "Hide collision overlay (F1)"
-            : "Show collision overlay (F1)");
+    if (m_controlsButton) {
+        m_controlsButton->SetText(m_showControlsHelp
+            ? "MASQUER LES TOUCHES"
+            : "TOUCHES");
     }
+
+    if (m_resumeButton) {
+        m_resumeButton->SetText(m_time > 0.01f ? "REPRENDRE" : "NOUVELLE PARTIE");
+    }
+
+    if (m_controlsPanel)
+        m_controlsPanel->SetVisible(m_menuVisible && m_showControlsHelp);
 
     m_uiSystem.Update(dt);
 }
