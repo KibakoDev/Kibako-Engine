@@ -234,6 +234,7 @@ void GameLayer::OnDetach()
     m_exitButton = nullptr;
     m_hudScreen = nullptr;
     m_menuScreen = nullptr;
+    m_menuBackdrop = nullptr;
 
 #if KBK_DEBUG_BUILD
     DebugUI::SetSceneInspector(nullptr, nullptr);
@@ -393,6 +394,7 @@ void GameLayer::BuildUI()
     dim.SetColor(kMenuTheme.background);
     dim.SetAnchor(UIAnchor::TopLeft);
     dim.SetSize({ static_cast<float>(m_app.Width()), static_cast<float>(m_app.Height()) });
+    m_menuBackdrop = &dim;
 
     auto& stack = menuRoot.EmplaceChild<UIElement>("Menu.Stack");
     stack.SetAnchor(UIAnchor::Center);
@@ -438,9 +440,13 @@ void GameLayer::UpdateUI(float dt)
     (void)dt;
 
     // Resize-aware
-    m_uiSystem.SetScreenSize(
-        static_cast<float>(m_app.Width()),
-        static_cast<float>(m_app.Height()));
+    const float screenW = static_cast<float>(m_app.Width());
+    const float screenH = static_cast<float>(m_app.Height());
+
+    m_uiSystem.SetScreenSize(screenW, screenH);
+
+    if (m_menuBackdrop)
+        m_menuBackdrop->SetSize({ screenW, screenH });
 
     // Time
     if (m_timeLabel) {
