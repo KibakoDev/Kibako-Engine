@@ -396,8 +396,8 @@ void GameLayer::BuildUI()
 
     auto& dim = menuRoot.EmplaceChild<UIPanel>("Menu.Backdrop");
     dim.SetColor(kMenuTheme.background);
-    dim.SetAnchor(UIAnchor::Stretch);
-    dim.SetSize({ 0.0f, 0.0f });
+    dim.SetAnchor(UIAnchor::TopLeft);
+    dim.SetSize({ static_cast<float>(m_app.Width()), static_cast<float>(m_app.Height()) });
 
     auto& stack = menuRoot.EmplaceChild<UIElement>("Menu.Stack");
     stack.SetAnchor(UIAnchor::Center);
