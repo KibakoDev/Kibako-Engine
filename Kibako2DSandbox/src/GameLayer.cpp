@@ -403,7 +403,7 @@ void GameLayer::BuildUI()
     style.ApplyHeading(title);
     title.SetAnchor(UIAnchor::Center);
     title.SetScale(kMenuTheme.titleScale + 0.25f);
-    title.SetText("ASTRO VOID");
+    title.SetText("SANDBOX");
     title.SetPosition({ 0.0f, yOffset });
     yOffset += kMenuTheme.titleSpacing;
 
