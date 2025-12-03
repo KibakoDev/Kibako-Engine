@@ -40,12 +40,12 @@ namespace
         DirectX::XMFLOAT2 buttonSize{ 440.0f, 64.0f };
         DirectX::XMFLOAT2 buttonPadding{ 48.0f, 14.0f };
 
-        float titleScale = 0.95f;
+        float titleScale = 0.50f;
         float bodyScale = 0.42f;
         float buttonTextScale = 0.46f;
         float verticalSpacing = 28.0f;
-        float titleSpacing = 54.0f;
-        float infoPanelHeight = 124.0f;
+        float titleSpacing = 74.0f;
+        float infoPanelHeight = 80.0f;
     };
 
     const SandboxMenuTheme kMenuTheme{};
